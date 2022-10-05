@@ -1,0 +1,14 @@
+.loadingOverlay {
+    position: fixed;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+
+    justify-content: center;
+    align-items: center;
+}
+
+.loading {
+    opacity: 0.5;
+    pointer-events: none;
+}
