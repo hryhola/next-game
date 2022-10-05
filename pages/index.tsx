@@ -4,7 +4,7 @@ import { Router } from '../client/features/app/Router'
 import { LoadingOverlay } from '../client/ui/loadingOverlay/LoadingOverlay'
 import { connectToWebSocket, terminateWS } from '../client/ws'
 import { WSContext } from '../client/context/ws.context'
-import { sleep } from '../client/util/time'
+import { sleep } from '../util/time'
 
 const Home: NextPage = () => {
     const { setWS, setIsConnected, isConnected } = useContext(WSContext)

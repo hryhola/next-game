@@ -1,38 +1,45 @@
 import { WebSocket } from 'uWebSockets.js'
-
+import { Handler } from '../uws.types'
 import { state } from '../../state'
+import { contexts } from '../contexts'
 
-export const login = (ws: WebSocket, data: { username: string }) => {
+export interface LoginRequest {
+    username: string
+}
+
+export interface LoginSuccess {
+    success: true
+    username: string
+}
+
+export interface LoginFailure {
+    success: false
+    username: string
+    message: string
+}
+
+export const login: Handler<LoginRequest> = (res, data) => {
     if (state.users.some(u => u.id === data.username)) {
-        const data = JSON.stringify({
-            ctx: 'login',
-            data: {
-                success: false,
-                message: 'User exists'
-            }
+        res.send<LoginFailure>({
+            success: false,
+            username: data.username,
+            message: 'User exists'
         })
-
-        ws.send(data)
 
         return
     }
 
     state.users.push({ id: data.username })
 
-    ws.send(
-        JSON.stringify({
-            ctx: 'login',
-            data: {
-                username: data.username,
-                success: true
-            }
-        })
-    )
+    res.send<LoginSuccess>({
+        success: true,
+        username: data.username
+    })
 
-    ws.publish(
-        'global-online',
-        JSON.stringify({
+    res.publish(contexts.globalOnline, {
+        ctx: contexts.globalOnline,
+        data: {
             onlineUsersCount: state.users.length
-        })
-    )
+        }
+    })
 }
