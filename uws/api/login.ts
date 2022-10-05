@@ -1,7 +1,6 @@
-import { WebSocket } from 'uWebSockets.js'
-import { Handler } from '../uws.types'
+import { GlobalOnlineUpdate, Handler } from '../uws.types'
 import { state } from '../../state'
-import { contexts } from '../contexts'
+import { channel } from '../channel'
 
 export interface LoginRequest {
     username: string
@@ -36,10 +35,10 @@ export const login: Handler<LoginRequest> = (res, data) => {
         username: data.username
     })
 
-    res.publish(contexts.globalOnline, {
-        ctx: contexts.globalOnline,
+    res.publish(channel.globalOnline, {
+        ctx: channel.globalOnline,
         data: {
             onlineUsersCount: state.users.length
-        }
+        } as GlobalOnlineUpdate
     })
 }

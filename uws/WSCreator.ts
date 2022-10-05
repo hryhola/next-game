@@ -1,17 +1,16 @@
 import uws from 'uWebSockets.js'
 import util from 'util'
 import handlers from './api'
-import { AbstractSocketMessage, PublishContext, Res } from './uws.types'
+import { AbstractSocketMessage, Channel, Res } from './uws.types'
+import { channel } from './channel'
 
 export const PORT = 5555
 
 export const createSocketApp = () => {
     const decoder = new util.TextDecoder()
-    const ROOM1 = 'ROOM1'
 
     const app = uws.App().ws('/*', {
-        open: ws => {
-            ws.subscribe(ROOM1)
+        open: _ws => {
             console.log('new connected')
         },
         message: (ws, message) => {
@@ -66,8 +65,9 @@ export const createSocketApp = () => {
                 }
 
                 const response: Res = {
-                    publish(publishCtx: PublishContext, message: AbstractSocketMessage) {
-                        ws.publish(publishCtx, JSON.stringify(message))
+                    publish(channel: Channel, message: AbstractSocketMessage) {
+                        console.log('publishing to', channel, message)
+                        app.publish(channel, JSON.stringify(message))
                     },
                     send<T>(data: T) {
                         ws.send(

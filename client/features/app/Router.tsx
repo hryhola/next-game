@@ -12,8 +12,6 @@ const pageMap: Record<Route, JSX.Element> = {
 export const Router = () => {
     const { currentRoute } = useContext(RouterContext)
 
-    console.log(currentRoute)
-
     const page = pageMap[currentRoute]
 
     if (!page) {
