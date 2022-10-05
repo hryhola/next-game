@@ -4,5 +4,5 @@ import { RouterProvider } from './router.context'
 import { WSProvider } from './ws.context'
 
 export const AppContext: React.FC<{ children: JSX.Element }> = props => (
-    <ContextComposer components={[WSProvider, RouterProvider, AuthProvider]}>{props.children}</ContextComposer>
+    <ContextComposer components={[RouterProvider, AuthProvider, WSProvider]}>{props.children}</ContextComposer>
 )

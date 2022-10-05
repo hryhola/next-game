@@ -1,6 +1,10 @@
 import { WebSocket } from 'uWebSockets.js'
 
-export type PublishContext = 'globalOnline'
+export type Channel = 'globalOnline'
+
+export interface GlobalOnlineUpdate {
+    onlineUsersCount: number
+}
 
 export interface AbstractSocketMessage<Ctx extends string = string, Data extends Object = {}> {
     ctx: Ctx
@@ -9,8 +13,8 @@ export interface AbstractSocketMessage<Ctx extends string = string, Data extends
 
 export type Res = {
     send: <Data>(data: Data) => void
-    publish: (ctx: PublishContext, data: AbstractSocketMessage<string, any>) => void
+    publish: (channel: Channel, data: AbstractSocketMessage<string, any>) => void
     ws: WebSocket
 }
 
-export type Handler<RequestData extends Object> = (res: Res, data: RequestData) => void
+export type Handler<RequestData extends Object | null = null> = (res: Res, data: RequestData) => void

@@ -2,7 +2,13 @@
 
 import { Handler } from '../uws.types'
 import { login } from './login'
+import { subscribe } from './subscribe'
+import { globalOnline } from './globalOnline'
+import { close } from './close'
 
 export default {
-    login
+    login,
+    subscribe,
+    globalOnline,
+    close
 } as Record<string, Handler<any>>

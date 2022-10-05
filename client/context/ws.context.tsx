@@ -1,4 +1,5 @@
-import React, { useState, createContext } from 'react'
+import React, { useState, createContext, useContext, useEffect } from 'react'
+import { AuthContext } from './auth.context'
 
 export interface WSData {
     ws: WebSocket | null
@@ -6,7 +7,7 @@ export interface WSData {
     setWS: (ws: WebSocket) => void
     setIsConnected: (value: boolean) => void
     on: <T>(context: string, handler: (data: T) => void) => void
-    send: <T>(context: string, data: T) => void
+    send: <T>(context: string, data?: T) => void
 }
 
 const init: WSData = {
@@ -33,6 +34,8 @@ interface Props {
 }
 
 export const WSProvider: React.FC<Props> = props => {
+    const auth = useContext(AuthContext)
+
     const [ws, setWS] = useState<WebSocket | null>(null)
     const [isConnected, setIsConnected] = useState<boolean | null>(null)
     const [listeners, setListeners] = useState<Record<string, Array<Function>>>({})
@@ -54,19 +57,36 @@ export const WSProvider: React.FC<Props> = props => {
         })
     }
 
-    function send<T>(context: string, data: T) {
+    function send<T>(context: string, data?: T) {
         if (!ws) {
             console.error('Cannot send', context, data)
             return
         }
 
-        ws.send(
-            JSON.stringify({
-                ctx: context,
-                data
-            })
-        )
+        const message = {
+            ctx: context,
+            data: data || null
+        }
+
+        console.log('send', message)
+
+        ws.send(JSON.stringify(message))
     }
+
+    useEffect(() => {
+        if (auth.username) {
+            window.addEventListener('beforeunload', () => {
+                ws?.send(
+                    JSON.stringify({
+                        ctx: 'close',
+                        data: {
+                            username: auth.username
+                        }
+                    })
+                )
+            })
+        }
+    }, [ws, auth.username])
 
     return <WSContext.Provider value={{ ws, setWS, isConnected, setIsConnected, on, send }}>{props.children}</WSContext.Provider>
 }
