@@ -1,0 +1,5 @@
+@import '../../ui/mixins.scss';
+
+.container {
+    @include centered-page;
+}
