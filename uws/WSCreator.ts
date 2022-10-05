@@ -1,6 +1,7 @@
 import uws from 'uWebSockets.js'
 import util from 'util'
-import { login } from './api'
+import handlers from './api'
+import { AbstractSocketMessage, PublishContext, Res } from './uws.types'
 
 export const PORT = 5555
 
@@ -14,18 +15,93 @@ export const createSocketApp = () => {
             console.log('new connected')
         },
         message: (ws, message) => {
-            const decodedMsg = decoder.decode(message)
+            try {
+                const decodedMsg = decoder.decode(message)
 
-            console.log(decodedMsg)
+                if (!message || !decodedMsg) {
+                    console.log('Request body is missing', decodedMsg)
 
-            const request = JSON.parse(decodedMsg)
+                    return ws.send(
+                        JSON.stringify({
+                            ctx: 'request',
+                            request: decodedMsg,
+                            data: {
+                                success: false,
+                                message: 'Request body is missing'
+                            }
+                        })
+                    )
+                }
 
-            if (request.ctx === 'login') {
-                login(ws, request.data)
+                const request: AbstractSocketMessage = JSON.parse(decodedMsg)
+
+                if (!request.ctx) {
+                    console.log('Request context is missing', decodedMsg)
+
+                    return ws.send(
+                        JSON.stringify({
+                            ctx: 'request',
+                            request: decodedMsg,
+                            data: {
+                                success: false,
+                                message: 'Request context is missing'
+                            }
+                        })
+                    )
+                }
+
+                if (!(request.ctx in handlers)) {
+                    console.log(`Handler for context is '${request.ctx}' missing`, decodedMsg)
+
+                    return ws.send(
+                        JSON.stringify({
+                            ctx: 'request',
+                            request: decodedMsg,
+                            data: {
+                                success: false,
+                                message: `Handler for context '${request.ctx}' is missing`
+                            }
+                        })
+                    )
+                }
+
+                const response: Res = {
+                    publish(publishCtx: PublishContext, message: AbstractSocketMessage) {
+                        ws.publish(publishCtx, JSON.stringify(message))
+                    },
+                    send<T>(data: T) {
+                        ws.send(
+                            JSON.stringify({
+                                ctx: request.ctx,
+                                data
+                            })
+                        )
+                    },
+                    ws
+                }
+
+                console.log(request)
+
+                handlers[request.ctx](response, request.data)
+            } catch (e) {
+                const message = e instanceof Error ? e.message : (e as string)
+
+                console.log('Internal error', e)
+
+                ws.send(
+                    JSON.stringify({
+                        ctx: 'request',
+                        data: {
+                            success: false,
+                            message: 'Internal error',
+                            errorMessage: message
+                        }
+                    })
+                )
             }
         },
-        close: (ws, code, message) => {
-            //  code
+        close: (_ws, code, message) => {
+            console.log('Closing connection', code, message)
         }
     })
 
