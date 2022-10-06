@@ -1,14 +1,23 @@
-/* eslint-disable import/no-anonymous-default-export */
+// @index('./*', f => `import { handler as ${f.name.replaceAll('-', '')} } from '${f.path}'`)
+import { handler as AuthLogin } from './Auth-Login'
+import { handler as AuthLogout } from './Auth-Logout'
+import { handler as GlobalChatGet } from './Global-ChatGet'
+import { handler as GlobalChatSend } from './Global-ChatSend'
+import { handler as GlobalOnlineGet } from './Global-OnlineGet'
+import { handler as GlobalSubscribe } from './Global-Subscribe'
+// @endindex
 
-import { Handler } from '../uws.types'
-import { login } from './login'
-import { subscribe } from './subscribe'
-import { globalOnline } from './globalOnline'
-import { close } from './close'
+const handlerMap = {
+    // @index('./*', f => `'${f.name}': ${f.name.replaceAll('-', '')},`)
+    'Auth-Login': AuthLogin,
+    'Auth-Logout': AuthLogout,
+    'Global-ChatGet': GlobalChatGet,
+    'Global-ChatSend': GlobalChatSend,
+    'Global-OnlineGet': GlobalOnlineGet,
+    'Global-Subscribe': GlobalSubscribe
+    // @endindex
+}
 
-export default {
-    login,
-    subscribe,
-    globalOnline,
-    close
-} as Record<string, Handler<any>>
+export type HandlerName = keyof typeof handlerMap
+
+export default handlerMap

@@ -1,8 +1,7 @@
 import uws from 'uWebSockets.js'
 import util from 'util'
-import handlers from './api'
-import { AbstractSocketMessage, Channel, Res } from './uws.types'
-import { channel } from './channel'
+import handlers, { HandlerName } from './api'
+import { AbstractSocketMessage, ResponseActions } from './uws.types'
 
 export const PORT = 5555
 
@@ -32,7 +31,7 @@ export const createSocketApp = () => {
                     )
                 }
 
-                const request: AbstractSocketMessage = JSON.parse(decodedMsg)
+                const request: AbstractSocketMessage<HandlerName, never> = JSON.parse(decodedMsg)
 
                 if (!request.ctx) {
                     console.log('Request context is missing', decodedMsg)
@@ -64,12 +63,13 @@ export const createSocketApp = () => {
                     )
                 }
 
-                const response: Res = {
-                    publish(channel: Channel, message: AbstractSocketMessage) {
+                const response: ResponseActions = {
+                    publish(channel: string, message: AbstractSocketMessage) {
                         console.log('publishing to', channel, message)
+
                         app.publish(channel, JSON.stringify(message))
                     },
-                    send<T>(data: T) {
+                    res<T>(data: T) {
                         ws.send(
                             JSON.stringify({
                                 ctx: request.ctx,
@@ -77,10 +77,18 @@ export const createSocketApp = () => {
                             })
                         )
                     },
+                    send<T>(ctx: string, data: T) {
+                        ws.send(
+                            JSON.stringify({
+                                ctx: ctx,
+                                data
+                            })
+                        )
+                    },
                     ws
                 }
 
-                console.log(request)
+                console.log('Get:', request)
 
                 handlers[request.ctx](response, request.data)
             } catch (e) {

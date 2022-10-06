@@ -1,5 +1,7 @@
 @import '../../ui/mixins.scss';
 
 .container {
-    @include centered-page;
+    @include page;
+    justify-content: center;
+    align-items: center;
 }
