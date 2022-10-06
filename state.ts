@@ -1,3 +1,4 @@
 export const state = {
-    users: <User[]>[]
+    onlineUsers: <User[]>[],
+    globalChat: <ChatMessage[]>[]
 }

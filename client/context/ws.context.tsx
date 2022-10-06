@@ -1,13 +1,17 @@
 import React, { useState, createContext, useContext, useEffect } from 'react'
+import type { HandlerName } from 'uws/api'
 import { AuthContext } from './auth.context'
+
+type HandlerOn = <C extends keyof typeof import('uws/events')['topics']>(context: C, handler: (data: import('uws/events').TopicEventData[C]) => void) => void
+type HandlerSend = <H extends HandlerName>(context: H, data?: Parameters<typeof import('uws/api')['default'][H]>[1]) => void
 
 export interface WSData {
     ws: WebSocket | null
     isConnected: boolean | null
     setWS: (ws: WebSocket) => void
     setIsConnected: (value: boolean) => void
-    on: <T>(context: string, handler: (data: T) => void) => void
-    send: <T>(context: string, data?: T) => void
+    on: HandlerOn
+    send: HandlerSend
 }
 
 const init: WSData = {
@@ -50,14 +54,20 @@ export const WSProvider: React.FC<Props> = props => {
         }
     }
 
-    function on<T>(context: string, handler: (data: T) => void) {
-        setListeners({
-            ...listeners,
-            [context]: [...(context in listeners ? listeners[context] : []), handler]
+    const on: HandlerOn = (context, handler) => {
+        setListeners(curr => {
+            if (curr[context] && curr[context].includes(handler)) {
+                return curr
+            }
+
+            return {
+                ...curr,
+                [context]: [...(context in curr ? curr[context] : []), handler]
+            }
         })
     }
 
-    function send<T>(context: string, data?: T) {
+    const send: HandlerSend = (context, data) => {
         if (!ws) {
             console.error('Cannot send', context, data)
             return
@@ -78,7 +88,7 @@ export const WSProvider: React.FC<Props> = props => {
             window.addEventListener('beforeunload', () => {
                 ws?.send(
                     JSON.stringify({
-                        ctx: 'close',
+                        ctx: 'Auth-Logout',
                         data: {
                             username: auth.username
                         }

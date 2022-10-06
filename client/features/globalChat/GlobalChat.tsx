@@ -1,0 +1,63 @@
+import { useEffect, useState } from 'react'
+import { v4 as uuid } from 'uuid'
+import { Chat } from 'client/ui'
+import { AuthContext } from 'client/context/auth.context'
+import { useContext } from 'react'
+import { WSContext } from 'client/context/ws.context'
+import { topics } from 'uws/events'
+import styles from './GlobalChat.module.scss'
+
+export const GlobalChat: React.FC = () => {
+    const auth = useContext(AuthContext)
+    const ws = useContext(WSContext)
+
+    const [messages, setMessages] = useState<ChatMessage[]>([])
+    const [onlineUsersCount, setOnlineUsersCount] = useState<number | null>(null)
+
+    const handleMessageRetrieve = (data: { message: ChatMessage }) => {
+        setMessages(curr => [data.message, ...curr])
+    }
+
+    const handlerSend = (text: string) => {
+        const message: ChatMessage = {
+            username: auth.username,
+            text,
+            id: uuid()
+        }
+
+        ws.send('Global-ChatSend', { message })
+    }
+
+    const handleOnlineUpdate = (data: { onlineUsersCount: number }) => {
+        setOnlineUsersCount(data.onlineUsersCount)
+    }
+
+    const handleMessagesInit = (data: { messages: ChatMessage[] }) => {
+        setMessages(data.messages)
+    }
+
+    useEffect(() => {
+        console.log('init global')
+        ws.on(topics.globalOnlineUpdate, handleOnlineUpdate)
+        ws.on(topics.globalChatMessageUpdate, handleMessageRetrieve)
+        ws.on(topics['Global-ChatGet'], handleMessagesInit)
+
+        ws.send('Global-Subscribe', {
+            topic: topics.globalOnlineUpdate
+        })
+
+        ws.send('Global-Subscribe', {
+            topic: topics.globalChatMessageUpdate
+        })
+
+        ws.send('Global-OnlineGet')
+        ws.send('Global-ChatGet')
+    }, [])
+
+    return (
+        <div className={styles.container}>
+            <div>Online users: {onlineUsersCount}</div>
+            <Chat messages={messages} onSendMessage={handlerSend} />
+        </div>
+    )
+}

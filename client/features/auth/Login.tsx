@@ -1,5 +1,5 @@
 import { useState, useEffect, useContext, FormEventHandler } from 'react'
-import { LoginFailure, LoginSuccess } from '../../../uws/api/login'
+import { LoginFailure, LoginSuccess } from '../../../uws/api/Auth-Login'
 import { AuthContext } from '../../context/auth.context'
 import { RouterContext } from '../../context/router.context'
 import { WSContext } from '../../context/ws.context'
@@ -12,21 +12,23 @@ export const Login: React.FC = () => {
     const [username, setUsername] = useState('')
     const [error, setError] = useState('')
 
+    const handleLogin = (data: LoginSuccess | LoginFailure) => {
+        if (data.success) {
+            auth.setUsername(data.username)
+            router.setCurrentRoute('Home')
+        } else {
+            setError(data.message)
+        }
+    }
+
     useEffect(() => {
-        ws.on<LoginSuccess | LoginFailure>('login', data => {
-            if (data.success) {
-                auth.setUsername(data.username)
-                router.setCurrentRoute('Home')
-            } else {
-                setError(data.message)
-            }
-        })
+        ws.on('Auth-Login', handleLogin)
     }, [])
 
     const handleSubmit: FormEventHandler<HTMLFormElement> = e => {
         e.preventDefault()
         setError('')
-        ws.send('login', { username })
+        ws.send('Auth-Login', { username })
     }
 
     return (
