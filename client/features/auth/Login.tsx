@@ -1,8 +1,8 @@
 import { useState, useEffect, useContext, FormEventHandler } from 'react'
-import { LoginFailure, LoginSuccess } from '../../../uws/api/Auth-Login'
-import { AuthContext } from '../../context/auth.context'
-import { RouterContext } from '../../context/router.context'
-import { WSContext } from '../../context/ws.context'
+import { LoginFailure, LoginSuccess } from 'uws/api/Auth-Login'
+import { AuthContext } from 'client/context/list/auth.context'
+import { RouterContext } from 'client/context/list/router.context'
+import { WSContext } from 'client/context/list/ws.context'
 
 export const Login: React.FC = () => {
     const ws = useContext(WSContext)

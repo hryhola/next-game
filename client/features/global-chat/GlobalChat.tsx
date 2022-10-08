@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import { v4 as uuid } from 'uuid'
 import { Chat } from 'client/ui'
-import { AuthContext } from 'client/context/auth.context'
+import { AuthContext } from 'client/context/list/auth.context'
 import { useContext } from 'react'
-import { WSContext } from 'client/context/ws.context'
+import { WSContext } from 'client/context/list/ws.context'
 import { topics } from 'uws/events'
 import styles from './GlobalChat.module.scss'
 
