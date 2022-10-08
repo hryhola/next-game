@@ -1,55 +1,41 @@
-declare global {
-    interface Window {
-        ws?: WebSocket
-        isConnected: boolean
-    }
-}
-
 type WebSocketCallbacks = { onClose: () => void; onOpen: (ws: WebSocket) => void; onError: () => void }
 
 export const initUWS = () => fetch('http://localhost:3000/api/init')
 
-export const connectToWebSocket = async (callbacks?: WebSocketCallbacks) =>
-    initUWS()
+let isHandlingConnectRequest = false
+
+export const connectToWebSocket = async (callbacks?: WebSocketCallbacks) => {
+    if (isHandlingConnectRequest) {
+        console.log('Already handling connecting request. Exiting.')
+
+        return
+    }
+
+    isHandlingConnectRequest = true
+
+    return initUWS()
         .catch(e => console.log('UWS Init error', e))
         .finally(() => {
             const url = 'ws://localhost:5555'
 
-            if (window.ws) {
-                console.log('ws already exist. exiting connect function.')
+            const ws = new WebSocket(url)
 
-                return
+            ws.onopen = () => {
+                ws.addEventListener('message', m => console.log(m))
+
+                callbacks?.onOpen(ws!)
             }
 
-            window.ws = new WebSocket(url)
-
-            window.ws.onopen = () => {
-                window.isConnected = true
-
-                window.ws?.addEventListener('message', m => console.log(m))
-
-                callbacks?.onOpen(window.ws!)
-            }
-
-            window.ws.onclose = () => {
+            ws.onclose = () => {
                 console.log('websocket closed')
-                window.isConnected = false
                 callbacks?.onClose()
             }
 
-            window.ws.onerror = e => {
-                window.isConnected = false
+            ws.onerror = e => {
                 console.error('WS Error', e)
-                callbacks?.onClose()
+                callbacks?.onError()
             }
+
+            isHandlingConnectRequest = false
         })
-
-export const terminateWS = () => {
-    console.log('terminating connection')
-
-    if (window.ws) {
-        window.ws.close()
-
-        delete window.ws
-    }
 }

@@ -11,7 +11,7 @@ export type NextApiResponseUWS = NextApiResponse & {
     }
 }
 
-const SocketHandler = (req: NextApiRequest, res: NextApiResponseUWS) => {
+const SocketHandler = (_req: NextApiRequest, res: NextApiResponseUWS) => {
     if (res.socket.server.uws) {
         console.log('Socket is already running')
 

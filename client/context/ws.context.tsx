@@ -1,4 +1,4 @@
-import React, { useState, createContext, useContext, useEffect } from 'react'
+import React, { useState, createContext, useContext, useEffect, useRef, MutableRefObject } from 'react'
 import type { HandlerName } from 'uws/api'
 import { AuthContext } from './auth.context'
 
@@ -6,32 +6,15 @@ type HandlerOn = <C extends keyof typeof import('uws/events')['topics']>(context
 type HandlerSend = <H extends HandlerName>(context: H, data?: Parameters<typeof import('uws/api')['default'][H]>[1]) => void
 
 export interface WSData {
-    ws: WebSocket | null
+    wsRef: MutableRefObject<WebSocket | null>
     isConnected: boolean | null
-    setWS: (ws: WebSocket) => void
     setIsConnected: (value: boolean) => void
     on: HandlerOn
     send: HandlerSend
 }
 
-const init: WSData = {
-    ws: null,
-    isConnected: null,
-    setWS: _ => {
-        throw new Error('Too soon')
-    },
-    setIsConnected: _ => {
-        throw new Error('Too soon')
-    },
-    on: _ => {
-        throw new Error('Too soon')
-    },
-    send: _ => {
-        throw new Error('Too soon')
-    }
-}
-
-export const WSContext = createContext<WSData>(init)
+// @ts-ignore
+export const WSContext = createContext<WSData>({})
 
 interface Props {
     children?: JSX.Element
@@ -40,19 +23,10 @@ interface Props {
 export const WSProvider: React.FC<Props> = props => {
     const auth = useContext(AuthContext)
 
-    const [ws, setWS] = useState<WebSocket | null>(null)
+    const wsRef = useRef<WebSocket | null>(null)
+
     const [isConnected, setIsConnected] = useState<boolean | null>(null)
     const [listeners, setListeners] = useState<Record<string, Array<Function>>>({})
-
-    if (ws) {
-        ws.onmessage = event => {
-            const message = JSON.parse(event.data)
-
-            if (message.ctx in listeners) {
-                listeners[message.ctx].forEach(listener => listener(message.data))
-            }
-        }
-    }
 
     const on: HandlerOn = (context, handler) => {
         setListeners(curr => {
@@ -68,7 +42,7 @@ export const WSProvider: React.FC<Props> = props => {
     }
 
     const send: HandlerSend = (context, data) => {
-        if (!ws) {
+        if (!wsRef.current) {
             console.error('Cannot send', context, data)
             return
         }
@@ -80,13 +54,25 @@ export const WSProvider: React.FC<Props> = props => {
 
         console.log('send', message)
 
-        ws.send(JSON.stringify(message))
+        wsRef.current.send(JSON.stringify(message))
     }
+
+    const messageHandler = (event: MessageEvent<any>) => {
+        console.log('message handler')
+
+        const message = JSON.parse(event.data)
+
+        if (message.ctx in listeners) {
+            listeners[message.ctx].forEach(listener => listener(message.data))
+        }
+    }
+
+    if (wsRef.current) wsRef.current.onmessage = messageHandler
 
     useEffect(() => {
         if (auth.username) {
             window.addEventListener('beforeunload', () => {
-                ws?.send(
+                wsRef.current?.send(
                     JSON.stringify({
                         ctx: 'Auth-Logout',
                         data: {
@@ -96,7 +82,7 @@ export const WSProvider: React.FC<Props> = props => {
                 )
             })
         }
-    }, [ws, auth.username])
+    }, [wsRef.current, auth.username])
 
-    return <WSContext.Provider value={{ ws, setWS, isConnected, setIsConnected, on, send }}>{props.children}</WSContext.Provider>
+    return <WSContext.Provider value={{ wsRef, isConnected, setIsConnected, on, send }}>{props.children}</WSContext.Provider>
 }
