@@ -1,7 +1,7 @@
 import { useContext, useEffect } from 'react'
 import { NextPage } from 'next'
 import { Router } from '../client/features/app/Router'
-import { LoadingOverlay } from '../client/ui/loadingOverlay/LoadingOverlay'
+import { LoadingOverlay } from '../client/ui/loading-overlay/LoadingOverlay'
 import { connectToWebSocket } from '../client/ws'
 import { WSContext } from '../client/context/ws.context'
 import { sleep } from '../util/time'
