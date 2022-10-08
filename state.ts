@@ -1,4 +1,5 @@
 export const state = {
     onlineUsers: <User[]>[],
-    globalChat: <ChatMessage[]>[]
+    globalChat: <ChatMessage[]>[],
+    rooms: <Record<string, Room>>{}
 }

@@ -29,3 +29,8 @@ declare interface Chat {
     users: Array<User>
     messages: Array<ChatMessage>
 }
+
+declare interface Room {
+    id: string
+    chat: Chat
+}
