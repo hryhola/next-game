@@ -1,3 +1,4 @@
+import { IChatMessage } from 'model'
 import { WebSocket } from 'uWebSockets.js'
 
 export interface GlobalOnlineUpdate {
@@ -5,7 +6,7 @@ export interface GlobalOnlineUpdate {
 }
 
 export interface GlobalChatMessage {
-    message: ChatMessage
+    message: IChatMessage
 }
 
 export interface AbstractSocketMessage<Ctx extends string = string, Data extends Object = {}> {
