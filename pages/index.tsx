@@ -2,38 +2,57 @@ import { useContext, useEffect } from 'react'
 import { NextPage } from 'next'
 import { Router } from '../client/features/app/Router'
 import { LoadingOverlay } from '../client/ui/loadingOverlay/LoadingOverlay'
-import { connectToWebSocket, terminateWS } from '../client/ws'
+import { connectToWebSocket } from '../client/ws'
 import { WSContext } from '../client/context/ws.context'
 import { sleep } from '../util/time'
+import { DevToolsOverlay } from 'client/features/dev/DevToolsOverlay'
+
+let isConnecting = false
 
 const Home: NextPage = () => {
-    const { setWS, setIsConnected, isConnected } = useContext(WSContext)
-
-    const handleWSConnection = {
-        onClose: () => setIsConnected(false),
-        onError: () => setIsConnected(false),
-        onOpen: (ws: WebSocket) => {
-            setWS(ws)
-            setIsConnected(true)
-        }
-    }
+    const { wsRef, setIsConnected, isConnected } = useContext(WSContext)
 
     useEffect(() => {
-        connectToWebSocket(handleWSConnection)
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+        if (isConnecting) {
+            console.log('Already connecting. Exiting init hook.')
+            return
+        }
+
+        isConnecting = true
+
+        connectToWebSocket({
+            onClose: () => setIsConnected(false),
+            onError: () => setIsConnected(false),
+            onOpen: (ws: WebSocket) => {
+                console.log('Connection is set.')
+                wsRef.current = ws
+                setIsConnected(true)
+            }
+        }).then(() => {
+            isConnecting = false
+        })
     }, [])
 
     useEffect(() => {
-        console.log('isConnected', isConnected)
-
         if (isConnected === false) {
-            const retry = () => {
-                terminateWS()
+            if (isConnecting) {
+                console.log('Already connecting. Exiting retry hook.')
+                return
+            }
+
+            const retry = async () => {
+                wsRef.current = null
+
+                isConnecting = true
 
                 console.log('trying to establish connection')
 
-                connectToWebSocket({
-                    ...handleWSConnection,
+                await connectToWebSocket({
+                    onOpen: (ws: WebSocket) => {
+                        console.log('Connection is set.')
+                        wsRef.current = ws
+                        setIsConnected(true)
+                    },
                     onError: async () => {
                         setIsConnected(false)
                         console.log('connection error')
@@ -42,7 +61,7 @@ const Home: NextPage = () => {
 
                         console.log('trying to reconnect...')
 
-                        retry()
+                        await retry()
                     },
                     onClose: async () => {
                         setIsConnected(false)
@@ -52,20 +71,24 @@ const Home: NextPage = () => {
 
                         console.log('trying to reconnect...')
 
-                        retry()
+                        await retry()
                     }
+                }).then(() => {
+                    isConnecting = false
                 })
             }
 
             retry()
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isConnected])
 
     return (
-        <LoadingOverlay isLoading={!isConnected}>
-            <Router />
-        </LoadingOverlay>
+        <>
+            <DevToolsOverlay />
+            <LoadingOverlay isLoading={!isConnected}>
+                <Router />
+            </LoadingOverlay>
+        </>
     )
 }
 

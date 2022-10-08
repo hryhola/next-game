@@ -36,12 +36,7 @@ export const GlobalChat: React.FC = () => {
         setMessages(data.messages)
     }
 
-    useEffect(() => {
-        console.log('init global')
-        ws.on(topics.globalOnlineUpdate, handleOnlineUpdate)
-        ws.on(topics.globalChatMessageUpdate, handleMessageRetrieve)
-        ws.on(topics['Global-ChatGet'], handleMessagesInit)
-
+    const subscriptionsInit = () => {
         ws.send('Global-Subscribe', {
             topic: topics.globalOnlineUpdate
         })
@@ -49,10 +44,24 @@ export const GlobalChat: React.FC = () => {
         ws.send('Global-Subscribe', {
             topic: topics.globalChatMessageUpdate
         })
+    }
+
+    useEffect(() => {
+        console.log('init global')
+
+        subscriptionsInit()
+
+        ws.on(topics.globalOnlineUpdate, handleOnlineUpdate)
+        ws.on(topics.globalChatMessageUpdate, handleMessageRetrieve)
+        ws.on(topics['Global-ChatGet'], handleMessagesInit)
 
         ws.send('Global-OnlineGet')
         ws.send('Global-ChatGet')
     }, [])
+
+    useEffect(() => {
+        ws.isConnected && subscriptionsInit()
+    }, [ws.isConnected])
 
     return (
         <div className={styles.container}>
