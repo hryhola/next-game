@@ -1,8 +1,8 @@
 import { useContext } from 'react'
 import { Route, RouterContext } from '../../context/router.context'
-import { LoginRoute } from '../../route/loginRoute/LoginRoute'
-import { HomeRoute } from '../../route/homeRoute/HomeRoute'
-import { ErrorRoute } from '../../route/errorRoute/ErrorRoute'
+import { LoginRoute } from '../../route/login-route/LoginRoute'
+import { HomeRoute } from '../../route/home-route/HomeRoute'
+import { ErrorRoute } from '../../route/error-route/ErrorRoute'
 
 const pageMap: Record<Route, JSX.Element> = {
     Login: <LoginRoute />,
