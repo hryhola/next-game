@@ -1,5 +1,5 @@
 import { useContext } from 'react'
-import { WSContext } from 'client/context/ws.context'
+import { WSContext } from 'client/context/list/ws.context'
 
 export const DevToolsOverlay: React.FC = () => {
     const ws = useContext(WSContext)

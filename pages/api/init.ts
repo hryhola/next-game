@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { Server as NetServer, Socket } from 'net'
 import { TemplatedApp } from 'uWebSockets.js'
-import { createSocketApp } from '../../uws/WSCreator'
+import { createSocketApp } from 'uws/WSCreator'
 
 export type NextApiResponseUWS = NextApiResponse & {
     socket: Socket & {

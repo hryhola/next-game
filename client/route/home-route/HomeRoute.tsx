@@ -1,6 +1,6 @@
 import { useContext } from 'react'
 import { GlobalChat } from 'client/features/global-chat/GlobalChat'
-import { AuthContext } from 'client/context/auth.context'
+import { AuthContext } from 'client/context/list/auth.context'
 import styles from './HomeRoute.module.scss'
 
 export const HomeRoute: React.FC = () => {

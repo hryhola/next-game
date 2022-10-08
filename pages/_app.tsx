@@ -1,6 +1,6 @@
 import type { AppProps } from 'next/app'
-import { AppContext } from '../client/context'
-import '../client/ui/globals.css'
+import { AppContext } from 'client/context/AppContext'
+import 'client/ui/globals.css'
 
 function MyApp({ Component, pageProps }: AppProps) {
     return (
