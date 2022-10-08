@@ -18,7 +18,7 @@ export interface LoginFailure {
 }
 
 export const handler: Handler<LoginRequest> = (actions, data) => {
-    if (state.onlineUsers.some(u => u.id === data.username)) {
+    if (state.globalChat.onlineUsers.some(u => u.id === data.username)) {
         actions.res<LoginFailure>({
             success: false,
             username: data.username,
@@ -28,7 +28,7 @@ export const handler: Handler<LoginRequest> = (actions, data) => {
         return
     }
 
-    state.onlineUsers.push({ id: data.username })
+    state.globalChat.onlineUsers.push({ id: data.username })
 
     actions.res<LoginSuccess>({
         success: true,
@@ -38,7 +38,7 @@ export const handler: Handler<LoginRequest> = (actions, data) => {
     actions.publish(topics.globalOnlineUpdate, {
         ctx: topics.globalOnlineUpdate,
         data: {
-            onlineUsersCount: state.onlineUsers.length
+            onlineUsersCount: state.globalChat.onlineUsers.length
         } as GlobalOnlineUpdate
     })
 }
