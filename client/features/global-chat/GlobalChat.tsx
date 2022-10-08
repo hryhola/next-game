@@ -6,20 +6,21 @@ import { useContext } from 'react'
 import { WSContext } from 'client/context/list/ws.context'
 import { topics } from 'uws/events'
 import styles from './GlobalChat.module.scss'
+import { IChatMessage } from 'model'
 
 export const GlobalChat: React.FC = () => {
     const auth = useContext(AuthContext)
     const ws = useContext(WSContext)
 
-    const [messages, setMessages] = useState<ChatMessage[]>([])
+    const [messages, setMessages] = useState<IChatMessage[]>([])
     const [onlineUsersCount, setOnlineUsersCount] = useState<number | null>(null)
 
-    const handleMessageRetrieve = (data: { message: ChatMessage }) => {
+    const handleMessageRetrieve = (data: { message: IChatMessage }) => {
         setMessages(curr => [data.message, ...curr])
     }
 
     const handlerSend = (text: string) => {
-        const message: ChatMessage = {
+        const message: IChatMessage = {
             username: auth.username,
             text,
             id: uuid()
@@ -32,7 +33,7 @@ export const GlobalChat: React.FC = () => {
         setOnlineUsersCount(data.onlineUsersCount)
     }
 
-    const handleMessagesInit = (data: { messages: ChatMessage[] }) => {
+    const handleMessagesInit = (data: { messages: IChatMessage[] }) => {
         setMessages(data.messages)
     }
 

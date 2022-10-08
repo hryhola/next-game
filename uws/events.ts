@@ -1,3 +1,4 @@
+import { IChatMessage } from 'model'
 import { LoginFailure, LoginSuccess } from './api/Auth-Login'
 
 export const topics = Object.freeze({
@@ -12,10 +13,10 @@ export type TopicEventData = {
         onlineUsersCount: number
     }
     globalChatMessageUpdate: {
-        message: ChatMessage
+        message: IChatMessage
     }
     'Auth-Login': LoginSuccess | LoginFailure
     'Global-ChatGet': {
-        messages: ChatMessage[]
+        messages: IChatMessage[]
     }
 }

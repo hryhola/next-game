@@ -1,5 +1,3 @@
-export const state = {
-    onlineUsers: <User[]>[],
-    globalChat: <ChatMessage[]>[],
-    rooms: <Record<string, Room>>{}
-}
+import { AppState } from 'model'
+
+export const state = new AppState()
