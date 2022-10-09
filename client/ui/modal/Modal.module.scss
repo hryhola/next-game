@@ -1,0 +1,19 @@
+.open {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.closed {
+    display: none;
+}
+
+.background {
+    position: fixed;
+    width: 100vw;
+    height: 100vh;
+    background: rgba($color: #000, $alpha: 0.5);
+    z-index: 10;
+    left: 0;
+    top: 0;
+}

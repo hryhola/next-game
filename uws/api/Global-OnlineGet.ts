@@ -4,6 +4,6 @@ import { state } from '../../state'
 
 export const handler: Handler = res => {
     res.send<GlobalOnlineUpdate>(topics.globalOnlineUpdate, {
-        onlineUsersCount: state.globalChat.onlineUsers.length
+        onlineUsersCount: state.users.length
     })
 }

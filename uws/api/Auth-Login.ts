@@ -1,25 +1,26 @@
 import { GlobalOnlineUpdate, Handler } from '../uws.types'
 import { state } from '../../state'
 import { topics } from '../events'
+import { User } from 'model'
 
 export interface LoginRequest {
     username: string
 }
 
-export interface LoginSuccess {
+export interface Success {
     success: true
     username: string
 }
 
-export interface LoginFailure {
+export interface Failure {
     success: false
     username: string
     message: string
 }
 
 export const handler: Handler<LoginRequest> = (actions, data) => {
-    if (state.globalChat.onlineUsers.some(u => u.id === data.username)) {
-        actions.res<LoginFailure>({
+    if (state.users.some(u => u.id === data.username)) {
+        actions.res<'Auth-Login'>({
             success: false,
             username: data.username,
             message: 'User exists'
@@ -28,9 +29,13 @@ export const handler: Handler<LoginRequest> = (actions, data) => {
         return
     }
 
-    state.globalChat.onlineUsers.push({ id: data.username })
+    const user = new User(data.username)
 
-    actions.res<LoginSuccess>({
+    state.users.push(user)
+
+    console.log(state.users.length)
+
+    actions.res<'Auth-Login'>({
         success: true,
         username: data.username
     })
@@ -38,7 +43,7 @@ export const handler: Handler<LoginRequest> = (actions, data) => {
     actions.publish(topics.globalOnlineUpdate, {
         ctx: topics.globalOnlineUpdate,
         data: {
-            onlineUsersCount: state.globalChat.onlineUsers.length
+            onlineUsersCount: state.users.length
         } as GlobalOnlineUpdate
     })
 }

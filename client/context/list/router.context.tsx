@@ -1,6 +1,6 @@
 import React, { useState, createContext } from 'react'
 
-export type Route = 'Login' | 'Home'
+export type Route = 'Login' | 'Home' | 'Lobby'
 
 export interface RouterData {
     currentRoute: Route

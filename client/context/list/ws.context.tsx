@@ -1,9 +1,10 @@
 import React, { useState, createContext, useContext, useEffect, useRef, MutableRefObject } from 'react'
 import type { HandlerName } from 'uws/api'
+import type { RequestData, RequestHandler } from 'uws/uws.types'
 import { AuthContext } from './auth.context'
 
-type HandlerOn = <C extends keyof typeof import('uws/events')['topics']>(context: C, handler: (data: import('uws/events').TopicEventData[C]) => void) => void
-type HandlerSend = <H extends HandlerName>(context: H, data?: Parameters<typeof import('uws/api')['default'][H]>[1]) => void
+type HandlerOn = <C extends keyof typeof import('uws/events')['topics']>(context: C, handler: RequestHandler<C>) => void
+type HandlerSend = <H extends HandlerName>(context: H, data?: RequestData<H>) => void
 
 export interface WSData {
     wsRef: MutableRefObject<WebSocket | null>

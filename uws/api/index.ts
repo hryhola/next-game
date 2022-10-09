@@ -5,6 +5,8 @@ import { handler as GlobalChatGet } from './Global-ChatGet'
 import { handler as GlobalChatSend } from './Global-ChatSend'
 import { handler as GlobalOnlineGet } from './Global-OnlineGet'
 import { handler as GlobalSubscribe } from './Global-Subscribe'
+import { handler as LobbyCreate } from './Lobby-Create'
+import { handler as LobbyGetList } from './Lobby-GetList'
 // @endindex
 
 const handlerMap = {
@@ -14,7 +16,9 @@ const handlerMap = {
     'Global-ChatGet': GlobalChatGet,
     'Global-ChatSend': GlobalChatSend,
     'Global-OnlineGet': GlobalOnlineGet,
-    'Global-Subscribe': GlobalSubscribe
+    'Global-Subscribe': GlobalSubscribe,
+    'Lobby-Create': LobbyCreate,
+    'Lobby-GetList': LobbyGetList
     // @endindex
 }
 
