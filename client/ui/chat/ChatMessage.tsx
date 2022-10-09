@@ -1,7 +1,8 @@
+import { TChatMessage } from 'model'
 import styles from './Chat.module.scss'
 
 interface Props {
-    message: ChatMessage
+    message: TChatMessage
 }
 
 export const ChatMessageComponent: React.FC<Props> = ({ message }) => (

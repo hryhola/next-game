@@ -1,9 +1,10 @@
 import { FormEventHandler, useState } from 'react'
 import { ChatMessageComponent } from './ChatMessage'
 import styles from './Chat.module.scss'
+import { TChatMessage } from 'model'
 
 interface Props {
-    messages: ChatMessage[]
+    messages: TChatMessage[]
     onSendMessage: (message: string) => void
 }
 

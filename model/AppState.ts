@@ -1,6 +1,7 @@
-import { Chat, Room } from 'model'
+import { Chat, Lobby, User } from 'model'
 
 export class AppState {
+    users: User[] = []
     globalChat = new Chat()
-    rooms: Record<string, Room> = {}
+    lobbies: Record<string, Lobby> = {}
 }

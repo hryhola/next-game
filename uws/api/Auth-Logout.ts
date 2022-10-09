@@ -7,12 +7,12 @@ export interface CloseRequest {
 }
 
 export const handler: Handler<CloseRequest> = (res, data) => {
-    state.globalChat.onlineUsers = state.globalChat.onlineUsers.filter(u => u.id !== data.username)
+    state.users = state.users.filter(u => u.id !== data.username)
 
     res.publish(topics.globalOnlineUpdate, {
         ctx: topics.globalOnlineUpdate,
         data: {
-            onlineUsersCount: state.globalChat.onlineUsers.length
+            onlineUsersCount: state.users.length
         } as GlobalOnlineUpdate
     })
 }

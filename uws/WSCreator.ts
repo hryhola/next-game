@@ -70,6 +70,7 @@ export const createSocketApp = () => {
                         app.publish(channel, JSON.stringify(message))
                     },
                     res<T>(data: T) {
+                        console.log('Responding to', request.ctx, data)
                         ws.send(
                             JSON.stringify({
                                 ctx: request.ctx,
@@ -78,6 +79,7 @@ export const createSocketApp = () => {
                         )
                     },
                     send<T>(ctx: string, data: T) {
+                        console.log('Sending to', ctx, data)
                         ws.send(
                             JSON.stringify({
                                 ctx: ctx,
