@@ -6,6 +6,7 @@ import { connectToWebSocket } from 'client/ws'
 import { WSContext } from 'client/context/list/ws.context'
 import { sleep } from 'util/time'
 import { DevToolsOverlay } from 'client/features/dev/DevToolsOverlay'
+import { AnimatedBackground } from 'client/ui/animated-background/AnimatedBackground'
 
 let isConnecting = false
 
@@ -84,6 +85,7 @@ const Home: NextPage = () => {
 
     return (
         <>
+            <AnimatedBackground type="ghost-mouse" />
             <DevToolsOverlay />
             <LoadingOverlay isLoading={!isConnected}>
                 <Router />
