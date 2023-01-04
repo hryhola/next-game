@@ -1,16 +1,14 @@
 import { useEffect } from 'react'
 import dotsGrid from './scripts/dots-grid'
 import matrix from './scripts/matrix'
-import ghostMouse from './scripts/ghost-mouse'
 
 import styles from './AnimatedBackground.module.scss'
 
-export type AnimationType = 'dot-grid' | 'matrix' | 'ghost-mouse'
+export type AnimationType = 'dot-grid' | 'matrix'
 
 const scriptMap: Record<AnimationType, Function> = {
     'dot-grid': dotsGrid,
-    matrix: matrix,
-    'ghost-mouse': ghostMouse
+    matrix: matrix
 }
 
 interface Props {
