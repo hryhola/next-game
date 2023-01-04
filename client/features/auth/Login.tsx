@@ -3,6 +3,7 @@ import { Failure, Success } from 'uws/api/Auth-Login'
 import { AuthContext } from 'client/context/list/auth.context'
 import { RouterContext } from 'client/context/list/router.context'
 import { WSContext } from 'client/context/list/ws.context'
+import { Button, Grid, TextField } from '@mui/material'
 
 export const Login: React.FC = () => {
     const ws = useContext(WSContext)
@@ -32,10 +33,25 @@ export const Login: React.FC = () => {
     }
 
     return (
-        <form onSubmit={handleSubmit}>
-            {error && <div>{error}</div>}
-            <input type="text" name="username" value={username} onChange={e => setUsername(e.target.value)} />
-            <button type="submit">login</button>
-        </form>
+        <Grid container component="form" onSubmit={handleSubmit} direction="column" justifyContent="center" alignItems="center" spacing={2} height="100vh">
+            <Grid item minWidth="300px">
+                <TextField
+                    id="outlined-basic"
+                    name="username"
+                    label="Nickname"
+                    variant="outlined"
+                    value={username}
+                    onChange={e => setUsername(e.target.value)}
+                    error={Boolean(error)}
+                    helperText={error || undefined}
+                    fullWidth
+                />
+            </Grid>
+            <Grid item minWidth="300px">
+                <Button type="submit" variant="outlined" size="large" fullWidth>
+                    enter
+                </Button>
+            </Grid>
+        </Grid>
     )
 }
