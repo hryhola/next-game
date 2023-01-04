@@ -85,7 +85,7 @@ const Home: NextPage = () => {
 
     return (
         <>
-            <DevToolsOverlay />
+            {/* <DevToolsOverlay /> */}
             <LoadingOverlay isLoading={!isConnected}>
                 <Router />
             </LoadingOverlay>
