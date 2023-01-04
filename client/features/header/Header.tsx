@@ -6,8 +6,13 @@ import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
 import IconButton from '@mui/material/IconButton'
 import MenuIcon from '@mui/icons-material/Menu'
+import { AuthContext } from 'client/context/list/auth.context'
+import { ProfilePreview } from './ProfilePreview'
+import { Container } from '@mui/material'
 
-export default function ButtonAppBar() {
+export function Header() {
+    const auth = React.useContext(AuthContext)
+
     return (
         <Box sx={{ flexGrow: 1 }}>
             <AppBar position="static">
@@ -16,9 +21,9 @@ export default function ButtonAppBar() {
                         <MenuIcon />
                     </IconButton>
                     <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-                        News
+                        Game Club
                     </Typography>
-                    <Button color="inherit">Login</Button>
+                    <ProfilePreview sx={{ marginY: 2 }} />
                 </Toolbar>
             </AppBar>
         </Box>

@@ -66,7 +66,6 @@ export const GlobalChat: React.FC = () => {
 
     return (
         <div className={styles.container}>
-            <div>Online users: {onlineUsersCount}</div>
             <Chat messages={messages} onSendMessage={handlerSend} />
         </div>
     )
