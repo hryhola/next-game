@@ -1,39 +1,28 @@
-import { useContext, useState } from 'react'
-import { GlobalChat } from 'client/features/global-chat/GlobalChat'
+import { useContext } from 'react'
 import { Header } from 'client/features/header/Header'
-import { AuthContext } from 'client/context/list/auth.context'
-import { Modal } from 'client/ui/modal/Modal'
-import styles from './HomeRoute.module.scss'
-import { LobbyCreator } from 'client/features/lobby-creator/LobbyCreator'
-import { LobbyBrowser } from 'client/features/lobby-browser/LobbyBrowser'
-import HomeTabs from 'client/features/home-tabs/HomeTabs'
-import { Box } from '@mui/material'
+import { HomeContext } from 'client/context/list/home.context'
+
+import { HomeTabs } from 'client/features/home-tabs/HomeTabs'
+import { Navigation } from 'client/features/navigation/Navigation'
+import { Grid } from '@mui/material'
+import { ProfileEditor } from 'client/features/profile-editor/ProfileEditor'
+import FullScreenModel from 'client/ui/full-screen-modal/FullScreenModel'
 
 export const HomeRoute: React.FC = () => {
-    const [isCreateLobbyVisible, setIsCreateLobbyVisible] = useState(false)
-    const [isLobbyListVisible, setIsLobbyListVisible] = useState(false)
-
-    const auth = useContext(AuthContext)
-
-    const openLobbyCreationModel = () => setIsCreateLobbyVisible(true)
-    const openLobbyListModel = () => setIsLobbyListVisible(true)
+    const home = useContext(HomeContext)
 
     return (
         <>
-            <Header />
-            <HomeTabs />
-            {/* <div className={styles.container}>
-                <main>
-                    Hello, {auth.username}
-                    <button onClick={openLobbyCreationModel}>Create lobby</button>
-                    <button onClick={openLobbyListModel}>Search for lobbies</button>
-                </main>
-                <section className={styles.chat}>
-                    <GlobalChat />
-                </section>
-            </div>
-            <Modal isOpen={isCreateLobbyVisible} setIsOpen={setIsCreateLobbyVisible} content={LobbyCreator} />
-            <Modal isOpen={isLobbyListVisible} setIsOpen={setIsLobbyListVisible} content={LobbyBrowser} /> */}
+            <Grid display="flex" direction="column" height="100vh">
+                <Header />
+                <HomeTabs sx={{ flexGrow: 1 }} />
+            </Grid>
+            <FullScreenModel label="Edit profile" isOpen={home.isProfileEditModalOpen} setIsOpen={home.setIsProfileEditModalOpen}>
+                <ProfileEditor />
+            </FullScreenModel>
+            <FullScreenModel label="Navigation" isOpen={home.isNavigationOpen} setIsOpen={home.setIsNavigationOpen} transition="right">
+                <Navigation />
+            </FullScreenModel>
         </>
     )
 }

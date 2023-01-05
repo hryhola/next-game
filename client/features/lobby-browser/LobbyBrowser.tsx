@@ -1,4 +1,4 @@
-import { Box, IconButton, Toolbar } from '@mui/material'
+import { Box, IconButton, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Toolbar } from '@mui/material'
 import { WSContext } from 'client/context/list/ws.context'
 import { useContext, useEffect, useState } from 'react'
 import { LobbyInfo } from 'uws/api/Lobby-GetList'
@@ -7,6 +7,7 @@ import AddIcon from '@mui/icons-material/Add'
 import { styled, alpha } from '@mui/material/styles'
 import InputBase from '@mui/material/InputBase'
 import SearchIcon from '@mui/icons-material/Search'
+import LockIcon from '@mui/icons-material/Lock'
 
 const Search = styled('div')(({ theme }) => ({
     position: 'relative',
@@ -49,10 +50,12 @@ const StyledInputBase = styled(InputBase)(({ theme }) => ({
 }))
 
 const LobbyRecord: React.FC<LobbyInfo> = props => (
-    <li>
-        {props.id}
-        {props.private ? <button>Enter password</button> : <button>Join</button>}
-    </li>
+    <ListItem disablePadding>
+        <ListItemButton>
+            <ListItemText>{props.id}</ListItemText>
+            {props.private && <LockIcon />}
+        </ListItemButton>
+    </ListItem>
 )
 
 export const LobbyBrowser: React.FC = () => {
@@ -61,7 +64,137 @@ export const LobbyBrowser: React.FC = () => {
     const [lobbiesList, setLobbiesList] = useState<LobbyInfo[]>([])
 
     const getListHandler: RequestHandler<'Lobby-GetList'> = data => {
-        setLobbiesList(data.lobbies)
+        // setLobbiesList(data.lobbies)
+        setLobbiesList([
+            {
+                id: 'Room',
+                private: false
+            },
+            {
+                id: 'Room 2',
+                private: true
+            },
+            {
+                id: 'Room 3',
+                private: false
+            },
+            {
+                id: 'Room 4',
+                private: false
+            },
+            {
+                id: 'Room 2',
+                private: false
+            },
+            {
+                id: 'Room 3',
+                private: true
+            },
+            {
+                id: 'Room 4',
+                private: false
+            },
+            {
+                id: 'Room 4',
+                private: false
+            },
+            {
+                id: 'Room 4',
+                private: false
+            },
+            {
+                id: 'Room 4',
+                private: false
+            },
+            {
+                id: 'Room 4',
+                private: false
+            },
+            {
+                id: 'Room 4',
+                private: false
+            },
+            {
+                id: 'Room 4',
+                private: false
+            },
+            {
+                id: 'Room 4',
+                private: false
+            },
+            {
+                id: 'Room 4',
+                private: false
+            },
+            {
+                id: 'Room 4',
+                private: false
+            },
+            {
+                id: 'Room 4',
+                private: false
+            },
+            {
+                id: 'Room 4',
+                private: false
+            },
+            {
+                id: 'Room 4',
+                private: false
+            },
+            {
+                id: 'Room 4',
+                private: false
+            },
+            {
+                id: 'Room 4',
+                private: false
+            },
+            {
+                id: 'Room 4',
+                private: false
+            },
+            {
+                id: 'Room 4',
+                private: false
+            },
+            {
+                id: 'Room 4',
+                private: false
+            },
+            {
+                id: 'Room 4',
+                private: false
+            },
+            {
+                id: 'Room 4',
+                private: false
+            },
+            {
+                id: 'Room 4',
+                private: false
+            },
+            {
+                id: 'Room 4',
+                private: false
+            },
+            {
+                id: 'Room 4',
+                private: false
+            },
+            {
+                id: 'Room 4',
+                private: false
+            },
+            {
+                id: 'Room 4',
+                private: false
+            },
+            {
+                id: 'Room 5',
+                private: false
+            }
+        ])
     }
 
     useEffect(() => {
@@ -82,7 +215,7 @@ export const LobbyBrowser: React.FC = () => {
                     <StyledInputBase placeholder="Search…" inputProps={{ 'aria-label': 'search' }} />
                 </Search>
             </Toolbar>
-            <ul>{lobbiesList.map(LobbyRecord)}</ul>
+            <List>{lobbiesList.map(LobbyRecord)}</List>
         </>
     )
 }

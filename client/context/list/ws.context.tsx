@@ -1,7 +1,7 @@
 import React, { useState, createContext, useContext, useEffect, useRef, MutableRefObject } from 'react'
 import type { HandlerName } from 'uws/api'
 import type { RequestData, RequestHandler } from 'uws/uws.types'
-import { AuthContext } from './auth.context'
+import { UserContext } from './user.context'
 
 type HandlerOn = <C extends keyof typeof import('uws/events')['topics']>(context: C, handler: RequestHandler<C>) => void
 type HandlerSend = <H extends HandlerName>(context: H, data?: RequestData<H>) => void
@@ -22,7 +22,7 @@ interface Props {
 }
 
 export const WSProvider: React.FC<Props> = props => {
-    const auth = useContext(AuthContext)
+    const auth = useContext(UserContext)
 
     const wsRef = useRef<WebSocket | null>(null)
 

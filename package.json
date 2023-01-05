@@ -16,6 +16,7 @@
         "@mui/material": "^5.11.3",
         "@mui/styled-engine-sc": "^5.11.0",
         "@types/react-swipeable-views": "^0.13.1",
+        "address": "^1.2.2",
         "classnames": "^2.3.2",
         "next": "12.3.1",
         "node-sass": "^8.0.0",

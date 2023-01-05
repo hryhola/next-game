@@ -1,13 +1,13 @@
 import { useState, useEffect, useContext, FormEventHandler } from 'react'
 import { Failure, Success } from 'uws/api/Auth-Login'
-import { AuthContext } from 'client/context/list/auth.context'
+import { UserContext } from 'client/context/list/user.context'
 import { RouterContext } from 'client/context/list/router.context'
 import { WSContext } from 'client/context/list/ws.context'
 import { Button, Grid, TextField } from '@mui/material'
 
 export const Login: React.FC = () => {
     const ws = useContext(WSContext)
-    const auth = useContext(AuthContext)
+    const auth = useContext(UserContext)
     const router = useContext(RouterContext)
 
     const [username, setUsername] = useState('')
@@ -38,7 +38,7 @@ export const Login: React.FC = () => {
                 <TextField
                     id="outlined-basic"
                     name="username"
-                    label="Nickname"
+                    label="nickname"
                     variant="outlined"
                     value={username}
                     onChange={e => setUsername(e.target.value)}
