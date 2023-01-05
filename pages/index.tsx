@@ -21,7 +21,7 @@ const Home: NextPage = () => {
 
         isConnecting = true
 
-        connectToWebSocket({
+        connectToWebSocket(window.location.hostname, window.location.port, {
             onClose: () => setIsConnected(false),
             onError: () => setIsConnected(false),
             onOpen: (ws: WebSocket) => {
@@ -48,7 +48,7 @@ const Home: NextPage = () => {
 
                 console.log('trying to establish connection')
 
-                await connectToWebSocket({
+                await connectToWebSocket(window.location.hostname, window.location.port, {
                     onOpen: (ws: WebSocket) => {
                         console.log('Connection is set.')
                         wsRef.current = ws
@@ -85,7 +85,6 @@ const Home: NextPage = () => {
 
     return (
         <>
-            {/* <DevToolsOverlay /> */}
             <LoadingOverlay isLoading={!isConnected}>
                 <Router />
             </LoadingOverlay>
