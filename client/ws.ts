@@ -20,7 +20,7 @@ export const connectToWebSocket = async (hostname: string, port: string, callbac
     return initUWS(siteLink)
         .catch(e => console.log('UWS Init error', e))
         .finally(() => {
-            const url = `${process.env.NODE_ENV === 'production' ? 'wss' : 'ws'}://${hostname}:5555`
+            const url = `${process.env.NODE_ENV === 'production' ? 'wss' : 'ws'}://${hostname}:${process.env.PORT || 5555}`
 
             const ws = new WebSocket(url)
 

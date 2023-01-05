@@ -3,7 +3,7 @@ import util from 'util'
 import handlers, { HandlerName } from './api'
 import { AbstractSocketMessage, ResponseActions } from './uws.types'
 
-export const PORT = 5555
+export const PORT = Number(process.env.PORT) || 5555
 
 export const createSocketApp = () => {
     const decoder = new util.TextDecoder()
