@@ -15,7 +15,7 @@ const SocketHandler = (_req: NextApiRequest, res: NextApiResponseUWS) => {
     if (res.socket.server.uws) {
         console.log('Socket is already running')
 
-        return res.end()
+        return res.json({ port: process.env.PORT || 5555 })
     }
 
     console.log('Socket is initializing')
@@ -24,7 +24,7 @@ const SocketHandler = (_req: NextApiRequest, res: NextApiResponseUWS) => {
 
     res.socket.server.uws = uws
 
-    res.end()
+    res.json({ port: process.env.PORT || 5555 })
 }
 
 export default SocketHandler

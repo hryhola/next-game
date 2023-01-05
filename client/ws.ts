@@ -1,6 +1,6 @@
 type WebSocketCallbacks = { onClose: () => void; onOpen: (ws: WebSocket) => void; onError: () => void }
 
-export const initUWS = (siteLink: string) => fetch(`${process.env.NODE_ENV === 'production' ? 'https' : 'http'}://${siteLink}/api/init`)
+export const initUWS = (siteLink: string) => fetch(`${process.env.NODE_ENV === 'production' ? 'https' : 'http'}://${siteLink}/api/init`).then(res => res.json())
 
 let isHandlingConnectRequest = false
 
@@ -19,8 +19,8 @@ export const connectToWebSocket = async (hostname: string, port: string, callbac
 
     return initUWS(siteLink)
         .catch(e => console.log('UWS Init error', e))
-        .finally(() => {
-            const url = `${process.env.NODE_ENV === 'production' ? 'wss' : 'ws'}://${hostname}:${process.env.PORT || 5555}`
+        .then(({ port }) => {
+            const url = `${process.env.NODE_ENV === 'production' ? 'wss' : 'ws'}://${hostname}:${port}`
 
             console.log('WS url is', url)
 
