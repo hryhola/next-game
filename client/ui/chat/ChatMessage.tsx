@@ -1,3 +1,4 @@
+import ListItem from '@mui/material/ListItem'
 import { TChatMessage } from 'model'
 import styles from './Chat.module.scss'
 
@@ -6,7 +7,7 @@ interface Props {
 }
 
 export const ChatMessageComponent: React.FC<Props> = ({ message }) => (
-    <div className={styles.message}>
-        <b>{message.username}</b>&nbsp;{message.text}
-    </div>
+    <ListItem sx={{ overflowWrap: 'anywhere' }}>
+        <b style={{ display: 'contents' }}>{message.username}</b>&nbsp;{message.text}
+    </ListItem>
 )

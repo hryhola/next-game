@@ -1,6 +1,6 @@
 import * as React from 'react'
 import SwipeableViews from 'react-swipeable-views'
-import { useTheme } from '@mui/material/styles'
+import { SxProps, Theme, useTheme } from '@mui/material/styles'
 import AppBar from '@mui/material/AppBar'
 import Tabs from '@mui/material/Tabs'
 import Tab from '@mui/material/Tab'
@@ -8,25 +8,27 @@ import Typography from '@mui/material/Typography'
 import Box from '@mui/material/Box'
 import { LobbyBrowser } from '../lobby-browser/LobbyBrowser'
 import { GlobalChat } from '../global-chat/GlobalChat'
+import { GetProps } from 'react-redux'
+import { headerHeight } from '../header/Header'
+import { chatInputHeight } from 'client/ui'
+import ListItemText from '@mui/material/ListItemText'
+import { List, ListItem } from '@mui/material'
 
 interface TabPanelProps {
     children?: React.ReactNode
     dir?: string
     index: number
     value: number
+    sx?: SxProps<Theme>
 }
 
 function TabPanel(props: TabPanelProps) {
     const { children, value, index, ...other } = props
 
     return (
-        <div role="tabpanel" hidden={value !== index} id={`full-width-tabpanel-${index}`} aria-labelledby={`full-width-tab-${index}`} {...other}>
-            {value === index && (
-                <Box sx={{ p: 3 }}>
-                    <Typography>{children}</Typography>
-                </Box>
-            )}
-        </div>
+        <Box role="tabpanel" hidden={value !== index} id={`full-width-tabpanel-${index}`} aria-labelledby={`full-width-tab-${index}`} {...other}>
+            {value === index && children}
+        </Box>
     )
 }
 
@@ -37,7 +39,9 @@ function a11yProps(index: number) {
     }
 }
 
-export default function FullWidthTabs() {
+export const tabsHeaderHeight = '48px'
+
+export const HomeTabs: React.FC<GetProps<typeof Box>> = props => {
     const theme = useTheme()
     const [value, setValue] = React.useState(0)
 
@@ -49,24 +53,218 @@ export default function FullWidthTabs() {
         setValue(index)
     }
 
+    const sx: SxProps<Theme> = {
+        bgcolor: 'background.paper',
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        ...(props.sx || {})
+    }
+
+    const headersHeight = `(${tabsHeaderHeight} + ${headerHeight})`
+
     return (
-        <Box sx={{ bgcolor: 'background.paper' }}>
-            <AppBar position="static">
+        <Box {...props} sx={sx}>
+            <AppBar sx={{ height: tabsHeaderHeight }} position="static">
                 <Tabs value={value} onChange={handleChange} indicatorColor="primary" textColor="inherit" variant="fullWidth" aria-label="Home page navigation">
                     <Tab label="Lobbies" {...a11yProps(0)} />
                     <Tab label="Global chat" {...a11yProps(1)} />
                     <Tab label="Online users" {...a11yProps(2)} />
                 </Tabs>
             </AppBar>
-            <SwipeableViews axis={theme.direction === 'rtl' ? 'x-reverse' : 'x'} index={value} onChangeIndex={handleChangeIndex}>
-                <TabPanel value={value} index={0} dir={theme.direction}>
+            <SwipeableViews
+                id="home-tab-swipe-container"
+                style={{ flexGrow: 1 }}
+                axis={theme.direction === 'rtl' ? 'x-reverse' : 'x'}
+                index={value}
+                onChangeIndex={handleChangeIndex}
+            >
+                <TabPanel sx={{ height: `calc(100vh - ${headersHeight})` }} value={value} index={0} dir={theme.direction}>
                     <LobbyBrowser />
                 </TabPanel>
-                <TabPanel value={value} index={1} dir={theme.direction}>
-                    <GlobalChat />
+                <TabPanel sx={{ height: `calc(100vh - ${headersHeight})` }} value={value} index={1} dir={theme.direction}>
+                    <GlobalChat messagesWrapperBoxSx={{ height: `calc(100vh - ${headersHeight} - ${chatInputHeight})` }} />
                 </TabPanel>
-                <TabPanel value={value} index={2} dir={theme.direction}>
-                    Item Three
+                <TabPanel sx={{ height: `calc(100vh - ${headersHeight})` }} value={value} index={2} dir={theme.direction}>
+                    <List>
+                        <ListItem>
+                            <ListItemText>User name</ListItemText>
+                        </ListItem>
+                        <ListItem>
+                            <ListItemText>User name</ListItemText>
+                        </ListItem>
+                        <ListItem>
+                            <ListItemText>User name</ListItemText>
+                        </ListItem>
+                        <ListItem>
+                            <ListItemText>User name</ListItemText>
+                        </ListItem>
+                        <ListItem>
+                            <ListItemText>User name</ListItemText>
+                        </ListItem>
+                        <ListItem>
+                            <ListItemText>User name</ListItemText>
+                        </ListItem>
+                        <ListItem>
+                            <ListItemText>User name</ListItemText>
+                        </ListItem>
+                        <ListItem>
+                            <ListItemText>User name</ListItemText>
+                        </ListItem>
+                        <ListItem>
+                            <ListItemText>User name</ListItemText>
+                        </ListItem>
+                        <ListItem>
+                            <ListItemText>User name</ListItemText>
+                        </ListItem>
+                        <ListItem>
+                            <ListItemText>User name</ListItemText>
+                        </ListItem>
+                        <ListItem>
+                            <ListItemText>User name</ListItemText>
+                        </ListItem>
+                        <ListItem>
+                            <ListItemText>User name</ListItemText>
+                        </ListItem>
+                        <ListItem>
+                            <ListItemText>User name</ListItemText>
+                        </ListItem>
+                        <ListItem>
+                            <ListItemText>User name</ListItemText>
+                        </ListItem>
+                        <ListItem>
+                            <ListItemText>User name</ListItemText>
+                        </ListItem>
+                        <ListItem>
+                            <ListItemText>User name</ListItemText>
+                        </ListItem>
+                        <ListItem>
+                            <ListItemText>User name</ListItemText>
+                        </ListItem>
+                        <ListItem>
+                            <ListItemText>User name</ListItemText>
+                        </ListItem>
+                        <ListItem>
+                            <ListItemText>User name</ListItemText>
+                        </ListItem>
+                        <ListItem>
+                            <ListItemText>User name</ListItemText>
+                        </ListItem>
+                        <ListItem>
+                            <ListItemText>User name</ListItemText>
+                        </ListItem>
+                        <ListItem>
+                            <ListItemText>User name</ListItemText>
+                        </ListItem>
+                        <ListItem>
+                            <ListItemText>User name</ListItemText>
+                        </ListItem>
+                        <ListItem>
+                            <ListItemText>User name</ListItemText>
+                        </ListItem>
+                        <ListItem>
+                            <ListItemText>User name</ListItemText>
+                        </ListItem>
+                        <ListItem>
+                            <ListItemText>User name</ListItemText>
+                        </ListItem>
+                        <ListItem>
+                            <ListItemText>User name</ListItemText>
+                        </ListItem>
+                        <ListItem>
+                            <ListItemText>User name</ListItemText>
+                        </ListItem>
+                        <ListItem>
+                            <ListItemText>User name</ListItemText>
+                        </ListItem>
+                        <ListItem>
+                            <ListItemText>User name</ListItemText>
+                        </ListItem>
+                        <ListItem>
+                            <ListItemText>User name</ListItemText>
+                        </ListItem>
+                        <ListItem>
+                            <ListItemText>User name</ListItemText>
+                        </ListItem>
+                        <ListItem>
+                            <ListItemText>User name</ListItemText>
+                        </ListItem>
+                        <ListItem>
+                            <ListItemText>User name</ListItemText>
+                        </ListItem>
+                        <ListItem>
+                            <ListItemText>User name</ListItemText>
+                        </ListItem>
+                        <ListItem>
+                            <ListItemText>User name</ListItemText>
+                        </ListItem>
+                        <ListItem>
+                            <ListItemText>User name</ListItemText>
+                        </ListItem>
+                        <ListItem>
+                            <ListItemText>User name</ListItemText>
+                        </ListItem>
+                        <ListItem>
+                            <ListItemText>User name</ListItemText>
+                        </ListItem>
+                        <ListItem>
+                            <ListItemText>User name</ListItemText>
+                        </ListItem>
+                        <ListItem>
+                            <ListItemText>User name</ListItemText>
+                        </ListItem>
+                        <ListItem>
+                            <ListItemText>User name</ListItemText>
+                        </ListItem>
+                        <ListItem>
+                            <ListItemText>User name</ListItemText>
+                        </ListItem>
+                        <ListItem>
+                            <ListItemText>User name</ListItemText>
+                        </ListItem>
+                        <ListItem>
+                            <ListItemText>User name</ListItemText>
+                        </ListItem>
+                        <ListItem>
+                            <ListItemText>User name</ListItemText>
+                        </ListItem>
+                        <ListItem>
+                            <ListItemText>User name</ListItemText>
+                        </ListItem>
+                        <ListItem>
+                            <ListItemText>User name</ListItemText>
+                        </ListItem>
+                        <ListItem>
+                            <ListItemText>User name</ListItemText>
+                        </ListItem>
+                        <ListItem>
+                            <ListItemText>User name</ListItemText>
+                        </ListItem>
+                        <ListItem>
+                            <ListItemText>User name</ListItemText>
+                        </ListItem>
+                        <ListItem>
+                            <ListItemText>User name</ListItemText>
+                        </ListItem>
+                        <ListItem>
+                            <ListItemText>User name</ListItemText>
+                        </ListItem>
+                        <ListItem>
+                            <ListItemText>User name</ListItemText>
+                        </ListItem>
+                        <ListItem>
+                            <ListItemText>User name</ListItemText>
+                        </ListItem>
+                        <ListItem>
+                            <ListItemText>User name</ListItemText>
+                        </ListItem>
+                        <ListItem>
+                            <ListItemText>User name</ListItemText>
+                        </ListItem>
+                        <ListItem>
+                            <ListItemText>User name</ListItemText>
+                        </ListItem>
+                    </List>
                 </TabPanel>
             </SwipeableViews>
         </Box>

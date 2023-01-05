@@ -1,19 +1,17 @@
 import { useEffect, useState } from 'react'
 import { v4 as uuid } from 'uuid'
-import { Chat } from 'client/ui'
-import { AuthContext } from 'client/context/list/auth.context'
+import { Chat, ChatSXProps } from 'client/ui'
+import { UserContext } from 'client/context/list/user.context'
 import { useContext } from 'react'
 import { WSContext } from 'client/context/list/ws.context'
 import { topics } from 'uws/events'
-import styles from './GlobalChat.module.scss'
 import { TChatMessage } from 'model'
 
-export const GlobalChat: React.FC = () => {
-    const auth = useContext(AuthContext)
+export const GlobalChat: React.FC<ChatSXProps> = props => {
+    const auth = useContext(UserContext)
     const ws = useContext(WSContext)
 
     const [messages, setMessages] = useState<TChatMessage[]>([])
-    const [onlineUsersCount, setOnlineUsersCount] = useState<number | null>(null)
 
     const handleMessageRetrieve = (data: { message: TChatMessage }) => {
         setMessages(curr => [data.message, ...curr])
@@ -27,10 +25,6 @@ export const GlobalChat: React.FC = () => {
         }
 
         ws.send('Global-ChatSend', { message })
-    }
-
-    const handleOnlineUpdate = (data: { onlineUsersCount: number }) => {
-        setOnlineUsersCount(data.onlineUsersCount)
     }
 
     const handleMessagesInit = (data: { messages: TChatMessage[] }) => {
@@ -52,11 +46,9 @@ export const GlobalChat: React.FC = () => {
 
         subscriptionsInit()
 
-        ws.on(topics.globalOnlineUpdate, handleOnlineUpdate)
         ws.on(topics.globalChatMessageUpdate, handleMessageRetrieve)
         ws.on(topics['Global-ChatGet'], handleMessagesInit)
 
-        ws.send('Global-OnlineGet')
         ws.send('Global-ChatGet')
     }, [])
 
@@ -64,9 +56,5 @@ export const GlobalChat: React.FC = () => {
         ws.isConnected && subscriptionsInit()
     }, [ws.isConnected])
 
-    return (
-        <div className={styles.container}>
-            <Chat messages={messages} onSendMessage={handlerSend} />
-        </div>
-    )
+    return <Chat messages={messages} onSendMessage={handlerSend} {...props} />
 }

@@ -1,4 +1,4 @@
-import { AuthContext } from 'client/context/list/auth.context'
+import { UserContext } from 'client/context/list/user.context'
 import { LobbyContext } from 'client/context/list/lobby.context'
 import { RouterContext } from 'client/context/list/router.context'
 import { WSContext } from 'client/context/list/ws.context'
@@ -9,7 +9,7 @@ import styles from './LobbyCreator.module.scss'
 export const LobbyCreator: React.FC = () => {
     const router = useContext(RouterContext)
     const ws = useContext(WSContext)
-    const auth = useContext(AuthContext)
+    const auth = useContext(UserContext)
     const lobby = useContext(LobbyContext)
 
     const [name, setName] = useState('')

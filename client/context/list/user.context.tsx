@@ -20,15 +20,15 @@ const init: RouterData = {
     }
 }
 
-export const AuthContext = createContext<RouterData>(init)
+export const UserContext = createContext<RouterData>(init)
 
 interface Props {
     children?: JSX.Element
 }
 
-export const AuthProvider: React.FC<Props> = props => {
+export const UserProvider: React.FC<Props> = props => {
     const [username, setUsername] = useState('')
-    const [profilePictureUrl, setProfilePictureUrl] = useState('')
+    const [profilePictureUrl, setProfilePictureUrl] = useState('https://gordonua.com/img/article/16025/78_big.jpg')
 
-    return <AuthContext.Provider value={{ username, setUsername, profilePictureUrl, setProfilePictureUrl }}>{props.children}</AuthContext.Provider>
+    return <UserContext.Provider value={{ username, setUsername, profilePictureUrl, setProfilePictureUrl }}>{props.children}</UserContext.Provider>
 }
