@@ -22,6 +22,8 @@ export const connectToWebSocket = async (hostname: string, port: string, callbac
         .finally(() => {
             const url = `${process.env.NODE_ENV === 'production' ? 'wss' : 'ws'}://${hostname}:${process.env.PORT || 5555}`
 
+            console.log('WS url is', url)
+
             const ws = new WebSocket(url)
 
             ws.onopen = () => {

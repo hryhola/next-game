@@ -6,6 +6,8 @@ import { AbstractSocketMessage, ResponseActions } from './uws.types'
 export const PORT = Number(process.env.PORT) || 5555
 
 export const createSocketApp = () => {
+    console.log('Creating UWS on port:', PORT)
+
     const decoder = new util.TextDecoder()
 
     const app = uws.App().ws('/*', {
@@ -117,7 +119,7 @@ export const createSocketApp = () => {
 
     app.listen(PORT, listenSocket => {
         if (listenSocket) {
-            console.log('Listening to port ' + PORT)
+            console.log('UWS Listening to port ' + PORT)
         }
     })
 
