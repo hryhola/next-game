@@ -1,22 +1,24 @@
 type WebSocketCallbacks = { onClose: () => void; onOpen: (ws: WebSocket) => void; onError: () => void }
 
-export const initUWS = () => fetch('http://localhost:3000/api/init')
+export const initUWS = (siteLink: string) => fetch(`http://${siteLink}/api/init`)
 
 let isHandlingConnectRequest = false
 
-export const connectToWebSocket = async (callbacks?: WebSocketCallbacks) => {
+export const connectToWebSocket = async (hostname: string, port: string, callbacks?: WebSocketCallbacks) => {
     if (isHandlingConnectRequest) {
         console.log('Already handling connecting request. Exiting.')
 
         return
     }
 
+    const siteLink = hostname + (port ? ':' + port : '')
+
     isHandlingConnectRequest = true
 
-    return initUWS()
+    return initUWS(siteLink)
         .catch(e => console.log('UWS Init error', e))
         .finally(() => {
-            const url = 'ws://localhost:5555'
+            const url = `ws://${hostname}:5555`
 
             const ws = new WebSocket(url)
 
