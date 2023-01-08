@@ -6,7 +6,7 @@ import { HomeTabs } from 'client/features/home-tabs/HomeTabs'
 import { Navigation } from 'client/features/navigation/Navigation'
 import { Grid } from '@mui/material'
 import { ProfileEditor } from 'client/features/profile-editor/ProfileEditor'
-import FullScreenModel from 'client/ui/full-screen-modal/FullScreenModel'
+import FullScreenModal from 'client/ui/full-screen-modal/FullScreenModal'
 
 export const HomeRoute: React.FC = () => {
     const home = useContext(HomeContext)
@@ -17,12 +17,12 @@ export const HomeRoute: React.FC = () => {
                 <Header />
                 <HomeTabs sx={{ flexGrow: 1 }} />
             </Grid>
-            <FullScreenModel label="Edit profile" isOpen={home.isProfileEditModalOpen} setIsOpen={home.setIsProfileEditModalOpen}>
+            <FullScreenModal label="Edit profile" isOpen={home.isProfileEditModalOpen} setIsOpen={home.setIsProfileEditModalOpen}>
                 <ProfileEditor />
-            </FullScreenModel>
-            <FullScreenModel label="Navigation" isOpen={home.isNavigationOpen} setIsOpen={home.setIsNavigationOpen} transition="right">
+            </FullScreenModal>
+            <FullScreenModal label="Navigation" isOpen={home.isNavigationOpen} setIsOpen={home.setIsNavigationOpen} transition="right">
                 <Navigation />
-            </FullScreenModel>
+            </FullScreenModal>
         </>
     )
 }

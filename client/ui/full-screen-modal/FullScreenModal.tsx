@@ -25,7 +25,7 @@ const Transition = React.forwardRef(function Transition(
     return <Slide direction="up" ref={ref} {...props} />
 })
 
-const FullScreenModel: React.FC<{
+const FullScreenModal: React.FC<{
     isOpen: boolean
     setIsOpen: (value: boolean) => void
     children: JSX.Element
@@ -52,4 +52,4 @@ const FullScreenModel: React.FC<{
     )
 }
 
-export default FullScreenModel
+export default FullScreenModal
