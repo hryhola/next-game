@@ -5,8 +5,7 @@
     "scripts": {
         "dev": "next dev",
         "build": "next build",
-        "start": "next start -p $PORT",
-        "run": "next start",
+        "start": "next start",
         "lint": "next lint",
         "prepare": "husky install"
     },

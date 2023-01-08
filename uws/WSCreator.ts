@@ -3,13 +3,17 @@ import util from 'util'
 import handlers, { HandlerName } from './api'
 import { AbstractSocketMessage, ResponseActions } from './uws.types'
 
-export const PORT = Number(process.env.PORT) || 5555
+export const WS_PORT = 5555
 
 export const createSocketApp = () => {
-    console.log('Creating UWS on port:', PORT)
+    console.log('Creating UWS on port:', WS_PORT)
 
     const decoder = new util.TextDecoder()
 
+    // const app = uws.SSLApp({
+    //     key_file_name: "/etc/letsencrypt/live/game-club/privkey.pem",
+    //     cert_file_name: "/etc/letsencrypt/live/game-club/cert.pem"
+    // }).ws('/*', {
     const app = uws.App().ws('/*', {
         open: _ws => {
             console.log('new connected')
@@ -117,9 +121,9 @@ export const createSocketApp = () => {
         }
     })
 
-    app.listen(PORT, listenSocket => {
+    app.listen(WS_PORT, listenSocket => {
         if (listenSocket) {
-            console.log('UWS Listening to port ' + PORT)
+            console.log('UWS Listening to port ' + WS_PORT)
         }
     })
 
