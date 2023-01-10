@@ -1,10 +1,12 @@
 import React, { useState, createContext } from 'react'
 
 export const HomeContext = createContext({
-    isProfileEditModalOpen: false,
-    setIsProfileEditModalOpen: (_value: boolean) => {},
+    isProfileEditOpen: false,
+    setIsProfileEditOpen: (_value: boolean) => {},
     isNavigationOpen: false,
-    setIsNavigationOpen: (_value: boolean) => {}
+    setIsNavigationOpen: (_value: boolean) => {},
+    isCreateLobbyOpen: false,
+    setIsCreateLobbyOpen: (_value: boolean) => {}
 })
 
 interface Props {
@@ -12,14 +14,17 @@ interface Props {
 }
 
 export const HomeProvider: React.FC<Props> = props => {
-    const [isProfileEditModalOpen, setIsProfileEditModalOpen] = useState(false)
+    const [isProfileEditOpen, setIsProfileEditOpen] = useState(false)
     const [isNavigationOpen, setIsNavigationOpen] = useState(false)
+    const [isCreateLobbyOpen, setIsCreateLobbyOpen] = useState(false)
 
     const context = {
-        isProfileEditModalOpen,
-        setIsProfileEditModalOpen,
+        isProfileEditOpen,
+        setIsProfileEditOpen,
         isNavigationOpen,
-        setIsNavigationOpen
+        setIsNavigationOpen,
+        isCreateLobbyOpen,
+        setIsCreateLobbyOpen
     }
 
     return <HomeContext.Provider value={context}>{props.children}</HomeContext.Provider>

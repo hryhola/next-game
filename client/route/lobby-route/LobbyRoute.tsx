@@ -1,10 +1,10 @@
-import { LobbyContext } from 'client/context/list/lobby.context'
+import { JeopardyContext } from 'client/context/list/jeopardy'
 import { Chat } from 'client/ui'
 import { useContext } from 'react'
 import styles from './LobbyRoute.module.scss'
 
 export const LobbyRoute: React.FC = () => {
-    const lobby = useContext(LobbyContext)
+    const lobby = useContext(JeopardyContext)
 
     const handleMessageSend = (message: string) => {}
 

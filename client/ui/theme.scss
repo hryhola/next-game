@@ -1,25 +1,3 @@
 :root {
     color-scheme: dark;
-
-    --primary: white;
-    --secondary: black;
-}
-
-:root[data-theme='light'] {
-    color-scheme: light;
-
-    --primary: black;
-    --secondary: white;
-}
-
-:root[data-theme='jeopardy'] {
-    color-scheme: dark;
-
-    --primary: white;
-    --secondary: #0028b8;
-}
-
-body {
-    color: var(--primary);
-    background: var(--secondary);
 }

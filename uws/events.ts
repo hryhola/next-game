@@ -22,4 +22,5 @@ export type TopicEventData = {
     }
     'Lobby-GetList': import('uws/api/Lobby-GetList').Success
     'Lobby-Create': import('uws/api/Lobby-Create').Success | import('uws/api/Lobby-Create').Failure
+    'Global-UsersGet': import('uws/api/Global-UsersGet').Success
 }

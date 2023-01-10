@@ -26,7 +26,7 @@ export const Header: React.FC<GetProps<typeof AppBar>> = props => {
                 <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
                     Game Club
                 </Typography>
-                <ProfilePreview sx={{ marginY: 2 }} onClick={() => home.setIsProfileEditModalOpen(true)} />
+                <ProfilePreview sx={{ marginY: 2 }} onClick={() => home.setIsProfileEditOpen(true)} />
             </Toolbar>
         </AppBar>
     )

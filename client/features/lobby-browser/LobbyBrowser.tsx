@@ -9,6 +9,7 @@ import { Input, OutlinedInput } from '@mui/material'
 import InputBase from '@mui/material/InputBase'
 import SearchIcon from '@mui/icons-material/Search'
 import LockIcon from '@mui/icons-material/Lock'
+import { HomeContext } from 'client/context/list/home.context'
 
 const LobbyRecord: React.FC<LobbyInfo> = props => (
     <ListItem disablePadding>
@@ -21,29 +22,9 @@ const LobbyRecord: React.FC<LobbyInfo> = props => (
 
 export const LobbyBrowser: React.FC = () => {
     const ws = useContext(WSContext)
+    const home = useContext(HomeContext)
 
-    const [lobbiesList, setLobbiesList] = useState<LobbyInfo[]>([
-        {
-            id: 'Room',
-            private: false
-        },
-        {
-            id: 'Room 2',
-            private: true
-        },
-        {
-            id: 'Room 3',
-            private: false
-        },
-        {
-            id: 'Room 4',
-            private: false
-        },
-        {
-            id: 'Room 5',
-            private: false
-        }
-    ])
+    const [lobbiesList, setLobbiesList] = useState<LobbyInfo[]>([])
 
     const [searchString, setSearchString] = useState('')
 
@@ -52,18 +33,16 @@ export const LobbyBrowser: React.FC = () => {
     }
 
     useEffect(() => {
-        // ws.on('Lobby-GetList', getListHandler)
-        // ws.send('Lobby-GetList')
+        ws.on('Lobby-GetList', getListHandler)
+        ws.send('Lobby-GetList')
     }, [])
 
     const renderedLobbies = searchString.length ? lobbiesList.filter(lobby => lobby.id.toLowerCase().includes(searchString.toLowerCase())) : lobbiesList
 
-    console.log(renderedLobbies)
-
     return (
         <>
             <Toolbar>
-                <IconButton size="large" edge="start" color="inherit" aria-label="menu" sx={{ mr: 2 }}>
+                <IconButton size="large" edge="start" color="inherit" aria-label="menu" sx={{ mr: 2 }} onClick={() => home.setIsCreateLobbyOpen(true)}>
                     <AddIcon />
                 </IconButton>
                 <FormControl fullWidth variant="filled">

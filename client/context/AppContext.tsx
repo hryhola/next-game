@@ -2,7 +2,7 @@ import { ContextComposer } from './ContextComposer'
 import { UserProvider } from './list/user.context'
 import { RouterProvider } from './list/router.context'
 import { WSProvider } from './list/ws.context'
-import { LobbyProvider } from './list/lobby.context'
+import { LobbyProvider } from './list/jeopardy'
 import { HomeProvider } from './list/home.context'
 
 export const AppContext: React.FC<{ children: JSX.Element }> = props => (
