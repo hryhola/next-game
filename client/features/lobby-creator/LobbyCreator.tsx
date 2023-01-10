@@ -1,70 +1,85 @@
 import { UserContext } from 'client/context/list/user.context'
-import { LobbyContext } from 'client/context/list/lobby.context'
+import { JeopardyContext } from 'client/context/list/jeopardy'
 import { RouterContext } from 'client/context/list/router.context'
 import { WSContext } from 'client/context/list/ws.context'
-import { FormEventHandler, useContext, useEffect, useState } from 'react'
+import { FormEventHandler, useContext, useEffect, useState, useRef } from 'react'
 import { CreateLobbyRequest } from 'uws/api/Lobby-Create'
-import styles from './LobbyCreator.module.scss'
+import { TextField, Button, Box, FormControl, InputLabel, MenuItem, Select, Input, CircularProgress, Backdrop, Alert } from '@mui/material'
+import FileUploadIcon from '@mui/icons-material/FileUpload'
 
 export const LobbyCreator: React.FC = () => {
     const router = useContext(RouterContext)
-    const ws = useContext(WSContext)
-    const auth = useContext(UserContext)
-    const lobby = useContext(LobbyContext)
+    const user = useContext(UserContext)
+    const jeopardy = useContext(JeopardyContext)
+
+    const formRef = useRef<HTMLFormElement | null>(null)
 
     const [name, setName] = useState('')
     const [password, setPassword] = useState('')
     const [error, setError] = useState('')
+    const [isLoading, setIsLoading] = useState(false)
 
     const handleSubmit: FormEventHandler<HTMLFormElement> = event => {
         event.preventDefault()
 
-        const requestData: CreateLobbyRequest = {
-            creatorId: auth.username,
-            lobbyId: name
-        }
+        const data = new FormData(formRef.current!)
 
-        if (password) {
-            requestData.password = password
-        }
+        data.set('creatorId', user.username)
 
-        ws.send('Lobby-Create', requestData)
+        setIsLoading(true)
+
+        fetch('/api/lobby', {
+            method: 'POST',
+            body: data
+        })
+            .then(res => res.json())
+            .then(res => {
+                if (!res.success) {
+                    setError(res.message)
+
+                    return
+                }
+
+                jeopardy.setName(name)
+                jeopardy.setMembers([
+                    {
+                        id: user.username,
+                        isCreator: true,
+                        isMaster: true
+                    }
+                ])
+
+                router.setCurrentRoute('Lobby')
+            })
+            .catch(e => setError(e.toString()))
+            .finally(() => setIsLoading(false))
     }
 
-    useEffect(() => {
-        ws.on('Lobby-Create', data => {
-            if (!data.success) {
-                setError(data.message)
-            }
-
-            lobby.setName(name)
-            lobby.setMembers([
-                {
-                    id: auth.username,
-                    isCreator: true,
-                    isMaster: true
-                }
-            ])
-
-            router.setCurrentRoute('Lobby')
-        })
-    }, [])
-
     return (
-        <form className={styles.container} onSubmit={handleSubmit}>
-            {error && (
-                <>
-                    <span>{error}</span>
-                    <br />
-                </>
-            )}
-            <label htmlFor="lobby">Lobby name</label>
-            <input name="lobby" value={name} onChange={e => setName(e.target.value)} />
+        <>
+            <Box component="form" onSubmit={handleSubmit} display="flex" flexDirection="column" ref={formRef}>
+                {error && <Alert severity="error">{error}</Alert>}
+                <TextField required label="Lobby name" name="lobbyId" value={name} onChange={e => setName(e.target.value)} />
+                <FormControl>
+                    <InputLabel id="game-type-selector">Game</InputLabel>
+                    <Select labelId="game-type-selector" id="game-type-selector" label="Game" value="Jeopardy">
+                        <MenuItem value="Jeopardy">Jeopardy</MenuItem>
+                    </Select>
+                </FormControl>
 
-            <label htmlFor="lobby-password">Password</label>
-            <input name="lobby-password" type="password" value={password} onChange={e => setPassword(e.target.value)} />
+                <FormControl>
+                    <FileUploadIcon />
+                    <input required multiple={false} accept=".siq" name="pack" type="file" />
+                </FormControl>
 
-            <button type-="submit">Create</button>
-        </form>
+                <TextField label="Password" name="password" value={password} onChange={e => setPassword(e.target.value.split('\\').pop()!)} />
+                <Button color="primary" variant="contained" type="submit">
+                    Create
+                </Button>
+            </Box>
+            <Backdrop sx={{ color: '#fff', zIndex: theme => theme.zIndex.drawer + 1 }} open={isLoading}>
+                <CircularProgress color="inherit" />
+            </Backdrop>
+        </>
     )
 }

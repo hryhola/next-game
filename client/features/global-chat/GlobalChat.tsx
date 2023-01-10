@@ -8,7 +8,7 @@ import { topics } from 'uws/events'
 import { TChatMessage } from 'model'
 
 export const GlobalChat: React.FC<ChatSXProps> = props => {
-    const auth = useContext(UserContext)
+    const user = useContext(UserContext)
     const ws = useContext(WSContext)
 
     const [messages, setMessages] = useState<TChatMessage[]>([])
@@ -19,7 +19,7 @@ export const GlobalChat: React.FC<ChatSXProps> = props => {
 
     const handlerSend = (text: string) => {
         const message: TChatMessage = {
-            username: auth.username,
+            username: user.username,
             text,
             id: uuid()
         }
