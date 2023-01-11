@@ -21,7 +21,7 @@ const Home: NextPage = () => {
 
         isConnecting = true
 
-        connectToWebSocket(window.location.hostname, {
+        connectToWebSocket(window.location, {
             onClose: () => setIsConnected(false),
             onError: () => setIsConnected(false),
             onOpen: (ws: WebSocket) => {
@@ -48,7 +48,7 @@ const Home: NextPage = () => {
 
                 console.log('trying to establish connection')
 
-                await connectToWebSocket(window.location.hostname, {
+                await connectToWebSocket(window.location, {
                     onOpen: (ws: WebSocket) => {
                         console.log('Connection is set.')
                         wsRef.current = ws
