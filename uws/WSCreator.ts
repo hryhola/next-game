@@ -5,7 +5,7 @@ import { AbstractSocketMessage, ResponseActions } from './uws.types'
 
 export const WS_PORT = 5555
 
-const wsHandler: uws.WebSocketBehavior = {
+const getWsHandler = (app: uws.TemplatedApp): uws.WebSocketBehavior  => ({
     open: _ws => {
         console.log('new connected')
     },
@@ -112,7 +112,7 @@ const wsHandler: uws.WebSocketBehavior = {
     close: (_ws, code, message) => {
         console.log('Closing connection', code, message)
     }
-}
+});
 
 export const createSocketApp = () => {
     console.log('Creating UWS on port:', WS_PORT)
@@ -121,7 +121,9 @@ export const createSocketApp = () => {
     //     key_file_name: "/etc/letsencrypt/live/game-club/privkey.pem",
     //     cert_file_name: "/etc/letsencrypt/live/game-club/cert.pem"
     // }).ws('/*', {
-    const app = uws.App().ws('/*', wsHandler)
+    const app = uws.App()
+
+    app.ws('/*', getWsHandler(app))
 
     app.listen(WS_PORT, listenSocket => {
         if (listenSocket) {
