@@ -1,10 +1,10 @@
 type WebSocketCallbacks = { onClose: () => void; onOpen: (ws: WebSocket) => void; onError: () => void }
 
-export const initUWS = (siteLink: string) => fetch(`http://${siteLink}/api/init`).then(res => res.json())
+export const initUWS = (hostname: string) => fetch(`https://${hostname}/api/init`).then(res => res.json())
 
 let isHandlingConnectRequest = false
 
-export const connectToWebSocket = async (hostname: string, port: string, callbacks?: WebSocketCallbacks) => {
+export const connectToWebSocket = async (hostname: string, callbacks?: WebSocketCallbacks) => {
     console.log(process.env.NODE_ENV)
 
     if (isHandlingConnectRequest) {
@@ -13,14 +13,12 @@ export const connectToWebSocket = async (hostname: string, port: string, callbac
         return
     }
 
-    const siteLink = hostname + (port ? ':' + port : '')
-
     isHandlingConnectRequest = true
 
-    return initUWS(siteLink)
+    return initUWS(hostname)
         .catch(e => console.log('UWS Init error', e))
         .then(({ port }) => {
-            const url = `ws://${hostname}:${port}`
+            const url = `wss://${hostname}/ws`
 
             console.log('WS url is', url)
 

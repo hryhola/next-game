@@ -117,13 +117,12 @@ const getWsHandler = (app: uws.TemplatedApp): uws.WebSocketBehavior  => ({
 export const createSocketApp = () => {
     console.log('Creating UWS on port:', WS_PORT)
 
-    // const app = uws.SSLApp({
-    //     key_file_name: "/etc/letsencrypt/live/game-club/privkey.pem",
-    //     cert_file_name: "/etc/letsencrypt/live/game-club/cert.pem"
-    // }).ws('/*', {
-    const app = uws.App()
+    const app = uws.SSLApp({
+        key_file_name: "/etc/letsencrypt/live/game-club.click/privkey.pem",
+        cert_file_name: "/etc/letsencrypt/live/game-club.click/cert.pem"
+    })
 
-    app.ws('/*', getWsHandler(app))
+    app.ws('/ws', getWsHandler(app))
 
     app.listen(WS_PORT, listenSocket => {
         if (listenSocket) {
