@@ -5,7 +5,7 @@ const { parse } = require('url')
 
 const next = require('next')
 const port = 3000
-const dev = false
+const dev = true
 const app = next({ dev, dir: __dirname })
 const handle = app.getRequestHandler()
 
@@ -25,5 +25,3 @@ app.prepare().then(() => {
             console.log(`> Ready on localhost:${port}`)
         })
 })
-
-console.log(JSON.stringify({ e: process.env.PROD_TYPE }))
