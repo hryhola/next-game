@@ -5,7 +5,7 @@ import { AbstractSocketMessage, ResponseActions } from './uws.types'
 
 export const WS_PORT = 5555
 
-const getWsHandler = (app: uws.TemplatedApp): uws.WebSocketBehavior  => ({
+const getWsHandler = (app: uws.TemplatedApp): uws.WebSocketBehavior => ({
     open: _ws => {
         console.log('new connected')
     },
@@ -112,15 +112,21 @@ const getWsHandler = (app: uws.TemplatedApp): uws.WebSocketBehavior  => ({
     close: (_ws, code, message) => {
         console.log('Closing connection', code, message)
     }
-});
+})
 
 export const createSocketApp = () => {
     console.log('Creating UWS on port:', WS_PORT)
 
-    const app = uws.SSLApp({
-        key_file_name: "/etc/letsencrypt/live/game-club.click/privkey.pem",
-        cert_file_name: "/etc/letsencrypt/live/game-club.click/cert.pem"
-    })
+    let app: uws.TemplatedApp
+
+    if (process.env.NODE_ENV === 'production') {
+        app = uws.SSLApp({
+            key_file_name: '/etc/letsencrypt/live/game-club.click/privkey.pem',
+            cert_file_name: '/etc/letsencrypt/live/game-club.click/cert.pem'
+        })
+    } else {
+        app = uws.App()
+    }
 
     app.ws('/ws', getWsHandler(app))
 
