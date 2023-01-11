@@ -1,25 +1,25 @@
 type WebSocketCallbacks = { onClose: () => void; onOpen: (ws: WebSocket) => void; onError: () => void }
 
-const getSocketInitUrl = (hostname: string) => {
-    if (process.env.NODE_ENV === 'production') {
-        return `https://${hostname}/api/init`
+const getSocketInitUrl = (location: Location) => {
+    if (location.protocol.includes('https')) {
+        return `https://${location.hostname}/api/init`
     } else {
-        return `http://${hostname}:3000/api/init`
+        return `http://${location.hostname}:3000/api/init`
     }
 }
-const getWSUrl = (hostname: string) => {
-    if (process.env.NODE_ENV === 'production') {
-        return `wss://${hostname}/ws`
+const getWSUrl = (location: Location) => {
+    if (location.protocol.includes('https')) {
+        return `wss://${location.hostname}/ws`
     } else {
-        return `ws://${hostname}:5555/ws`
+        return `ws://${location.hostname}:5555/ws`
     }
 }
 
-export const initUWS = (hostname: string) => fetch(getSocketInitUrl(hostname)).then(res => res.json())
+export const initUWS = (location: Location) => fetch(getSocketInitUrl(location)).then(res => res.json())
 
 let isHandlingConnectRequest = false
 
-export const connectToWebSocket = async (hostname: string, callbacks?: WebSocketCallbacks) => {
+export const connectToWebSocket = async (location: Location, callbacks?: WebSocketCallbacks) => {
     console.log(process.env.NODE_ENV)
 
     if (isHandlingConnectRequest) {
@@ -30,10 +30,10 @@ export const connectToWebSocket = async (hostname: string, callbacks?: WebSocket
 
     isHandlingConnectRequest = true
 
-    return initUWS(hostname)
+    return initUWS(location)
         .catch(e => console.log('UWS Init error', e))
         .then(() => {
-            const url = getWSUrl(hostname)
+            const url = getWSUrl(location)
 
             console.log('WS url is', url)
 
