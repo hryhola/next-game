@@ -9,7 +9,7 @@ const getSocketInitUrl = (location: Location) => {
 }
 const getWSUrl = (location: Location) => {
     if (location.protocol.includes('https')) {
-        return `wss://${location.hostname}/ws`
+        return `wss://${location.hostname}/ws/`
     } else {
         return `ws://${location.hostname}:5555/ws`
     }
