@@ -17,6 +17,8 @@ const getWSUrl = (location: Location) => {
 
 export const initUWS = (location: Location) => fetch(getSocketInitUrl(location)).then(res => res.json())
 
+const pingIntervals: NodeJS.Timer[] = []
+
 let isHandlingConnectRequest = false
 
 export const connectToWebSocket = async (location: Location, callbacks?: WebSocketCallbacks) => {
@@ -43,9 +45,19 @@ export const connectToWebSocket = async (location: Location, callbacks?: WebSock
                 ws.addEventListener('message', m => console.log(m))
 
                 callbacks?.onOpen(ws!)
+
+                pingIntervals.push(setInterval(() => ws.send('ping'), 2000))
             }
 
             ws.onclose = () => {
+                let i: NodeJS.Timer
+
+                while (pingIntervals.length) {
+                    i = pingIntervals.pop()!
+
+                    clearInterval(i)
+                }
+
                 console.log('websocket closed')
                 callbacks?.onClose()
             }

@@ -28,9 +28,10 @@ export const LobbyCreator: React.FC = () => {
 
         setIsLoading(true)
 
-        fetch('/api/lobby', {
+        fetch('http://localhost:5555/ws/post', {
             method: 'POST',
-            body: data
+            body: data,
+            mode: 'no-cors'
         })
             .then(res => res.json())
             .then(res => {

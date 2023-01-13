@@ -59,7 +59,9 @@ export const WSProvider: React.FC<Props> = props => {
     }
 
     const messageHandler = (event: MessageEvent<any>) => {
-        console.log('message handler')
+        if (event.data === 'pong') {
+            return
+        }
 
         const message = JSON.parse(event.data)
 
