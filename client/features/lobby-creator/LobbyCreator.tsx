@@ -28,10 +28,9 @@ export const LobbyCreator: React.FC = () => {
 
         setIsLoading(true)
 
-        fetch('http://localhost:5555/ws/post', {
+        fetch('http://localhost:5555/wsapi/lobby-create/jeopardy', {
             method: 'POST',
-            body: data,
-            mode: 'no-cors'
+            body: data
         })
             .then(res => res.json())
             .then(res => {

@@ -1,7 +1,14 @@
 import uws from 'uWebSockets.js'
 import util from 'util'
+import fs from 'fs'
 import handlers, { HandlerName } from './api'
 import { AbstractSocketMessage, ResponseActions } from './uws.types'
+import { state } from 'state'
+import { Jeopardy } from 'model/Jeopardy'
+import { v4 } from 'uuid'
+const multipart = require('parse-multipart-data')
+
+console.log(multipart)
 
 export const WS_PORT = 5555
 
@@ -134,32 +141,40 @@ export const createSocketApp = () => {
 
     app.ws('/ws', getWsHandler(app))
 
-    app.post('/ws/post', (res, req) => {
+    app.post('/wsapi/lobby-create/jeopardy', async (res, req) => {
         console.log('Posted to ' + req.getUrl())
 
-        res.onData((chunk, isLast) => {
-            // const decoder = new util.TextDecoder()
+        console.log(state.users)
 
-            // const decodedMsg = decoder.decode(chunk)
+        res.writeHeader('Access-Control-Allow-Origin', '*')
+        res.writeHeader('Content-Type', 'application/json')
 
-            // console.log(decodedMsg);
+        const contentType = req.getHeader('content-type')
 
-            /* Buffer this anywhere you want to */
-            console.log('Got chunk of data with length ' + chunk.byteLength + ', isLast: ' + isLast)
+        if (!contentType.includes('multipart/form-data') || !contentType.includes('boundary=')) {
+            res.writeStatus('400 Bad Request')
+            res.end(
+                JSON.stringify({
+                    success: false,
+                    message: 'Incorrect content type'
+                })
+            )
+        }
 
-            /* We respond when we are done */
-            if (isLast) {
-                res.writeHeader('Access-Control-Allow-Origin', '*')
-                res.writeHeader('Content-Type', 'application/json; charset=utf-8')
-                // res.end(JSON.stringify({ success: true }, null, 4));
-                res.end('{}')
-            }
-        })
+        const [, boundary] = contentType.split('boundary=')
 
-        res.onAborted(() => {
-            /* Request was prematurely aborted, stop reading */
-            console.log('Eh, okay. Thanks for nothing!')
-        })
+        const buffer = await readFormData(res)
+
+        const parts = multipart.parse(buffer, boundary)
+
+        console.log(parts)
+
+        return res.end(
+            JSON.stringify({
+                success: true,
+                lobby: '' // lobby.id
+            })
+        )
     })
 
     app.listen(WS_PORT, listenSocket => {
@@ -170,3 +185,28 @@ export const createSocketApp = () => {
 
     return app
 }
+
+const readFormData = (res: uws.HttpResponse): Promise<Buffer> =>
+    new Promise((resolve, reject) => {
+        let buffer: Buffer
+
+        res.onData((ab, isLast) => {
+            let chunk = Buffer.from(ab)
+
+            if (isLast) {
+                if (buffer) {
+                    return resolve(Buffer.concat([buffer, chunk]))
+                } else {
+                    return resolve(chunk)
+                }
+            } else {
+                if (buffer) {
+                    buffer = Buffer.concat([buffer, chunk])
+                } else {
+                    buffer = Buffer.concat([chunk])
+                }
+            }
+        })
+
+        res.onAborted(() => reject())
+    })

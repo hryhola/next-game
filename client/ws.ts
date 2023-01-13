@@ -42,7 +42,7 @@ export const connectToWebSocket = async (location: Location, callbacks?: WebSock
             const ws = new WebSocket(url)
 
             ws.onopen = () => {
-                ws.addEventListener('message', m => console.log(m))
+                ws.addEventListener('message', m => m.data !== 'pong' && console.log(m))
 
                 callbacks?.onOpen(ws!)
 
