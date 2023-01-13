@@ -1,25 +1,24 @@
+import { WSContext } from 'client/context/list/ws.context'
 import { UsersList } from 'client/ui'
-import React from 'react'
+import { TUser } from 'model'
+import React, { useContext, useEffect, useState } from 'react'
 
 type Props = {}
 
 export const GlobalUsersList: React.FC<Props> = props => {
     // const user = useContext(UserContext)
-    // const ws = useContext(WSContext)
+    const ws = useContext(WSContext)
+    const [users, setUsers] = useState<TUser[]>([])
 
-    // const [users, setUsers] = useState<User[]>([])
+    const handleUsersGot = (data: { users: TUser[] }) => {
+        setUsers(data.users)
+    }
 
-    // const handleMessageRetrieve = (data: { message: TChatMessage }) => {
-    //   setMessages(curr => [data.message, ...curr])
-    // }
+    useEffect(() => {
+        ws.on('Global-UsersGet', handleUsersGot)
 
-    // useEffect(() => {
-    //   ws.on(topics['Global-ChatGet'], handleMessagesInit)
+        ws.send('Global-UsersGet')
+    }, [])
 
-    //   ws.send('Global-ChatGet')
-    // }, [])
-    return (
-        // <UsersList />
-        <></>
-    )
+    return <UsersList users={users} />
 }

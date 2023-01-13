@@ -6,7 +6,8 @@ export const topics = Object.freeze({
     'Auth-Login': 'Auth-Login',
     'Global-ChatGet': 'Global-ChatGet',
     'Lobby-Create': 'Lobby-Create',
-    'Lobby-GetList': 'Lobby-GetList'
+    'Lobby-GetList': 'Lobby-GetList',
+    'Global-UsersGet': 'Global-UsersGet'
 })
 
 export type TopicEventData = {
