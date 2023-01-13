@@ -14,9 +14,13 @@ export const HomeRoute: React.FC = () => {
 
     return (
         <>
-            <Grid display="flex" direction="column" height="100vh">
-                <Header />
-                <HomeTabs sx={{ flexGrow: 1 }} />
+            <Grid display="flex" direction="column" height="100vh" container>
+                <Grid item>
+                    <Header />
+                </Grid>
+                <Grid item>
+                    <HomeTabs sx={{ flexGrow: 1 }} />
+                </Grid>
             </Grid>
             <FullScreenModal label="Edit profile" isOpen={home.isProfileEditOpen} setIsOpen={home.setIsProfileEditOpen}>
                 <ProfileEditor />

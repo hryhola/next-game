@@ -30,6 +30,10 @@ const getWsHandler = (app: uws.TemplatedApp): uws.WebSocketBehavior => ({
                 )
             }
 
+            if (decodedMsg === 'ping') {
+                return ws.send('pong')
+            }
+
             const request: AbstractSocketMessage<HandlerName, never> = JSON.parse(decodedMsg)
 
             if (!request.ctx) {
@@ -129,6 +133,34 @@ export const createSocketApp = () => {
     }
 
     app.ws('/ws', getWsHandler(app))
+
+    app.post('/ws/post', (res, req) => {
+        console.log('Posted to ' + req.getUrl())
+
+        res.onData((chunk, isLast) => {
+            // const decoder = new util.TextDecoder()
+
+            // const decodedMsg = decoder.decode(chunk)
+
+            // console.log(decodedMsg);
+
+            /* Buffer this anywhere you want to */
+            console.log('Got chunk of data with length ' + chunk.byteLength + ', isLast: ' + isLast)
+
+            /* We respond when we are done */
+            if (isLast) {
+                res.writeHeader('Access-Control-Allow-Origin', '*')
+                res.writeHeader('Content-Type', 'application/json; charset=utf-8')
+                // res.end(JSON.stringify({ success: true }, null, 4));
+                res.end('{}')
+            }
+        })
+
+        res.onAborted(() => {
+            /* Request was prematurely aborted, stop reading */
+            console.log('Eh, okay. Thanks for nothing!')
+        })
+    })
 
     app.listen(WS_PORT, listenSocket => {
         if (listenSocket) {
