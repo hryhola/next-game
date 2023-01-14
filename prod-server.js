@@ -1,7 +1,7 @@
 var https = require('https')
 var fs = require('fs')
-const path = require('path')
 const { parse } = require('url')
+const sslPath = require('./ssl-path')
 
 const next = require('next')
 const port = 3000
@@ -10,8 +10,8 @@ const app = next({ dev, dir: __dirname })
 const handle = app.getRequestHandler()
 
 var options = {
-    key: fs.readFileSync('/etc/letsencrypt/live/game-club.click/privkey.pem'),
-    cert: fs.readFileSync('/etc/letsencrypt/live/game-club.click/cert.pem')
+    key: fs.readFileSync(sslPath.keyPath),
+    cert: fs.readFileSync(sslPath.certPath)
 }
 
 app.prepare()

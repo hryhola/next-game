@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { Server as NetServer, Socket } from 'net'
 import { TemplatedApp } from 'uWebSockets.js'
-import { createSocketApp, WS_PORT } from 'uws/WSCreator'
+import { createSocketServer, WS_PORT } from 'uWebSockets/createServer'
 
 export type NextApiResponseUWS = NextApiResponse & {
     socket: Socket & {
@@ -20,7 +20,7 @@ const SocketHandler = (_req: NextApiRequest, res: NextApiResponseUWS) => {
 
     console.log('Socket is initializing')
 
-    const uws = createSocketApp()
+    const uws = createSocketServer()
 
     res.socket.server.uws = uws
 

@@ -1,27 +1,28 @@
-type WebSocketCallbacks = { onClose: () => void; onOpen: (ws: WebSocket) => void; onError: () => void }
+import { URL } from './const'
+import { WebSocketCallbacks } from './types'
 
-const getSocketInitUrl = (location: Location) => {
-    if (location.protocol.includes('https')) {
-        return `https://${location.hostname}/api/init`
-    } else {
-        return `http://${location.hostname}:3000/api/init`
+export const startSocketServer = () => fetch(URL.SocketStartStarter)
+
+const messageLogger = (message: MessageEvent<any>) => {
+    if (message.data === 'pong') {
+        return
+    }
+
+    try {
+        const parsed = JSON.parse(message.data)
+
+        console.log('%c' + parsed.ctx + ' %cget', 'color: aqua', '', parsed.data)
+    } catch (e) {
+        console.log('%cget > ' + message.data, 'color: red')
     }
 }
-const getWSUrl = (location: Location) => {
-    if (location.protocol.includes('https')) {
-        return `wss://${location.hostname}/ws/`
-    } else {
-        return `ws://${location.hostname}:5555/ws`
-    }
-}
 
-export const initUWS = (location: Location) => fetch(getSocketInitUrl(location)).then(res => res.json())
-
+// In theory should contain only one timer
 const pingIntervals: NodeJS.Timer[] = []
 
 let isHandlingConnectRequest = false
 
-export const connectToWebSocket = async (location: Location, callbacks?: WebSocketCallbacks) => {
+export const connectToWebSocket = async (callbacks?: WebSocketCallbacks) => {
     console.log(process.env.NODE_ENV)
 
     if (isHandlingConnectRequest) {
@@ -32,17 +33,15 @@ export const connectToWebSocket = async (location: Location, callbacks?: WebSock
 
     isHandlingConnectRequest = true
 
-    return initUWS(location)
+    return startSocketServer()
         .catch(e => console.log('UWS Init error', e))
         .then(() => {
-            const url = getWSUrl(location)
+            console.log('WS url is', URL.WS)
 
-            console.log('WS url is', url)
-
-            const ws = new WebSocket(url)
+            const ws = new WebSocket(URL.WS)
 
             ws.onopen = () => {
-                ws.addEventListener('message', m => m.data !== 'pong' && console.log(m))
+                ws.addEventListener('message', messageLogger)
 
                 callbacks?.onOpen(ws!)
 

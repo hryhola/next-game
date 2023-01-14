@@ -1,4 +1,4 @@
-import { Handler } from 'uws/uws.types'
+import { Handler } from 'uWebSockets/uws.types'
 import { state } from '../../state'
 
 export interface LobbyInfo {
@@ -10,10 +10,10 @@ export interface Success {
     lobbies: LobbyInfo[]
 }
 
-export const handler: Handler = res => {
+export const handler: Handler<null, Success> = actions => {
     const lobbies = Object.values(state.lobbies)
 
-    res.res<'Lobby-GetList'>({
+    actions.res({
         lobbies: lobbies.map(l => ({
             id: l.id,
             private: Boolean(l.password)

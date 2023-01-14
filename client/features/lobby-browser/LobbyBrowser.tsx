@@ -1,15 +1,15 @@
 import { Box, FormControl, IconButton, InputAdornment, List, ListItem, ListItemButton, ListItemIcon, ListItemText, TextField, Toolbar } from '@mui/material'
-import { WSContext } from 'client/context/list/ws.context'
+import { WSContext } from 'client/context/list/ws'
 import { useContext, useEffect, useState } from 'react'
-import { LobbyInfo } from 'uws/api/Lobby-GetList'
-import { RequestData, RequestHandler } from 'uws/uws.types'
+import { LobbyInfo } from 'uWebSockets/ws/Lobby-GetList'
+import { RequestData, RequestHandler } from 'uWebSockets/uws.types'
 import AddIcon from '@mui/icons-material/Add'
 import { styled, alpha } from '@mui/material/styles'
 import { Input, OutlinedInput } from '@mui/material'
 import InputBase from '@mui/material/InputBase'
 import SearchIcon from '@mui/icons-material/Search'
 import LockIcon from '@mui/icons-material/Lock'
-import { HomeContext } from 'client/context/list/home.context'
+import { HomeContext } from 'client/context/list/home'
 
 const LobbyRecord: React.FC<LobbyInfo> = props => (
     <ListItem disablePadding>

@@ -1,9 +1,8 @@
-import { GlobalOnlineUpdate, Handler } from '../uws.types'
+import { Handler } from '../uws.types'
 import { state } from '../../state'
-import { topics } from '../events'
 import { Lobby } from 'model'
 
-export interface CreateLobbyRequest {
+export interface Request {
     creatorId: string
     lobbyId: string
     password?: string
@@ -20,9 +19,9 @@ export interface Failure {
     message: string
 }
 
-export const handler: Handler<CreateLobbyRequest> = (res, data) => {
+export const handler: Handler<Request, Success | Failure> = (actions, data) => {
     if (!data.lobbyId) {
-        return res.res<'Lobby-Create'>({
+        return actions.res({
             success: false,
             message: 'Room ID cannot be empty',
             lobbyId: data.lobbyId
@@ -30,7 +29,7 @@ export const handler: Handler<CreateLobbyRequest> = (res, data) => {
     }
 
     if (data.lobbyId in state.lobbies) {
-        return res.res<'Lobby-Create'>({
+        return actions.res({
             success: false,
             message: 'Room already exists',
             lobbyId: data.lobbyId
@@ -40,7 +39,7 @@ export const handler: Handler<CreateLobbyRequest> = (res, data) => {
     const user = state.users.find(u => u.id === data.creatorId)!
 
     if (!user) {
-        return res.res<'Lobby-Create'>({
+        return actions.res({
             success: false,
             message: 'Cannot find user with such nickname',
             lobbyId: data.lobbyId
@@ -51,7 +50,7 @@ export const handler: Handler<CreateLobbyRequest> = (res, data) => {
 
     state.lobbies[lobby.id] = lobby
 
-    res.res<'Lobby-Create'>({
+    actions.res({
         success: true,
         lobbyId: lobby.id
     })

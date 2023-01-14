@@ -1,9 +1,9 @@
 import { useState, useEffect, useContext, FormEventHandler } from 'react'
-import { Failure, Success } from 'uws/api/Auth-Login'
-import { UserContext } from 'client/context/list/user.context'
-import { RouterContext } from 'client/context/list/router.context'
-import { WSContext } from 'client/context/list/ws.context'
+import { UserContext } from 'client/context/list/user'
+import { RouterContext } from 'client/context/list/router'
+import { WSContext } from 'client/context/list/ws'
 import { Button, Grid, TextField } from '@mui/material'
+import { RequestHandler } from 'uWebSockets/uws.types'
 
 export const Login: React.FC = () => {
     const ws = useContext(WSContext)
@@ -13,7 +13,7 @@ export const Login: React.FC = () => {
     const [username, setUsername] = useState('')
     const [error, setError] = useState('')
 
-    const handleLogin = (data: Success | Failure) => {
+    const handleLogin: RequestHandler<'Auth-Login'> = data => {
         if (data.success) {
             auth.setUsername(data.username)
             router.setCurrentRoute('Home')
@@ -28,7 +28,9 @@ export const Login: React.FC = () => {
 
     const handleSubmit: FormEventHandler<HTMLFormElement> = e => {
         e.preventDefault()
+
         setError('')
+
         ws.send('Auth-Login', { username })
     }
 
