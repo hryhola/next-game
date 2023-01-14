@@ -1,12 +1,8 @@
 import { useContext } from 'react'
-import { WSContext } from 'client/context/list/ws.context'
+import { WSContext } from 'client/context/list/ws'
 
 export const DevToolsOverlay: React.FC = () => {
     const ws = useContext(WSContext)
-
-    // if (process.env.NODE_ENV === 'production') {
-    //     return <></>;
-    // }
 
     return (
         <div style={{ position: 'fixed', right: 0, opacity: 0.5 }}>

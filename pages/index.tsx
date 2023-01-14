@@ -2,10 +2,9 @@ import { useContext, useEffect } from 'react'
 import { NextPage } from 'next'
 import { Router } from 'client/features/app/Router'
 import { LoadingOverlay } from 'client/ui/loading-overlay/LoadingOverlay'
-import { connectToWebSocket } from 'client/ws'
-import { WSContext } from 'client/context/list/ws.context'
+import { connectToWebSocket } from 'client/network-utils/socket'
+import { WSContext } from 'client/context/list/ws'
 import { sleep } from 'util/time'
-import { DevToolsOverlay } from 'client/features/dev/DevToolsOverlay'
 import Head from 'next/head'
 
 let isConnecting = false
@@ -21,7 +20,7 @@ const Home: NextPage = () => {
 
         isConnecting = true
 
-        connectToWebSocket(window.location, {
+        connectToWebSocket({
             onClose: () => setIsConnected(false),
             onError: () => setIsConnected(false),
             onOpen: (ws: WebSocket) => {
@@ -48,7 +47,7 @@ const Home: NextPage = () => {
 
                 console.log('trying to establish connection')
 
-                await connectToWebSocket(window.location, {
+                await connectToWebSocket({
                     onOpen: (ws: WebSocket) => {
                         console.log('Connection is set.')
                         wsRef.current = ws

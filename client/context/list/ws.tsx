@@ -1,9 +1,10 @@
 import React, { useState, createContext, useContext, useEffect, useRef, MutableRefObject } from 'react'
-import type { HandlerName } from 'uws/api'
-import type { RequestData, RequestHandler } from 'uws/uws.types'
-import { UserContext } from './user.context'
+import type { HandlerName } from 'uWebSockets/ws'
+import type { RequestData } from 'uWebSockets/uws.types'
+import type { GlobalEventName } from 'uWebSockets/globalSocketEvents'
+import { UserContext } from './user'
 
-type HandlerOn = <C extends keyof typeof import('uws/events')['topics']>(context: C, handler: RequestHandler<C>) => void
+type HandlerOn = <C extends GlobalEventName | HandlerName>(context: C, handler: Function) => void
 type HandlerSend = <H extends HandlerName>(context: H, data?: RequestData<H>) => void
 
 export interface WSData {
@@ -29,7 +30,7 @@ export const WSProvider: React.FC<Props> = props => {
     const [isConnected, setIsConnected] = useState<boolean | null>(null)
     const [listeners, setListeners] = useState<Record<string, Array<Function>>>({})
 
-    const on: HandlerOn = (context, handler) => {
+    const on: HandlerOn = (context: string, handler: Function) => {
         setListeners(curr => {
             if (curr[context] && curr[context].includes(handler)) {
                 return curr
@@ -53,7 +54,8 @@ export const WSProvider: React.FC<Props> = props => {
             data: data || null
         }
 
-        console.log('send', message)
+        // console.log('send >' + '%c ' + context, 'color: Chartreuse', message.data)
+        console.log('%c' + context + ' %csend', 'color: Chartreuse', '', message.data)
 
         wsRef.current.send(JSON.stringify(message))
     }

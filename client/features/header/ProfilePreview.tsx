@@ -1,5 +1,5 @@
 import Button from '@mui/material/Button'
-import { UserContext } from 'client/context/list/user.context'
+import { UserContext } from 'client/context/list/user'
 import PersonIcon from '@mui/icons-material/Person'
 import Image from 'next/image'
 import { useContext } from 'react'

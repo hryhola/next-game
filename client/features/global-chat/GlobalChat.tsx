@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import { v4 as uuid } from 'uuid'
 import { Chat, ChatSXProps } from 'client/ui'
-import { UserContext } from 'client/context/list/user.context'
+import { UserContext } from 'client/context/list/user'
 import { useContext } from 'react'
-import { WSContext } from 'client/context/list/ws.context'
-import { topics } from 'uws/events'
+import { WSContext } from 'client/context/list/ws'
 import { TChatMessage } from 'model'
+import { GlobalPublishedEvents } from 'uWebSockets/globalSocketEvents'
+import { RequestHandler } from 'uWebSockets/uws.types'
 
 export const GlobalChat: React.FC<ChatSXProps> = props => {
     const user = useContext(UserContext)
@@ -13,7 +14,7 @@ export const GlobalChat: React.FC<ChatSXProps> = props => {
 
     const [messages, setMessages] = useState<TChatMessage[]>([])
 
-    const handleMessageRetrieve = (data: { message: TChatMessage }) => {
+    const handleNewMessage = (data: GlobalPublishedEvents['GlobalChat-NewMessage']) => {
         setMessages(curr => [data.message, ...curr])
     }
 
@@ -27,17 +28,13 @@ export const GlobalChat: React.FC<ChatSXProps> = props => {
         ws.send('Global-ChatSend', { message })
     }
 
-    const handleMessagesInit = (data: { messages: TChatMessage[] }) => {
+    const handleGotRecentMessages: RequestHandler<'Global-ChatGet'> = data => {
         setMessages(data.messages)
     }
 
     const subscriptionsInit = () => {
         ws.send('Global-Subscribe', {
-            topic: topics.globalOnlineUpdate
-        })
-
-        ws.send('Global-Subscribe', {
-            topic: topics.globalChatMessageUpdate
+            topic: 'GlobalChat-NewMessage'
         })
     }
 
@@ -46,8 +43,8 @@ export const GlobalChat: React.FC<ChatSXProps> = props => {
 
         subscriptionsInit()
 
-        ws.on(topics.globalChatMessageUpdate, handleMessageRetrieve)
-        ws.on(topics['Global-ChatGet'], handleMessagesInit)
+        ws.on('GlobalChat-NewMessage', handleNewMessage)
+        ws.on('Global-ChatGet', handleGotRecentMessages)
 
         ws.send('Global-ChatGet')
     }, [])

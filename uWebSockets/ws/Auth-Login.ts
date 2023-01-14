@@ -1,9 +1,8 @@
-import { GlobalOnlineUpdate, Handler } from '../uws.types'
+import { Handler } from '../uws.types'
 import { state } from '../../state'
-import { topics } from '../events'
 import { User } from 'model'
 
-export interface LoginRequest {
+export interface Request {
     username: string
 }
 
@@ -18,9 +17,9 @@ export interface Failure {
     message: string
 }
 
-export const handler: Handler<LoginRequest> = (actions, data) => {
+export const handler: Handler<Request, Success | Failure> = (actions, data) => {
     if (state.users.some(u => u.id === data.username)) {
-        actions.res<'Auth-Login'>({
+        actions.res({
             success: false,
             username: data.username,
             message: 'User exists'
@@ -35,15 +34,12 @@ export const handler: Handler<LoginRequest> = (actions, data) => {
 
     console.log(state.users.length)
 
-    actions.res<'Auth-Login'>({
+    actions.res({
         success: true,
         username: data.username
     })
 
-    actions.publish(topics.globalOnlineUpdate, {
-        ctx: topics.globalOnlineUpdate,
-        data: {
-            onlineUsersCount: state.users.length
-        } as GlobalOnlineUpdate
+    actions.publishGlobal('Global-OnlineUpdate', {
+        onlineUsersCount: state.users.length
     })
 }
