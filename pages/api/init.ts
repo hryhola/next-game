@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { Server as NetServer, Socket } from 'net'
 import { TemplatedApp } from 'uWebSockets.js'
 import { createSocketServer, WS_PORT } from 'uWebSockets/createServer'
+import logger from 'logger'
 
 export type NextApiResponseUWS = NextApiResponse & {
     socket: Socket & {
@@ -13,12 +14,12 @@ export type NextApiResponseUWS = NextApiResponse & {
 
 const SocketHandler = (_req: NextApiRequest, res: NextApiResponseUWS) => {
     if (res.socket.server.uws) {
-        console.log('Socket is already running')
+        logger.debug('Socket is already running')
 
         return res.json({ port: WS_PORT })
     }
 
-    console.log('Socket is initializing')
+    logger.info('Socket is initializing')
 
     const uws = createSocketServer()
 

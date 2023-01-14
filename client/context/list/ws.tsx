@@ -54,7 +54,6 @@ export const WSProvider: React.FC<Props> = props => {
             data: data || null
         }
 
-        // console.log('send >' + '%c ' + context, 'color: Chartreuse', message.data)
         console.log('%c' + context + ' %csend', 'color: Chartreuse', '', message.data)
 
         wsRef.current.send(JSON.stringify(message))
