@@ -1,6 +1,7 @@
 import { Handler } from '../uws.types'
 import { state } from '../../state'
 import { User } from 'model'
+import logger from 'logger'
 
 export interface Request {
     username: string
@@ -32,7 +33,7 @@ export const handler: Handler<Request, Success | Failure> = (actions, data) => {
 
     state.users.push(user)
 
-    console.log(state.users.length)
+    logger.info('New login: ' + user.id)
 
     actions.res({
         success: true,

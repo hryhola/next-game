@@ -6,6 +6,7 @@ import { connectToWebSocket } from 'client/network-utils/socket'
 import { WSContext } from 'client/context/list/ws'
 import { sleep } from 'util/time'
 import Head from 'next/head'
+import { DevToolsOverlay } from 'client/features/dev/DevToolsOverlay'
 
 let isConnecting = false
 
@@ -87,6 +88,7 @@ const Home: NextPage = () => {
             <Head>
                 <title>Game Club</title>
             </Head>
+            <DevToolsOverlay />
             <LoadingOverlay isLoading={!isConnected}>
                 <Router />
             </LoadingOverlay>

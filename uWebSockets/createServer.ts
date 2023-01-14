@@ -4,11 +4,12 @@ import WSHandler from './ws'
 import PostHandler from './post'
 
 import sslPath from '../ssl-path'
+import logger from 'logger'
 
 export const WS_PORT = 5555
 
 export const createSocketServer = () => {
-    console.log('Creating UWS server on port', WS_PORT)
+    logger.info('Creating uWebSockets server on port: ' + WS_PORT)
 
     let app: uws.TemplatedApp
 
@@ -26,9 +27,9 @@ export const createSocketServer = () => {
 
     app.listen(WS_PORT, listenSocket => {
         if (listenSocket) {
-            console.log('UWS Listening to port ' + WS_PORT)
+            logger.info('uWebSockets server listening on port: ' + WS_PORT)
         } else {
-            console.log('wtf UWS not listening')
+            logger.error('wtf uWebSockets not listening')
         }
     })
 

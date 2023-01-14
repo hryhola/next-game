@@ -1,3 +1,4 @@
+import logger from 'logger'
 import uws from 'uWebSockets.js'
 
 // @index('./**/*.ts', f => `import { handler as ${f.path.replaceAll('-', '').replaceAll('/', '').substring(1)} } from '${f.path}'`)
@@ -14,7 +15,7 @@ const PostHandler = (app: uws.TemplatedApp) => {
     Object.keys(handlers).forEach(route => {
         const url = '/wsapi/' + route
 
-        console.log('Registered POST route', url)
+        logger.debug('Registered POST route: ' + url)
 
         app.post(url, handlers[route])
     })

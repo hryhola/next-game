@@ -1,6 +1,7 @@
 import uws from 'uWebSockets.js'
 import util from 'util'
 import { AbstractSocketMessage, ResponseActions } from '../uws.types'
+import logger from 'logger'
 
 // @index('./*', f => `import { handler as ${f.name.replaceAll('-', '')} } from '${f.path}'`)
 import { handler as AuthLogin } from './Auth-Login'
@@ -33,7 +34,7 @@ export type HandlerName = keyof typeof handlers
 const WSHandler = (app: uws.TemplatedApp) => {
     app.ws('/ws', {
         open: _ws => {
-            console.log('new connected')
+            logger.info('New websocket connection')
         },
         message: (ws, message) => {
             try {
@@ -42,7 +43,7 @@ const WSHandler = (app: uws.TemplatedApp) => {
                 const decodedMsg = decoder.decode(message)
 
                 if (!message || !decodedMsg) {
-                    console.log('Request body is missing', decodedMsg)
+                    logger.warn(decodedMsg, 'Request body is missing')
 
                     return ws.send(
                         JSON.stringify({
@@ -63,7 +64,7 @@ const WSHandler = (app: uws.TemplatedApp) => {
                 const request: AbstractSocketMessage<HandlerName, never> = JSON.parse(decodedMsg)
 
                 if (!request.ctx) {
-                    console.log('Request context is missing', decodedMsg)
+                    logger.warn(decodedMsg, 'Request context is missing')
 
                     return ws.send(
                         JSON.stringify({
@@ -78,7 +79,7 @@ const WSHandler = (app: uws.TemplatedApp) => {
                 }
 
                 if (!(request.ctx in handlers)) {
-                    console.log(`Handler for context is '${request.ctx}' missing`, decodedMsg)
+                    logger.warn(decodedMsg, `Handler for context is '${request.ctx}' missing`)
 
                     return ws.send(
                         JSON.stringify({
@@ -94,9 +95,11 @@ const WSHandler = (app: uws.TemplatedApp) => {
 
                 const response: ResponseActions = {
                     publish(channel: string, message: AbstractSocketMessage) {
-                        console.log('publishing to', channel, message)
+                        const messageString = JSON.stringify(message)
 
-                        app.publish(channel, JSON.stringify(message))
+                        logger.info(`publishing to ${channel} ${messageString}`)
+
+                        app.publish(channel, messageString)
                     },
                     publishGlobal(channelCtx: string, data: any) {
                         const message: AbstractSocketMessage = {
@@ -104,12 +107,12 @@ const WSHandler = (app: uws.TemplatedApp) => {
                             data
                         }
 
-                        console.log('publishing global event to', channelCtx, data)
+                        logger.info(data, `publishing global event to ${channelCtx}`)
 
                         app.publish(channelCtx, JSON.stringify(message))
                     },
                     res<T>(data: T) {
-                        console.log('Responding to', request.ctx, data)
+                        logger.info(data, 'Responding to ' + request.ctx)
                         ws.send(
                             JSON.stringify({
                                 ctx: request.ctx,
@@ -118,7 +121,7 @@ const WSHandler = (app: uws.TemplatedApp) => {
                         )
                     },
                     send<T>(ctx: string, data: T) {
-                        console.log('Sending to', ctx, data)
+                        logger.info(data, 'Sending to ' + ctx)
                         ws.send(
                             JSON.stringify({
                                 ctx: ctx,
@@ -129,13 +132,13 @@ const WSHandler = (app: uws.TemplatedApp) => {
                     ws
                 }
 
-                console.log('Retrieved message:', request)
+                logger.info(request, 'Retrieved message')
 
                 handlers[request.ctx](response, request.data)
             } catch (e) {
                 const message = e instanceof Error ? e.message : (e as string)
 
-                console.log('Internal error', e)
+                logger.error(e, 'Internal error while socket message handling')
 
                 ws.send(
                     JSON.stringify({
@@ -150,7 +153,7 @@ const WSHandler = (app: uws.TemplatedApp) => {
             }
         },
         close: (_ws, code, message) => {
-            console.log('Closing connection', code, message)
+            logger.info(message, 'Closing connection. Code: ' + code)
         }
     })
 }
