@@ -8,7 +8,6 @@ const darkTheme = createTheme({
         mode: 'dark'
     }
 })
-import 'client/ui/globals.scss'
 
 function MyApp({ Component, pageProps }: AppProps) {
     return (

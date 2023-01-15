@@ -89,9 +89,8 @@ const Home: NextPage = () => {
                 <title>Game Club</title>
             </Head>
             <DevToolsOverlay />
-            <LoadingOverlay isLoading={!isConnected}>
-                <Router />
-            </LoadingOverlay>
+            <Router />
+            <LoadingOverlay isLoading={!isConnected} />
         </>
     )
 }
