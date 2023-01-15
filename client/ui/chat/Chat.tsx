@@ -1,14 +1,9 @@
 import { FormEventHandler, useState } from 'react'
 import { ChatMessageComponent } from './ChatMessage'
 import { TChatMessage } from 'model'
-import { List, Input, IconButton, InputAdornment, TextField, FilledInput, Box, BoxTypeMap, SxProps, Theme } from '@mui/material'
+import { List, IconButton, InputAdornment, FilledInput, Box, SxProps, Theme } from '@mui/material'
 import SendIcon from '@mui/icons-material/Send'
 import FormControl from '@mui/material/FormControl'
-import { GetProps } from 'react-redux'
-import { type } from 'os'
-import { OverridableComponent } from '@mui/material/OverridableComponent'
-
-// type FormProps = React.DetailedHTMLProps<React.FormHTMLAttributes<HTMLFormElement>, HTMLFormElement>;
 
 export type ChatSXProps = {
     sx?: SxProps<Theme>
@@ -44,6 +39,7 @@ export const Chat: React.FunctionComponent<Props> = props => {
             </List>
             <FormControl sx={props.inputSx || { height: chatInputHeight }} fullWidth variant="filled">
                 <FilledInput
+                    autoFocus
                     fullWidth
                     hiddenLabel
                     value={text}

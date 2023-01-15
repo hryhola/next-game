@@ -1,12 +1,40 @@
-import { useContext } from 'react'
+import { useContext, useEffect, useState } from 'react'
 import { WSContext } from 'client/context/list/ws'
+import { Box, Button, IconButton } from '@mui/material'
+import CloseIcon from '@mui/icons-material/Close'
+import ArrowBackIosIcon from '@mui/icons-material/ArrowBackIos'
 
 export const DevToolsOverlay: React.FC = () => {
+    const [isEnabled, setIsEnabled] = useState(process.env.NODE_ENV !== 'production')
+    const [isVisible, setIsVisible] = useState(false)
+
     const ws = useContext(WSContext)
 
+    useEffect(() => {
+        window.hiddenSecrets = window.hiddenSecrets || {}
+
+        window.hiddenSecrets.enableDevTools = () => setIsEnabled(true)
+        window.hiddenSecrets.disableDevTools = () => setIsEnabled(false)
+    }, [])
+
+    if (!isEnabled) {
+        return <></>
+    }
+
     return (
-        <div style={{ position: 'fixed', right: 0, opacity: 0.5 }}>
-            <button onClick={() => ws.wsRef.current?.close()}>close web socket</button>
-        </div>
+        <Box sx={{ position: 'fixed', right: 0, top: '50%', display: 'flex', flexDirection: 'column', zIndex: 9999 }}>
+            {isVisible ? (
+                <>
+                    <IconButton onClick={() => setIsVisible(false)}>
+                        <CloseIcon />
+                    </IconButton>
+                    <Button onClick={() => ws.wsRef.current?.close()}>close WS</Button>
+                </>
+            ) : (
+                <IconButton onClick={() => setIsVisible(true)}>
+                    <ArrowBackIosIcon />
+                </IconButton>
+            )}
+        </Box>
     )
 }

@@ -6,11 +6,12 @@ import logger from 'logger'
 // @index('./*', f => `import { handler as ${f.name.replaceAll('-', '')} } from '${f.path}'`)
 import { handler as AuthLogin } from './Auth-Login'
 import { handler as AuthLogout } from './Auth-Logout'
-import { handler as GlobalChatGet } from './Global-ChatGet'
-import { handler as GlobalChatSend } from './Global-ChatSend'
-import { handler as GlobalOnlineGet } from './Global-OnlineGet'
 import { handler as GlobalSubscribe } from './Global-Subscribe'
-import { handler as GlobalUsersGet } from './Global-UsersGet'
+import { handler as GlobalUnsubscribe } from './Global-Unsubscribe'
+import { handler as GlobalChatGet } from './GlobalChat-Get'
+import { handler as GlobalChatSend } from './GlobalChat-Send'
+import { handler as GlobalOnlineGetUsers } from './GlobalOnline-GetUsers'
+import { handler as GlobalOnlineGetUsersCount } from './GlobalOnline-GetUsersCount'
 import { handler as LobbyCreate } from './Lobby-Create'
 import { handler as LobbyGetList } from './Lobby-GetList'
 // @endindex
@@ -19,11 +20,12 @@ export const handlers = {
     // @index('./*', f => `'${f.name}': ${f.name.replaceAll('-', '')},`)
     'Auth-Login': AuthLogin,
     'Auth-Logout': AuthLogout,
-    'Global-ChatGet': GlobalChatGet,
-    'Global-ChatSend': GlobalChatSend,
-    'Global-OnlineGet': GlobalOnlineGet,
     'Global-Subscribe': GlobalSubscribe,
-    'Global-UsersGet': GlobalUsersGet,
+    'Global-Unsubscribe': GlobalUnsubscribe,
+    'GlobalChat-Get': GlobalChatGet,
+    'GlobalChat-Send': GlobalChatSend,
+    'GlobalOnline-GetUsers': GlobalOnlineGetUsers,
+    'GlobalOnline-GetUsersCount': GlobalOnlineGetUsersCount,
     'Lobby-Create': LobbyCreate,
     'Lobby-GetList': LobbyGetList
     // @endindex
@@ -43,7 +45,7 @@ const WSHandler = (app: uws.TemplatedApp) => {
                 const decodedMsg = decoder.decode(message)
 
                 if (!message || !decodedMsg) {
-                    logger.warn(decodedMsg, 'Request body is missing')
+                    logger.warn({ decodedMsg }, 'Request body is missing')
 
                     return ws.send(
                         JSON.stringify({
@@ -64,7 +66,7 @@ const WSHandler = (app: uws.TemplatedApp) => {
                 const request: AbstractSocketMessage<HandlerName, never> = JSON.parse(decodedMsg)
 
                 if (!request.ctx) {
-                    logger.warn(decodedMsg, 'Request context is missing')
+                    logger.warn({ decodedMsg }, 'Request context is missing')
 
                     return ws.send(
                         JSON.stringify({
@@ -79,7 +81,7 @@ const WSHandler = (app: uws.TemplatedApp) => {
                 }
 
                 if (!(request.ctx in handlers)) {
-                    logger.warn(decodedMsg, `Handler for context is '${request.ctx}' missing`)
+                    logger.warn({ decodedMsg }, `Handler for context is '${request.ctx}' missing`)
 
                     return ws.send(
                         JSON.stringify({
