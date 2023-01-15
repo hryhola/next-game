@@ -1,19 +1,17 @@
 import React from 'react'
 import classnames from 'classnames'
 import styles from './LoadingOverlay.module.scss'
+import { Backdrop, CircularProgress } from '@mui/material'
 
 type Props = {
     isLoading: boolean
-    children: React.ReactNode
 }
 
-export const LoadingOverlay: React.FC<Props> = ({ children, isLoading }) => {
+export const LoadingOverlay: React.FC<Props> = ({ isLoading }) => {
     return (
-        <>
-            {isLoading && <div className={styles.loadingOverlay}>loading...</div>}
-            <div className={classnames({ [styles.loading]: isLoading })} aria-busy={isLoading}>
-                {children}
-            </div>
-        </>
+        <Backdrop sx={{ color: '#fff', zIndex: theme => theme.zIndex.drawer + 1 }} open={isLoading}>
+            <CircularProgress color="inherit" />
+            &nbsp; connecting...
+        </Backdrop>
     )
 }
