@@ -40,7 +40,11 @@ export const handler: Handler<Request, Success | Failure> = (actions, data) => {
         username: data.username
     })
 
-    actions.publishGlobal('Global-OnlineUpdate', {
+    actions.publishGlobal('GlobalOnline-UsersCountUpdate', {
         onlineUsersCount: state.users.length
+    })
+
+    actions.publishGlobal('GlobalOnline-UsersUpdate', {
+        users: state.users
     })
 }

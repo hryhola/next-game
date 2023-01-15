@@ -1,10 +1,13 @@
-import { TChatMessage } from 'model'
+import { TChatMessage, TUser } from 'model'
 
 export type GlobalPublishedEvents = {
     'GlobalChat-NewMessage': {
         message: TChatMessage
     }
-    'Global-OnlineUpdate': {
+    'GlobalOnline-UsersUpdate': {
+        users: TUser[]
+    }
+    'GlobalOnline-UsersCountUpdate': {
         onlineUsersCount: number
     }
 }

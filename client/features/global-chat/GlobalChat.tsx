@@ -25,32 +25,36 @@ export const GlobalChat: React.FC<ChatSXProps> = props => {
             id: uuid()
         }
 
-        ws.send('Global-ChatSend', { message })
+        ws.send('GlobalChat-Send', { message })
     }
 
-    const handleGotRecentMessages: RequestHandler<'Global-ChatGet'> = data => {
+    const handleGotRecentMessages: RequestHandler<'GlobalChat-Get'> = data => {
         setMessages(data.messages)
     }
 
-    const subscriptionsInit = () => {
+    const sendSubscribeRequest = () => {
         ws.send('Global-Subscribe', {
             topic: 'GlobalChat-NewMessage'
         })
     }
 
     useEffect(() => {
-        console.log('init global')
-
-        subscriptionsInit()
-
         ws.on('GlobalChat-NewMessage', handleNewMessage)
-        ws.on('Global-ChatGet', handleGotRecentMessages)
+        ws.on('GlobalChat-Get', handleGotRecentMessages)
 
-        ws.send('Global-ChatGet')
+        ws.send('GlobalChat-Get')
+
+        return () => {
+            ws.send('Global-Unsubscribe', {
+                topic: 'GlobalChat-NewMessage'
+            })
+        }
     }, [])
 
     useEffect(() => {
-        ws.isConnected && subscriptionsInit()
+        if (ws.isConnected) {
+            sendSubscribeRequest()
+        }
     }, [ws.isConnected])
 
     return <Chat messages={messages} onSendMessage={handlerSend} {...props} />

@@ -8,7 +8,11 @@ export interface Request {
 export const handler: Handler<Request> = (actions, data) => {
     state.users = state.users.filter(u => u.id !== data.username)
 
-    actions.publishGlobal('Global-OnlineUpdate', {
+    actions.publishGlobal('GlobalOnline-UsersCountUpdate', {
         onlineUsersCount: state.users.length
+    })
+
+    actions.publishGlobal('GlobalOnline-UsersUpdate', {
+        users: state.users
     })
 }
