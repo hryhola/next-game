@@ -3,7 +3,7 @@ export const URL = {
         if (window.location.protocol.includes('https')) {
             return `wss://${location.host}/ws/`
         } else {
-            return `ws://${location.hostname}:5555/ws`
+            return `ws://${location.hostname}:${process.env.NEXT_PUBLIC_WS_PORT}/ws`
         }
     },
     get SocketStartStarter() {

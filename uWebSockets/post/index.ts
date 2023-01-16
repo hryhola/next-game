@@ -12,6 +12,8 @@ const handlers: Record<string, (res: uws.HttpResponse, req: uws.HttpRequest) => 
 }
 
 const PostHandler = (app: uws.TemplatedApp) => {
+    logger.debug('Registered POST connection type')
+
     Object.keys(handlers).forEach(route => {
         const url = '/wsapi/' + route
 

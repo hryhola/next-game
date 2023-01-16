@@ -34,6 +34,8 @@ export const handlers = {
 export type HandlerName = keyof typeof handlers
 
 const WSHandler = (app: uws.TemplatedApp) => {
+    logger.debug('Registering handling for WS connection type')
+
     app.ws('/ws', {
         open: _ws => {
             logger.info('New websocket connection')
