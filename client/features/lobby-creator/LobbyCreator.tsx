@@ -4,7 +4,7 @@ import { RouterContext } from 'client/context/list/router'
 import { WSContext } from 'client/context/list/ws'
 import { FormEventHandler, useContext, useEffect, useState, useRef } from 'react'
 import { Request } from 'uWebSockets/ws/Lobby-Create'
-import { TextField, Button, Box, FormControl, InputLabel, MenuItem, Select, Input, CircularProgress, Backdrop, Alert } from '@mui/material'
+import { TextField, Button, Box, FormControl, InputLabel, MenuItem, Select, Input, CircularProgress, Backdrop, Alert, Grid } from '@mui/material'
 import FileUploadIcon from '@mui/icons-material/FileUpload'
 
 export const LobbyCreator: React.FC = () => {
@@ -57,26 +57,41 @@ export const LobbyCreator: React.FC = () => {
 
     return (
         <>
-            <Box component="form" onSubmit={handleSubmit} display="flex" flexDirection="column" ref={formRef}>
-                {error && <Alert severity="error">{error}</Alert>}
-                <TextField required label="Lobby name" name="lobbyId" value={name} onChange={e => setName(e.target.value)} />
-                <FormControl>
-                    <InputLabel id="game-type-selector">Game</InputLabel>
-                    <Select labelId="game-type-selector" id="game-type-selector" label="Game" value="Jeopardy">
-                        <MenuItem value="Jeopardy">Jeopardy</MenuItem>
-                    </Select>
-                </FormControl>
+            <Grid container component="form" onSubmit={handleSubmit} direction="column" spacing={2} height="100%">
+                {error && (
+                    <Grid item>
+                        <Alert severity="error">{error}</Alert>
+                    </Grid>
+                )}
+                <Grid item>
+                    <TextField required label="Lobby name" name="lobbyId" value={name} onChange={e => setName(e.target.value)} fullWidth />
+                </Grid>
+                <Grid item>
+                    <FormControl fullWidth>
+                        <InputLabel id="game-type-selector">Game</InputLabel>
+                        <Select labelId="game-type-selector" id="game-type-selector" label="Game" value="Jeopardy" fullWidth>
+                            <MenuItem value="Jeopardy">Jeopardy</MenuItem>
+                            <MenuItem value="tic-tac-toe">Tic Tac Toe</MenuItem>
+                        </Select>
+                    </FormControl>
+                </Grid>
 
-                <FormControl>
-                    <FileUploadIcon />
-                    <input required multiple={false} accept=".siq" name="pack" type="file" />
-                </FormControl>
+                <Grid item>
+                    <FormControl>
+                        <FileUploadIcon />
+                        <input required multiple={false} accept=".siq" name="pack" type="file" />
+                    </FormControl>
+                </Grid>
 
-                <TextField label="Password" name="password" value={password} onChange={e => setPassword(e.target.value.split('\\').pop()!)} />
-                <Button color="primary" variant="contained" type="submit">
-                    Create
-                </Button>
-            </Box>
+                <Grid item>
+                    <TextField label="Password" name="password" value={password} onChange={e => setPassword(e.target.value.split('\\').pop()!)} fullWidth />
+                </Grid>
+                <Grid item sx={{ mt: 'auto', mb: 2 }}>
+                    <Button color="primary" variant="contained" type="submit" size="large" fullWidth>
+                        Create
+                    </Button>
+                </Grid>
+            </Grid>
             <Backdrop sx={{ color: '#fff', zIndex: theme => theme.zIndex.drawer + 1 }} open={isLoading}>
                 <CircularProgress color="inherit" />
             </Backdrop>
