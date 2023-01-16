@@ -6,30 +6,32 @@ import PostHandler from './post'
 import sslPath from '../ssl-path'
 import logger from 'logger'
 
-export const WS_PORT = 5555
+export const port = Number(process.env.NEXT_PUBLIC_WS_PORT)
 
 export const createSocketServer = () => {
-    logger.info('Creating uWebSockets server on port: ' + WS_PORT)
-
     let app: uws.TemplatedApp
 
     if (process.env.NODE_ENV === 'production') {
+        logger.info('Creating SSL uWebSockets server on port: ' + port)
+
         app = uws.SSLApp({
             key_file_name: sslPath.keyPath,
             cert_file_name: sslPath.certPath
         })
     } else {
+        logger.info('Creating uWebSockets server on port: ' + port)
+
         app = uws.App()
     }
 
     WSHandler(app)
     PostHandler(app)
 
-    app.listen(WS_PORT, listenSocket => {
+    app.listen(port, listenSocket => {
         if (listenSocket) {
-            logger.info('uWebSockets server listening on port: ' + WS_PORT)
+            logger.info('uWebSockets server listening on port: ' + port)
         } else {
-            logger.error('wtf uWebSockets not listening')
+            logger.error({ listenSocket }, 'wtf uWebSockets not listening')
         }
     })
 
