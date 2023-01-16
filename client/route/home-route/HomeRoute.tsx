@@ -22,13 +22,13 @@ export const HomeRoute: React.FC = () => {
                     <HomeTabs sx={{ flexGrow: 1 }} />
                 </Grid>
             </Grid>
-            <FullScreenModal label="Edit profile" isOpen={home.isProfileEditOpen} setIsOpen={home.setIsProfileEditOpen}>
+            <FullScreenModal label="Edit profile" transition="left" padding isOpen={home.isProfileEditOpen} setIsOpen={home.setIsProfileEditOpen}>
                 <ProfileEditor />
             </FullScreenModal>
             <FullScreenModal label="Navigation" isOpen={home.isNavigationOpen} setIsOpen={home.setIsNavigationOpen} transition="right">
                 <Navigation />
             </FullScreenModal>
-            <FullScreenModal label="Create lobby" isOpen={home.isCreateLobbyOpen} setIsOpen={home.setIsCreateLobbyOpen} transition="right">
+            <FullScreenModal label="Create lobby" transition="up" padding isOpen={home.isCreateLobbyOpen} setIsOpen={home.setIsCreateLobbyOpen}>
                 <LobbyCreator />
             </FullScreenModal>
         </>
