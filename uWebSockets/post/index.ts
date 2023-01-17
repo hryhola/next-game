@@ -3,11 +3,13 @@ import uws from 'uWebSockets.js'
 
 // @index('./**/*.ts', f => `import { handler as ${f.path.replaceAll('-', '').replaceAll('/', '').substring(1)} } from '${f.path}'`)
 import { handler as lobbycreatejeopardy } from './lobby-create/jeopardy'
+import { handler as profileupdate } from './profile-update'
 // @endindex
 
 const handlers: Record<string, (res: uws.HttpResponse, req: uws.HttpRequest) => void> = {
     // @index('./**/*.ts', f => `'${f.path.substring(2)}': ${f.path.replaceAll('-', '').replaceAll('/', '').substring(1)},`)
-    'lobby-create/jeopardy': lobbycreatejeopardy
+    'lobby-create/jeopardy': lobbycreatejeopardy,
+    'profile-update': profileupdate
     // @endindex
 }
 

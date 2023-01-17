@@ -28,7 +28,7 @@ interface Props {
 
 export const UserProvider: React.FC<Props> = props => {
     const [username, setUsername] = useState('')
-    const [profilePictureUrl, setProfilePictureUrl] = useState('https://gordonua.com/img/article/16025/78_big.jpg')
+    const [profilePictureUrl, setProfilePictureUrl] = useState('')
 
     return <UserContext.Provider value={{ username, setUsername, profilePictureUrl, setProfilePictureUrl }}>{props.children}</UserContext.Provider>
 }
