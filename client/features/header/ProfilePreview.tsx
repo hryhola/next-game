@@ -7,12 +7,15 @@ import { SxProps, Theme, Typography } from '@mui/material'
 import { GetProps } from 'react-redux'
 
 function ProfilePicture() {
-    const auth = useContext(UserContext)
+    const user = useContext(UserContext)
 
-    if (auth.profilePictureUrl) {
-        // eslint-disable-next-line @next/next/no-img-element
-        return <img src={auth.profilePictureUrl} width={40} alt="profile picture" />
-        // return <Image src={auth.profilePictureUrl} width={40} height={40} alt="profile picture" />
+    if (user.profilePictureUrl) {
+        return (
+            <>
+                &nbsp;
+                <img src={user.profilePictureUrl} width={40} alt="profile picture" />
+            </>
+        )
     }
 
     return <PersonIcon sx={{ fontSize: 40 }} />

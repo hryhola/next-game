@@ -14,7 +14,7 @@ export const LobbyRoute: React.FC = () => {
                 <main>game</main>
                 <section>
                     {lobby.members.map(m => (
-                        <div key={m.id}>{m.id}</div>
+                        <div key={m.nickname}>{m.nickname}</div>
                     ))}
                 </section>
             </div>

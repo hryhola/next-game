@@ -15,9 +15,9 @@ export class Lobby {
     constructor(id: string, creator: User, password?: string) {
         this.id = id
         this.password = password
-        this.creatorID = creator.id
+        this.creatorID = creator.nickname
 
-        const creatorMember = new LobbyMember(creator.id)
+        const creatorMember = new LobbyMember(creator.nickname)
 
         creatorMember.isCreator = true
 

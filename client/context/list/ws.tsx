@@ -1,6 +1,6 @@
 import React, { useState, createContext, useContext, useEffect, useRef, MutableRefObject } from 'react'
 import type { HandlerName } from 'uWebSockets/ws'
-import type { RequestData } from 'uWebSockets/uws.types'
+import type { AbstractSocketMessage, RequestData } from 'uWebSockets/uws.types'
 import type { GlobalEventName } from 'uWebSockets/globalSocketEvents'
 import { UserContext } from './user'
 
@@ -45,16 +45,22 @@ export const WSProvider: React.FC<Props> = props => {
 
     const send: HandlerSend = (context, data) => {
         if (!wsRef.current) {
-            console.error('Cannot send', context, data)
+            console.error('Cannot send because ws is not defined', context, data)
             return
         }
 
-        const message = {
+        const message: AbstractSocketMessage = {
             ctx: context,
             data: data || null
         }
 
         console.log('%c' + context + ' %csend', 'color: Chartreuse', '', message.data)
+
+        const token = localStorage.getItem('token')
+
+        if (token) {
+            message.token = token
+        }
 
         wsRef.current.send(JSON.stringify(message))
     }
@@ -79,6 +85,7 @@ export const WSProvider: React.FC<Props> = props => {
                 wsRef.current?.send(
                     JSON.stringify({
                         ctx: 'Auth-Logout',
+                        token: localStorage.getItem('token'),
                         data: {
                             username: auth.username
                         }

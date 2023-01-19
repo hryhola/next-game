@@ -12,5 +12,12 @@ export const URL = {
         } else {
             return `http://${location.hostname}:3000/api/init`
         }
+    },
+    get Profile() {
+        if (location.protocol.includes('https')) {
+            return `https://${location.host}/api/profile`
+        } else {
+            return `http://${location.hostname}:3000/api/profile`
+        }
     }
 }

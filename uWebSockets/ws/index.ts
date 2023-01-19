@@ -3,9 +3,10 @@ import util from 'util'
 import { AbstractSocketMessage, ResponseActions } from '../uws.types'
 import logger from 'logger'
 
-// @index('./*', f => `import { handler as ${f.name.replaceAll('-', '')} } from '${f.path}'`)
+// @index('./*.ts', f => `import { handler as ${f.name.replaceAll('-', '')} } from '${f.path}'`)
 import { handler as AuthLogin } from './Auth-Login'
 import { handler as AuthLogout } from './Auth-Logout'
+import { handler as AuthRegister } from './Auth-Register'
 import { handler as GlobalSubscribe } from './Global-Subscribe'
 import { handler as GlobalUnsubscribe } from './Global-Unsubscribe'
 import { handler as GlobalChatGet } from './GlobalChat-Get'
@@ -17,9 +18,10 @@ import { handler as LobbyGetList } from './Lobby-GetList'
 // @endindex
 
 export const handlers = {
-    // @index('./*', f => `'${f.name}': ${f.name.replaceAll('-', '')},`)
+    // @index('./*.ts', f => `'${f.name}': ${f.name.replaceAll('-', '')},`)
     'Auth-Login': AuthLogin,
     'Auth-Logout': AuthLogout,
+    'Auth-Register': AuthRegister,
     'Global-Subscribe': GlobalSubscribe,
     'Global-Unsubscribe': GlobalUnsubscribe,
     'GlobalChat-Get': GlobalChatGet,
@@ -138,7 +140,7 @@ const WSHandler = (app: uws.TemplatedApp) => {
 
                 logger.info(request, 'Retrieved message')
 
-                handlers[request.ctx](response, request.data)
+                handlers[request.ctx](response, request.data, request.token)
             } catch (e) {
                 const message = e instanceof Error ? e.message : (e as string)
 

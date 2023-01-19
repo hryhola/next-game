@@ -9,7 +9,7 @@ export interface Success {
 export const handler: Handler<null, Success> = res => {
     res.res({
         users: state.users.map(u => ({
-            id: u.id
+            id: u.nickname
         }))
     })
 }
