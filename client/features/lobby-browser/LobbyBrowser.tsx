@@ -34,8 +34,13 @@ export const LobbyBrowser: React.FC = () => {
 
     useEffect(() => {
         ws.on('Lobby-GetList', getListHandler)
-        ws.send('Lobby-GetList')
     }, [])
+
+    useEffect(() => {
+        if (ws.isConnected) {
+            ws.send('Lobby-GetList')
+        }
+    }, [ws.isConnected])
 
     const renderedLobbies = searchString.length ? lobbiesList.filter(lobby => lobby.id.toLowerCase().includes(searchString.toLowerCase())) : lobbiesList
 

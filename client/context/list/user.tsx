@@ -2,25 +2,12 @@ import React, { useState, createContext } from 'react'
 
 export type Route = 'Login'
 
-export interface RouterData {
-    profilePictureUrl: string
-    setProfilePictureUrl: (value: string) => void
-    username: string
-    setUsername: (value: string) => void
-}
-
-const init: RouterData = {
-    profilePictureUrl: '',
+export const UserContext = createContext({
     username: '',
-    setProfilePictureUrl: () => {
-        throw new Error('Too soon')
-    },
-    setUsername: () => {
-        throw new Error('Too soon')
-    }
-}
-
-export const UserContext = createContext<RouterData>(init)
+    setUsername: (_val: string) => {},
+    profilePictureUrl: '',
+    setProfilePictureUrl: (_val: string) => {}
+})
 
 interface Props {
     children?: JSX.Element

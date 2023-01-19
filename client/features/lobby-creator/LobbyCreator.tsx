@@ -6,6 +6,7 @@ import { FormEventHandler, useContext, useEffect, useState, useRef } from 'react
 import { Request } from 'uWebSockets/ws/Lobby-Create'
 import { TextField, Button, Box, FormControl, InputLabel, MenuItem, Select, Input, CircularProgress, Backdrop, Alert, Grid } from '@mui/material'
 import FileUploadIcon from '@mui/icons-material/FileUpload'
+import { LoadingOverlay } from 'client/ui'
 
 export const LobbyCreator: React.FC = () => {
     const router = useContext(RouterContext)
@@ -43,7 +44,7 @@ export const LobbyCreator: React.FC = () => {
                 jeopardy.setName(name)
                 jeopardy.setMembers([
                     {
-                        id: user.username,
+                        nickname: user.username,
                         isCreator: true,
                         isMaster: true
                     }
@@ -92,9 +93,7 @@ export const LobbyCreator: React.FC = () => {
                     </Button>
                 </Grid>
             </Grid>
-            <Backdrop sx={{ color: '#fff', zIndex: theme => theme.zIndex.drawer + 1 }} open={isLoading}>
-                <CircularProgress color="inherit" />
-            </Backdrop>
+            <LoadingOverlay isLoading={isLoading} />
         </>
     )
 }

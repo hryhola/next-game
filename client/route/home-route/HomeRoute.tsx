@@ -8,6 +8,7 @@ import { Grid } from '@mui/material'
 import { ProfileEditor } from 'client/features/profile-editor/ProfileEditor'
 import FullScreenModal from 'client/ui/full-screen-modal/FullScreenModal'
 import { LobbyCreator } from 'client/features/lobby-creator/LobbyCreator'
+import { DevToolsOverlay } from 'client/features/dev/DevToolsOverlay'
 
 export const HomeRoute: React.FC = () => {
     const home = useContext(HomeContext)
@@ -23,7 +24,7 @@ export const HomeRoute: React.FC = () => {
                 </Grid>
             </Grid>
             <FullScreenModal label="Edit profile" transition="left" padding isOpen={home.isProfileEditOpen} setIsOpen={home.setIsProfileEditOpen}>
-                <ProfileEditor />
+                <ProfileEditor onUpdated={() => home.setIsProfileEditOpen(false)} />
             </FullScreenModal>
             <FullScreenModal label="Navigation" isOpen={home.isNavigationOpen} setIsOpen={home.setIsNavigationOpen} transition="right">
                 <Navigation />

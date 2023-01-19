@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext, FormEventHandler } from 'react'
+import { useState, useEffect, useContext, FormEventHandler, useRef } from 'react'
 import { UserContext } from 'client/context/list/user'
 import { RouterContext } from 'client/context/list/router'
 import { WSContext } from 'client/context/list/ws'
@@ -7,15 +7,18 @@ import { RequestHandler } from 'uWebSockets/uws.types'
 
 export const Login: React.FC = () => {
     const ws = useContext(WSContext)
-    const auth = useContext(UserContext)
+    const user = useContext(UserContext)
     const router = useContext(RouterContext)
 
     const [username, setUsername] = useState('')
     const [error, setError] = useState('')
 
-    const handleLogin: RequestHandler<'Auth-Login'> = data => {
+    const handleRegister: RequestHandler<'Auth-Register'> = data => {
         if (data.success) {
-            auth.setUsername(data.username)
+            user.setUsername(data.username)
+
+            localStorage.setItem('token', data.token)
+
             router.setCurrentRoute('Home')
         } else {
             setError(data.message)
@@ -23,7 +26,7 @@ export const Login: React.FC = () => {
     }
 
     useEffect(() => {
-        ws.on('Auth-Login', handleLogin)
+        ws.on('Auth-Register', handleRegister)
     }, [])
 
     const handleSubmit: FormEventHandler<HTMLFormElement> = e => {
@@ -31,7 +34,7 @@ export const Login: React.FC = () => {
 
         setError('')
 
-        ws.send('Auth-Login', { username })
+        ws.send('Auth-Register', { username })
     }
 
     return (
@@ -50,7 +53,7 @@ export const Login: React.FC = () => {
                 />
             </Grid>
             <Grid item minWidth="300px">
-                <Button type="submit" variant="outlined" size="large" fullWidth>
+                <Button sx={{ height: '54px' }} type="submit" variant="outlined" fullWidth>
                     enter
                 </Button>
             </Grid>

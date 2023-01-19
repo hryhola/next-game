@@ -1,46 +1,49 @@
 import { Handler } from '../uws.types'
 import { state } from '../../state'
-import { TUser } from 'model'
+import { User } from 'model'
 import logger from 'logger'
 
 export interface Request {
-    token: string
+    username: string
 }
 
 export interface Success {
     success: true
-    user: TUser
+    username: string
+    token: string
 }
 
 export interface Failure {
     success: false
+    username: string
     message: string
 }
 
 export const handler: Handler<Request, Success | Failure> = (actions, data) => {
-    if (!data.token) {
-        return actions.res({
+    const existingUser = state.users.find(u => u.nickname === data.username)
+
+    if (existingUser?.isOnline()) {
+        actions.res({
             success: false,
-            message: 'Token is missing'
+            username: data.username,
+            message: 'User exists'
         })
+
+        return
+    } else if (existingUser) {
+        existingUser.destroyToken()
     }
 
-    const user = state.auth[data.token]
+    const user = new User(data.username)
 
-    if (!user) {
-        return actions.res({
-            success: false,
-            message: 'Not valid token'
-        })
-    }
-
-    user.setOnline(true)
+    state.users.push(user)
 
     logger.info('New login: ' + user.nickname)
 
     actions.res({
         success: true,
-        user
+        username: data.username,
+        token: user.getToken()
     })
 
     actions.publishGlobal('GlobalOnline-UsersCountUpdate', {

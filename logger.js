@@ -6,7 +6,7 @@ const pino = require('pino')
 let logger
 
 if (process.env.NODE_ENV === 'production') {
-    logger = pino({}, pino.destination('./logs/prod.log'))
+    logger = pino({ level: 'debug' }, pino.destination('./logs/prod.log'))
 } else {
     logger = pino(
         {

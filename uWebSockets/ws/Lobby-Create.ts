@@ -36,7 +36,7 @@ export const handler: Handler<Request, Success | Failure> = (actions, data) => {
         })
     }
 
-    const user = state.users.find(u => u.id === data.creatorId)!
+    const user = state.users.find(u => u.nickname === data.creatorId)!
 
     if (!user) {
         return actions.res({
