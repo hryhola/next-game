@@ -9,11 +9,13 @@ import { GetProps } from 'react-redux'
 function ProfilePicture() {
     const user = useContext(UserContext)
 
+    console.log(user.profilePictureUrl)
+
     if (user.profilePictureUrl) {
         return (
             <>
                 &nbsp;
-                <img src={user.profilePictureUrl} width={40} alt="profile picture" />
+                <Image src={user.profilePictureUrl} alt="profile avatar" width={40} height={40} className="next-img" />
             </>
         )
     }

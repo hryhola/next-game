@@ -1,3 +1,4 @@
+import { TUser } from 'model'
 import React, { useState, createContext } from 'react'
 
 export type Route = 'Login'
@@ -11,11 +12,13 @@ export const UserContext = createContext({
 
 interface Props {
     children?: JSX.Element
+    user?: TUser // SSR user
+    userAvatarUrl: string // SSR avatar link
 }
 
 export const UserProvider: React.FC<Props> = props => {
-    const [username, setUsername] = useState('')
-    const [profilePictureUrl, setProfilePictureUrl] = useState('')
+    const [username, setUsername] = useState(props.user?.nickname || '')
+    const [profilePictureUrl, setProfilePictureUrl] = useState(props.user?.avatarRes ? '/res/' + props.user?.avatarRes : '')
 
     return <UserContext.Provider value={{ username, setUsername, profilePictureUrl, setProfilePictureUrl }}>{props.children}</UserContext.Provider>
 }

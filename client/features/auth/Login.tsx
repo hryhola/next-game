@@ -4,6 +4,9 @@ import { RouterContext } from 'client/context/list/router'
 import { WSContext } from 'client/context/list/ws'
 import { Button, Grid, TextField } from '@mui/material'
 import { RequestHandler } from 'uWebSockets/uws.types'
+import { setCookie } from 'cookies-next'
+
+const inSeconds90Days = 7776000
 
 export const Login: React.FC = () => {
     const ws = useContext(WSContext)
@@ -17,7 +20,7 @@ export const Login: React.FC = () => {
         if (data.success) {
             user.setUsername(data.username)
 
-            localStorage.setItem('token', data.token)
+            setCookie('token', data.token, { maxAge: inSeconds90Days })
 
             router.setCurrentRoute('Home')
         } else {

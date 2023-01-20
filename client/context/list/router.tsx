@@ -1,4 +1,6 @@
-import React, { useState, createContext } from 'react'
+import React, { useState, createContext, useEffect } from 'react'
+import dynamic from 'next/dynamic'
+import { GetServerSideProps } from 'next'
 
 export type Route = 'Login' | 'Home' | 'Lobby' | 'PackEditor'
 
@@ -18,10 +20,11 @@ export const RouterContext = createContext<RouterData>(init)
 
 interface Props {
     children?: JSX.Element
+    defaultRoute: Route
 }
 
 export const RouterProvider: React.FC<Props> = props => {
-    const [currentRoute, setCurrentRoute] = useState<Route>('Login')
+    const [currentRoute, setCurrentRoute] = useState<Route>(props.defaultRoute)
 
     return <RouterContext.Provider value={{ currentRoute, setCurrentRoute }}>{props.children}</RouterContext.Provider>
 }

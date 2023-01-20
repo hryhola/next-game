@@ -3,8 +3,9 @@ import formidable from 'formidable'
 import fetch from 'node-fetch'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { parseForm } from 'util/formDataRequest'
-import { WsUrl } from 'uWebSockets/post'
+import { WsPostUrl } from 'uWebSockets/post'
 import logger from 'logger'
+import path from 'path'
 
 export type Failure = {
     success: false
@@ -13,7 +14,7 @@ export type Failure = {
 
 export type Success = {
     success: true
-    avatarResourceId: string
+    avatarRes: string
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse<Success | Failure>) {
@@ -23,7 +24,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
         return res.end()
     }
 
-    const token = req.headers.authorization
+    const token = req.cookies.token
 
     if (!token) {
         return res.status(400).json({
@@ -32,7 +33,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
         })
     }
 
-    const authResult = (await fetch(WsUrl.auth, {
+    const authResult = (await fetch(WsPostUrl.auth, {
         method: 'POST',
         body: JSON.stringify({ token })
     }).then(r => r.json())) as { isValid: boolean }
@@ -44,7 +45,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
         })
     }
 
-    const [result, error] = await parseForm(req, 'avatar')
+    const [result, error] = await parseForm(req, 'avatar', true)
 
     if (error) {
         logger.error({ error }, 'form data parsing failure')
@@ -59,12 +60,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
 
     const avatarFullPath = (files.image as formidable.File).filepath
 
-    const avatarResourceId = 'avatar/' + avatarFullPath.split('\\').pop()!
+    const parsedPath = path.parse(avatarFullPath)
 
-    const requestResult = (await fetch(WsUrl.profile, {
+    const avatarResourceId = 'avatar/' + parsedPath.base
+
+    const requestResult = (await fetch(WsPostUrl.profile, {
         method: 'POST',
         body: JSON.stringify({
-            imageResId: avatarFullPath,
+            imageResId: avatarResourceId,
             nickname: fields.nickname,
             token
         })
@@ -79,7 +82,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
 
     res.status(200).json({
         success: true,
-        avatarResourceId
+        avatarRes: avatarResourceId
     })
 }
 

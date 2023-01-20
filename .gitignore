@@ -37,3 +37,4 @@ next-env.d.ts
 
 uploads
 logs
+public/res/*
