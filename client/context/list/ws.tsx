@@ -3,6 +3,7 @@ import type { HandlerName } from 'uWebSockets/ws'
 import type { AbstractSocketMessage, RequestData } from 'uWebSockets/uws.types'
 import type { GlobalEventName } from 'uWebSockets/globalSocketEvents'
 import { UserContext } from './user'
+import { getCookie } from 'cookies-next'
 
 type HandlerOn = <C extends GlobalEventName | HandlerName>(context: C, handler: Function) => void
 type HandlerSend = <H extends HandlerName>(context: H, data?: RequestData<H>) => void
@@ -56,7 +57,7 @@ export const WSProvider: React.FC<Props> = props => {
 
         console.log('%c' + context + ' %csend', 'color: Chartreuse', '', message.data)
 
-        const token = localStorage.getItem('token')
+        const token = getCookie('token') as string | undefined
 
         if (token) {
             message.token = token
@@ -82,15 +83,20 @@ export const WSProvider: React.FC<Props> = props => {
     useEffect(() => {
         if (auth.username) {
             window.addEventListener('beforeunload', () => {
-                wsRef.current?.send(
-                    JSON.stringify({
-                        ctx: 'Auth-Logout',
-                        token: localStorage.getItem('token'),
-                        data: {
-                            username: auth.username
-                        }
-                    })
-                )
+                const token = getCookie('token') as string | undefined
+
+                const data: AbstractSocketMessage = {
+                    ctx: 'Auth-Logout',
+                    data: {
+                        username: auth.username
+                    }
+                }
+
+                if (token) {
+                    data.token = token
+                }
+
+                wsRef.current?.send(JSON.stringify(data))
             })
         }
     }, [wsRef.current, auth.username])

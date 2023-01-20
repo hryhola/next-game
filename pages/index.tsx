@@ -1,98 +1,57 @@
-import { useContext, useEffect } from 'react'
-import { NextPage } from 'next'
+import { GetServerSideProps, NextPage } from 'next'
 import { Router } from 'client/features/app/Router'
-import { LoadingOverlay } from 'client/ui/loading-overlay/LoadingOverlay'
-import { connectToWebSocket } from 'client/network-utils/socket'
-import { WSContext } from 'client/context/list/ws'
-import { sleep } from 'util/time'
 import Head from 'next/head'
-import { DevToolsOverlay } from 'client/features/dev/DevToolsOverlay'
+import { AppContext } from 'client/context/AppContext'
+import { Route } from 'client/context/list/router'
+import { WsGetUrl } from 'uWebSockets/get'
+import { deleteCookie } from 'cookies-next'
+import { TUser } from 'model'
+import logger from 'logger'
 
-let isConnecting = false
+type Props = {
+    defaultRoute: Route
+    user?: TUser
+}
 
-const Home: NextPage = () => {
-    const { wsRef, setIsConnected, isConnected } = useContext(WSContext)
-
-    useEffect(() => {
-        if (isConnecting) {
-            console.log('Already connecting. Exiting init hook.')
-            return
-        }
-
-        isConnecting = true
-
-        connectToWebSocket({
-            onClose: () => setIsConnected(false),
-            onError: () => setIsConnected(false),
-            onOpen: (ws: WebSocket) => {
-                console.log('Connection is set.')
-                wsRef.current = ws
-                setIsConnected(true)
-            }
-        }).then(() => {
-            isConnecting = false
-        })
-    }, [])
-
-    useEffect(() => {
-        if (isConnected === false) {
-            if (isConnecting) {
-                console.log('Already connecting. Exiting retry hook.')
-                return
-            }
-
-            const retry = async () => {
-                wsRef.current = null
-
-                isConnecting = true
-
-                console.log('trying to establish connection')
-
-                await connectToWebSocket({
-                    onOpen: (ws: WebSocket) => {
-                        console.log('Connection is set.')
-                        wsRef.current = ws
-                        setIsConnected(true)
-                    },
-                    onError: async () => {
-                        setIsConnected(false)
-                        console.log('connection error')
-
-                        await sleep(1000)
-
-                        console.log('trying to reconnect...')
-
-                        await retry()
-                    },
-                    onClose: async () => {
-                        setIsConnected(false)
-                        console.log('connection closet')
-
-                        await sleep(1000)
-
-                        console.log('trying to reconnect...')
-
-                        await retry()
-                    }
-                }).then(() => {
-                    isConnecting = false
-                })
-            }
-
-            retry()
-        }
-    }, [isConnected])
-
+const Home: NextPage<Props> = props => {
     return (
-        <>
+        <AppContext {...props}>
             <Head>
                 <title>Game Club</title>
             </Head>
-            <DevToolsOverlay />
             <Router />
-            <LoadingOverlay isLoading={!isConnected} />
-        </>
+        </AppContext>
     )
+}
+
+export const getServerSideProps: GetServerSideProps = async context => {
+    const props: Props = {
+        defaultRoute: 'Login'
+    }
+
+    const token = context.req.cookies.token
+
+    if (token) {
+        try {
+            const res = await fetch(WsGetUrl.profile + '?token=' + token)
+            const data = await res.json()
+
+            if (!data.success) {
+                deleteCookie('token')
+            } else {
+                props.defaultRoute = 'Home'
+                props.user = data.user
+            }
+        } catch (e) {
+            logger.error(e)
+        }
+    }
+
+    console.log(props)
+
+    return {
+        props
+    }
 }
 
 export default Home

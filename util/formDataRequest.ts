@@ -7,9 +7,9 @@ import { X } from 'util/t'
 
 type PraseFromResult = { fields: formidable.Fields; files: formidable.Files }
 
-export const parseForm = async (req: NextApiRequest, folder?: string): Promise<X<PraseFromResult>> => {
+export const parseForm = async (req: NextApiRequest, folder?: string, isPublic = false): Promise<X<PraseFromResult>> => {
     return new Promise(async (resolve, reject) => {
-        const uploadDirPath = [process.env.ROOT_DIR || process.cwd(), 'uploads']
+        const uploadDirPath = [process.env.ROOT_DIR || process.cwd(), ...(isPublic ? ['public', 'res'] : ['uploads'])]
 
         if (folder) {
             uploadDirPath.push(folder)

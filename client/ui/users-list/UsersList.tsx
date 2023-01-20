@@ -2,7 +2,7 @@ import { List, ListItem, ListItemText } from '@mui/material'
 import React from 'react'
 
 interface Props {
-    users: Array<{ id: string }>
+    users: Array<{ nickname: string }>
 }
 
 export const UsersList: React.FC<Props> = props => {
@@ -13,8 +13,8 @@ export const UsersList: React.FC<Props> = props => {
     return (
         <List>
             {props.users.map(user => (
-                <ListItem key={user.id}>
-                    <ListItemText>{user.id}</ListItemText>
+                <ListItem key={user.nickname}>
+                    <ListItemText>{user.nickname}</ListItemText>
                 </ListItem>
             ))}
         </List>

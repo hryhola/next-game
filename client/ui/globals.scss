@@ -10,6 +10,15 @@ img {
     max-height: 100%;
 }
 
+.next-img {
+    width: inherit !important;
+    height: inherit !important;
+    min-width: inherit !important;
+    min-height: inherit !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
+}
+
 * {
     box-sizing: border-box;
 }

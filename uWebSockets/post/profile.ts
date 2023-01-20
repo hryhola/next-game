@@ -14,7 +14,7 @@ export interface Success {
 }
 
 export const handler = async (res: uws.HttpResponse, req: uws.HttpRequest) => {
-    logger.info('POST profile-update request')
+    logger.info('POST profile request')
 
     res.writeHeader('Content-Type', 'application/json')
 

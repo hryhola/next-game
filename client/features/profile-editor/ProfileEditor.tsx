@@ -7,9 +7,11 @@ import React, { useState, useContext, useRef } from 'react'
 import FileUploadIcon from '@mui/icons-material/FileUpload'
 import { LoadingOverlay } from 'client/ui'
 import { URL as ApiUrl } from 'client/network-utils/const'
-import { Failure, Success } from 'uWebSockets/post/profile'
 import { api } from 'client/network-utils/api'
+import Image from 'next/image'
 import { P } from 'pino'
+
+import type { Failure, Success } from 'pages/api/profile'
 
 interface Props {
     onUpdated?: () => void
@@ -26,7 +28,15 @@ export const ProfileEditor: React.FC<Props> = props => {
     const [error, setError] = useState('')
     const [isLoading, setIsLoading] = useState(false)
 
-    const imagePath = imageFile ? URL.createObjectURL(imageFile) : user.profilePictureUrl
+    const displayedImage = imageFile
+        ? {
+              local: true,
+              url: URL.createObjectURL(imageFile)
+          }
+        : {
+              local: false,
+              url: user.profilePictureUrl
+          }
 
     const handleSubmit: React.FormEventHandler<HTMLFormElement> = async event => {
         event.preventDefault()
@@ -35,7 +45,7 @@ export const ProfileEditor: React.FC<Props> = props => {
 
         setIsLoading(true)
 
-        const [response, postError] = await api.post<Success | Failure>(ApiUrl.Profile, data).finally(() => setIsLoading(false))
+        const [response, postError] = await api.post<Failure | Success>(ApiUrl.Profile, data).finally(() => setIsLoading(false))
 
         if (!response) {
             return setError(String(postError))
@@ -49,9 +59,10 @@ export const ProfileEditor: React.FC<Props> = props => {
             return
         }
 
-        if (imageFile) {
-            console.log('setProfilePictureUrl')
-            user.setProfilePictureUrl(URL.createObjectURL(imageFile))
+        user.setUsername(nickname)
+
+        if (response.avatarRes) {
+            user.setProfilePictureUrl('/res/' + response.avatarRes)
         }
 
         if (props.onUpdated) {
@@ -59,8 +70,6 @@ export const ProfileEditor: React.FC<Props> = props => {
             props.onUpdated()
         }
     }
-
-    const imgProps = {}
 
     return (
         <>
@@ -83,8 +92,12 @@ export const ProfileEditor: React.FC<Props> = props => {
                         }}
                     >
                         <input type="file" name="image" accept="image/*" onChange={e => setImageFile(e.target.files![0])} hidden />
-                        {imagePath ? (
-                            <img alt="user avatar" src={imagePath} />
+                        {displayedImage.url ? (
+                            displayedImage.local ? (
+                                <img alt="user avatar" src={displayedImage.url} />
+                            ) : (
+                                <Image alt="user avatar" src={displayedImage.url} width={300} height={300} className="next-img" />
+                            )
                         ) : (
                             <>
                                 <FileUploadIcon />
