@@ -3,9 +3,9 @@ import formidable from 'formidable'
 import fetch from 'node-fetch'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { parseForm } from 'util/formDataRequest'
-import { WsPostUrl } from 'uWebSockets/post'
 import logger from 'logger'
 import path from 'path'
+import { uWSRest } from 'uWebSockets/rest'
 
 export type Failure = {
     success: false
@@ -33,7 +33,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
         })
     }
 
-    const authResult = (await fetch(WsPostUrl.auth, {
+    const authResult = (await fetch(uWSRest.auth, {
         method: 'POST',
         body: JSON.stringify({ token })
     }).then(r => r.json())) as { isValid: boolean }
@@ -64,7 +64,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
 
     const avatarResourceId = 'avatar/' + parsedPath.base
 
-    const requestResult = (await fetch(WsPostUrl.profile, {
+    const requestResult = (await fetch(uWSRest.profile, {
         method: 'POST',
         body: JSON.stringify({
             imageResId: avatarResourceId,

@@ -3,10 +3,10 @@ import { Router } from 'client/features/app/Router'
 import Head from 'next/head'
 import { AppContext } from 'client/context/AppContext'
 import { Route } from 'client/context/list/router'
-import { WsGetUrl } from 'uWebSockets/get'
 import { deleteCookie } from 'cookies-next'
 import { TUser } from 'model'
 import logger from 'logger'
+import { uWSRest } from 'uWebSockets/rest'
 
 type Props = {
     defaultRoute: Route
@@ -31,9 +31,11 @@ export const getServerSideProps: GetServerSideProps = async context => {
 
     const token = context.req.cookies.token
 
+    await fetch((process.env.NODE_ENV === 'production' ? 'https://' : 'http://') + 'localhost:3000/api/init')
+
     if (token) {
         try {
-            const res = await fetch(WsGetUrl.profile + '?token=' + token)
+            const res = await fetch(uWSRest.profile + '?token=' + token)
             const data = await res.json()
 
             if (!data.success) {
@@ -46,8 +48,6 @@ export const getServerSideProps: GetServerSideProps = async context => {
             logger.error(e)
         }
     }
-
-    console.log(props)
 
     return {
         props
