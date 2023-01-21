@@ -25,7 +25,7 @@ const readBody = (res: uws.HttpResponse): Promise<Buffer> =>
         res.onAborted(() => reject())
     })
 
-export const readJSON = async <T>(res: uws.HttpResponse): Promise<T> => {
+export const parseJsonBody = async <T>(res: uws.HttpResponse): Promise<T> => {
     const buffer = await readBody(res)
     const result = JSON.parse(buffer.toString()) as T
 

@@ -1,8 +1,7 @@
 import uws from 'uWebSockets.js'
 
-import WSHandler from './ws'
-import PostHandler from './post'
-import GetHandler from './get'
+import { WSHandler } from './ws'
+import { RestHandlersRegister } from './rest'
 
 import sslPath from '../ssl-path'
 import logger from 'logger'
@@ -26,8 +25,7 @@ export const createSocketServer = () => {
     }
 
     WSHandler(app)
-    PostHandler(app)
-    GetHandler(app)
+    RestHandlersRegister(app)
 
     app.listen(port, listenSocket => {
         if (listenSocket) {
