@@ -1,4 +1,5 @@
 // Next.js API route support: https://nextjs.org/docs/api-routes/introduction
+import logger from 'logger'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { parseForm } from 'util/formDataRequest'
 import { uWSRest } from 'uWebSockets/rest'
@@ -7,7 +8,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const [result, error] = await parseForm(req)
 
     if (error) {
-        console.log(error)
+        logger.error({ error }, 'Error during form parsing (lobby create)')
 
         return res.status(500).json({
             success: false,

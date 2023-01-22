@@ -26,8 +26,6 @@ export const LobbyCreator: React.FC = () => {
 
         const data = new FormData(formRef.current!)
 
-        console.log(data)
-
         data.set('creatorId', user.username)
 
         setIsLoading(true)

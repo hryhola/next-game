@@ -8,8 +8,6 @@ type PostRequest = {
 }
 
 const post: WrapperHTTPHandler<PostRequest> = state => async (res, req) => {
-    console.log(await req.body)
-
     res.json({
         success: true,
         lobbyId: v4()

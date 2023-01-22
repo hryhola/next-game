@@ -1,17 +1,11 @@
 import { useContext, useEffect, useRef } from 'react'
-import { GetServerSideProps, NextPage } from 'next'
-import { Router } from 'client/features/app/Router'
 import { LoadingOverlay } from 'client/ui/loading-overlay/LoadingOverlay'
 import { connectToWebSocket } from 'client/network-utils/socket'
 import { WSContext } from 'client/context/list/ws'
 import { sleep } from 'util/time'
-import Head from 'next/head'
 import { DevToolsOverlay } from 'client/features/dev/DevToolsOverlay'
-import { RequestHandler } from 'uWebSockets/uws.types'
 import { UserContext } from 'client/context/list/user'
 import { RouterContext } from 'client/context/list/router'
-import { AppContext } from 'client/context/AppContext'
-import { deleteCookie, getCookie } from 'cookies-next'
 
 let isConnecting = false
 
@@ -20,14 +14,9 @@ type Props = {
 }
 
 export const WsApp: React.FC<Props> = props => {
-    const wasLoginCalled = useRef(false)
     const ws = useContext(WSContext)
-    const user = useContext(UserContext)
-    const router = useContext(RouterContext)
 
     useEffect(() => {
-        console.log('wsapp loaded')
-
         if (isConnecting) {
             console.log('Already connecting. Exiting init hook.')
             return
@@ -97,5 +86,11 @@ export const WsApp: React.FC<Props> = props => {
         }
     }, [ws.isConnected])
 
-    return <>{props.children}</>
+    return (
+        <>
+            {props.children}
+            <DevToolsOverlay />
+            <LoadingOverlay isLoading={!ws.isConnected} text="connecting..." />
+        </>
+    )
 }
