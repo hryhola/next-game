@@ -1,9 +1,7 @@
-import { Chat } from './Chat'
-import { User } from './User'
-
-export class LobbyMember extends User {
-    isCreator: boolean = false
-}
+import { makeAutoObservable } from 'mobx'
+import { Chat } from 'state/global/Chat'
+import { User } from 'state/user/User'
+import { LobbyMember } from './LobbyMember'
 
 export class Lobby {
     id: string
@@ -17,12 +15,12 @@ export class Lobby {
         this.password = password
         this.creatorID = creator.nickname
 
-        const creatorMember = new LobbyMember(creator.nickname)
+        const creatorMember = new LobbyMember(creator)
 
         creatorMember.isCreator = true
 
         this.users.push(creatorMember)
+
+        makeAutoObservable(this)
     }
 }
-
-export type TLobbyMember = ExcludeMethods<LobbyMember>

@@ -1,16 +1,19 @@
 import logger from 'logger'
+import { State } from 'state'
 import uws from 'uWebSockets.js'
 import { createHandlerWrapper } from 'uWebSockets/utils/rest/handler-wrapper'
 import { HTTPMethod } from 'uWebSockets/uws.types'
 
 // @index('./**/*.ts', f => `import { handlers as ${f.path.replaceAll('-', '').replaceAll('/', '').substring(1)} } from '${f.path}'`)
 import { handlers as auth } from './auth'
+import { handlers as lobby } from './lobby'
 import { handlers as profile } from './profile'
 // @endindex
 
 const routeHandlers = {
     // @index('./**/*.ts', f => `'${f.path.substring(2)}': ${f.path.replaceAll('-', '').replaceAll('/', '').substring(1)},`)
     auth: auth,
+    lobby: lobby,
     profile: profile
     // @endindex
 }
@@ -25,7 +28,7 @@ export const uWSRest = Object.keys(routeHandlers).reduce((acc, curr) => {
     return acc
 }, {} as Record<uWSRestRoute, string>)
 
-export const RestHandlersRegister = (app: uws.TemplatedApp) => {
+export const RestHandlersRegister = (app: uws.TemplatedApp, state: State) => {
     Object.keys(routeHandlers).forEach(route => {
         const url = '/wsapi/' + route
 
@@ -33,7 +36,7 @@ export const RestHandlersRegister = (app: uws.TemplatedApp) => {
 
         Object.entries(restHandlers).forEach(([method, handler]) => {
             try {
-                app[method as HTTPMethod](url, createHandlerWrapper(handler, route, method))
+                app[method as HTTPMethod](url, createHandlerWrapper(handler, state, route, method))
                 logger.debug(`Registered ${method.toUpperCase()}\t${url}`)
             } catch (e) {
                 logger.error({ error: e }, `Cannot register ${method.toUpperCase()} ${url}`)

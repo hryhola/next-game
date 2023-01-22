@@ -6,7 +6,7 @@ export interface Request {
     topic: GlobalEventName
 }
 
-export const handler: Handler<Request> = (actions, data) => {
+export const handler: Handler<Request> = (actions, state, data) => {
     logger.info('unsubscribed from: ' + data.topic)
 
     actions.ws.unsubscribe(data.topic)

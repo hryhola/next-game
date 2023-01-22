@@ -1,14 +1,19 @@
 import uws from 'uWebSockets.js'
 
-import { WSHandler } from './ws'
+import { WSHandlerRegister } from './ws'
 import { RestHandlersRegister } from './rest'
+import { ReactionsRegister } from './reactions'
 
 import sslPath from '../ssl-path'
 import logger from 'logger'
+import { State } from 'state'
+import { ReactionActions } from './utils/reactions'
 
 export const port = Number(process.env.NEXT_PUBLIC_WS_PORT)
 
 export const createSocketServer = () => {
+    const state = new State()
+
     let app: uws.TemplatedApp
 
     if (process.env.NODE_ENV === 'production') {
@@ -24,8 +29,9 @@ export const createSocketServer = () => {
         app = uws.App()
     }
 
-    WSHandler(app)
-    RestHandlersRegister(app)
+    WSHandlerRegister(app, state)
+    RestHandlersRegister(app, state)
+    ReactionsRegister(new ReactionActions(app), state)
 
     app.listen(port, listenSocket => {
         if (listenSocket) {

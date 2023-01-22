@@ -4,7 +4,7 @@ import { Chat, ChatSXProps } from 'client/ui'
 import { UserContext } from 'client/context/list/user'
 import { useContext } from 'react'
 import { WSContext } from 'client/context/list/ws'
-import { TChatMessage } from 'model'
+import { TChatMessage } from 'state'
 import { GlobalPublishedEvents } from 'uWebSockets/globalSocketEvents'
 import { RequestHandler } from 'uWebSockets/uws.types'
 

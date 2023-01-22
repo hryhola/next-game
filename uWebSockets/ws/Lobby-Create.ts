@@ -1,6 +1,5 @@
 import { Handler } from '../uws.types'
-import { state } from '../../state'
-import { Lobby } from 'model'
+import { Lobby } from 'state'
 
 export interface Request {
     creatorId: string
@@ -19,7 +18,7 @@ export interface Failure {
     message: string
 }
 
-export const handler: Handler<Request, Success | Failure> = (actions, data) => {
+export const handler: Handler<Request, Success | Failure> = (actions, state, data) => {
     if (!data.lobbyId) {
         return actions.res({
             success: false,
@@ -36,7 +35,7 @@ export const handler: Handler<Request, Success | Failure> = (actions, data) => {
         })
     }
 
-    const user = state.users.find(u => u.nickname === data.creatorId)!
+    const user = state.users.getByNickname(data.creatorId)
 
     if (!user) {
         return actions.res({
@@ -48,7 +47,7 @@ export const handler: Handler<Request, Success | Failure> = (actions, data) => {
 
     const lobby = new Lobby(data.lobbyId, user, data.password)
 
-    state.lobbies[lobby.id] = lobby
+    state.lobbies.add(lobby)
 
     actions.res({
         success: true,

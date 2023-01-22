@@ -18,6 +18,7 @@ export const LobbyCreator: React.FC = () => {
     const [name, setName] = useState('')
     const [password, setPassword] = useState('')
     const [error, setError] = useState('')
+    const [game, setGame] = useState('tic-tac-toe')
     const [isLoading, setIsLoading] = useState(false)
 
     const handleSubmit: FormEventHandler<HTMLFormElement> = event => {
@@ -25,11 +26,13 @@ export const LobbyCreator: React.FC = () => {
 
         const data = new FormData(formRef.current!)
 
+        console.log(data)
+
         data.set('creatorId', user.username)
 
         setIsLoading(true)
 
-        fetch('http://localhost:5555/wsapi/lobby-create/jeopardy', {
+        fetch('http://localhost:3000/api/lobby', {
             method: 'POST',
             body: data
         })
@@ -44,7 +47,7 @@ export const LobbyCreator: React.FC = () => {
                 jeopardy.setName(name)
                 jeopardy.setMembers([
                     {
-                        nickname: user.username,
+                        user: user,
                         isCreator: true,
                         isMaster: true
                     }
@@ -58,7 +61,7 @@ export const LobbyCreator: React.FC = () => {
 
     return (
         <>
-            <Grid container component="form" onSubmit={handleSubmit} direction="column" spacing={2} height="100%">
+            <Grid container component="form" onSubmit={handleSubmit} ref={formRef} direction="column" spacing={2} height="100%">
                 {error && (
                     <Grid item>
                         <Alert severity="error">{error}</Alert>
@@ -69,20 +72,30 @@ export const LobbyCreator: React.FC = () => {
                 </Grid>
                 <Grid item>
                     <FormControl fullWidth>
-                        <InputLabel id="game-type-selector">Game</InputLabel>
-                        <Select labelId="game-type-selector" id="game-type-selector" label="Game" value="Jeopardy" fullWidth>
-                            <MenuItem value="Jeopardy">Jeopardy</MenuItem>
+                        <InputLabel required id="game-type-selector">
+                            Game
+                        </InputLabel>
+                        <Select
+                            value={game}
+                            onChange={e => setGame(e.target.value)}
+                            labelId="game-type-selector"
+                            id="game-type-selector"
+                            name="game"
+                            label="Game"
+                            fullWidth
+                        >
+                            {/* <MenuItem value="jeopardy">Jeopardy</MenuItem> */}
                             <MenuItem value="tic-tac-toe">Tic Tac Toe</MenuItem>
                         </Select>
                     </FormControl>
                 </Grid>
 
-                <Grid item>
+                {/* <Grid item>
                     <FormControl>
                         <FileUploadIcon />
                         <input required multiple={false} accept=".siq" name="pack" type="file" />
                     </FormControl>
-                </Grid>
+                </Grid> */}
 
                 <Grid item>
                     <TextField label="Password" name="password" value={password} onChange={e => setPassword(e.target.value.split('\\').pop()!)} fullWidth />

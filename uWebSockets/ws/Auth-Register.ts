@@ -1,6 +1,5 @@
 import { Handler } from '../uws.types'
-import { state } from '../../state'
-import { User } from 'model'
+import { User } from 'state'
 import logger from 'logger'
 
 export interface Request {
@@ -19,24 +18,22 @@ export interface Failure {
     message: string
 }
 
-export const handler: Handler<Request, Success | Failure> = (actions, data) => {
-    const existingUser = state.users.find(u => u.nickname === data.username)
+export const handler: Handler<Request, Success | Failure> = (actions, state, data) => {
+    const existingUser = state.users.getByNickname(data.username)
 
     if (existingUser?.isOnline()) {
-        actions.res({
+        return actions.res({
             success: false,
             username: data.username,
             message: 'User exists'
         })
-
-        return
     } else if (existingUser) {
-        existingUser.destroyToken()
+        state.users.destroy(existingUser.getToken())
     }
 
     const user = new User(data.username)
 
-    state.users.push(user)
+    state.users.add(user, user.getToken())
 
     logger.info('New login: ' + user.nickname)
 
@@ -44,13 +41,5 @@ export const handler: Handler<Request, Success | Failure> = (actions, data) => {
         success: true,
         username: data.username,
         token: user.getToken()
-    })
-
-    actions.publishGlobal('GlobalOnline-UsersCountUpdate', {
-        onlineUsersCount: state.users.length
-    })
-
-    actions.publishGlobal('GlobalOnline-UsersUpdate', {
-        users: state.users
     })
 }

@@ -1,6 +1,6 @@
 import { FormEventHandler, useState } from 'react'
 import { ChatMessageComponent } from './ChatMessage'
-import { TChatMessage } from 'model'
+import { TChatMessage } from 'state'
 import { List, IconButton, InputAdornment, FilledInput, Box, SxProps, Theme } from '@mui/material'
 import SendIcon from '@mui/icons-material/Send'
 import FormControl from '@mui/material/FormControl'

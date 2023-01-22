@@ -1,12 +1,11 @@
 import { Handler } from '../uws.types'
-import { state } from '../../state'
 
 interface Success {
     onlineUsersCount: number
 }
 
-export const handler: Handler<null, Success> = actions => {
+export const handler: Handler<null, Success> = (actions, state) => {
     actions.res({
-        onlineUsersCount: state.users.length
+        onlineUsersCount: state.users.onlineUsers.length
     })
 }
