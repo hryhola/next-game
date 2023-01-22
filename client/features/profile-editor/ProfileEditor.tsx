@@ -52,8 +52,6 @@ export const ProfileEditor: React.FC<Props> = props => {
         }
 
         if (!response.success) {
-            console.log(response)
-
             setError(response.message)
 
             return
@@ -66,7 +64,6 @@ export const ProfileEditor: React.FC<Props> = props => {
         }
 
         if (props.onUpdated) {
-            console.log('onUpdated')
             props.onUpdated()
         }
     }

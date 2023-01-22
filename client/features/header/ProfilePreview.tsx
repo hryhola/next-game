@@ -9,8 +9,6 @@ import { GetProps } from 'react-redux'
 function ProfilePicture() {
     const user = useContext(UserContext)
 
-    console.log(user.profilePictureUrl)
-
     if (user.profilePictureUrl) {
         return (
             <>

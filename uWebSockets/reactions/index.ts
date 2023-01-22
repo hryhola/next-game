@@ -17,8 +17,6 @@ export const ReactionsRegister = (actions: ReactionActions, state: State) => {
         curr => {
             const onlineUsers = curr.filter(u => u.online)
 
-            console.log(onlineUsers)
-
             actions.publishGlobal('GlobalOnline-UsersCountUpdate', {
                 onlineUsersCount: onlineUsers.length
             })
