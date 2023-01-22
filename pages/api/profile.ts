@@ -1,11 +1,10 @@
 // Next.js API route support: https://nextjs.org/docs/api-routes/introduction
 import formidable from 'formidable'
-import fetch from 'node-fetch'
-import type { NextApiRequest, NextApiResponse } from 'next'
+import type { NextApiRequest } from 'next'
 import { parseForm } from 'util/formDataRequest'
 import logger from 'logger'
 import path from 'path'
-import { uWSRest } from 'uWebSockets/rest'
+import { NextApiResponseUWS } from 'util/t'
 
 export type Failure = {
     success: false
@@ -17,7 +16,7 @@ export type Success = {
     avatarRes: string
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse<Success | Failure>) {
+export default async function handler(req: NextApiRequest, res: NextApiResponseUWS<Success | Failure>) {
     if (req.method !== 'POST') {
         res.status(400)
 
@@ -33,12 +32,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
         })
     }
 
-    const authResult = (await fetch(uWSRest.auth, {
-        method: 'POST',
-        body: JSON.stringify({ token })
-    }).then(r => r.json())) as { isValid: boolean }
+    const user = res.socket.server.appState.users.auth(token)
 
-    if (!authResult.isValid) {
+    if (!user) {
         return res.status(400).json({
             success: false,
             message: 'Invalid auth token'
@@ -64,21 +60,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
 
     const avatarResourceId = 'avatar/' + parsedPath.base
 
-    const requestResult = (await fetch(uWSRest.profile, {
-        method: 'POST',
-        body: JSON.stringify({
-            imageResId: avatarResourceId,
-            nickname: fields.nickname,
-            token
-        })
-    }).then(r => r.json())) as { success: boolean; message: string }
-
-    if (!requestResult.success) {
-        return res.status(500).json({
-            success: false,
-            message: requestResult.message
-        })
-    }
+    user.setNickname(fields.nickname as string)
+    user.setAvatarRes(avatarResourceId)
 
     res.status(200).json({
         success: true,
