@@ -1,4 +1,4 @@
-import { TUser } from 'model'
+import { User } from 'state'
 import React, { useState, createContext } from 'react'
 
 export type Route = 'Login'
@@ -12,7 +12,7 @@ export const UserContext = createContext({
 
 interface Props {
     children?: JSX.Element
-    user?: TUser // SSR user
+    user?: User // SSR user
     userAvatarUrl: string // SSR avatar link
 }
 

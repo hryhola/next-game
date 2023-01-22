@@ -1,7 +1,6 @@
 import { Handler } from '../uws.types'
-import { state } from '../../state'
-import { TUser } from 'model'
 import logger from 'logger'
+import { User } from 'state'
 
 export interface Request {
     token: string
@@ -9,7 +8,7 @@ export interface Request {
 
 export interface Success {
     success: true
-    user: TUser
+    user: User
 }
 
 export interface Failure {
@@ -17,7 +16,7 @@ export interface Failure {
     message: string
 }
 
-export const handler: Handler<Request, Success | Failure> = (actions, data) => {
+export const handler: Handler<Request, Success | Failure> = (actions, state, data) => {
     if (!data.token) {
         return actions.res({
             success: false,
@@ -25,7 +24,7 @@ export const handler: Handler<Request, Success | Failure> = (actions, data) => {
         })
     }
 
-    const user = state.auth[data.token]
+    const user = state.users.auth(data.token)
 
     if (!user) {
         return actions.res({
@@ -41,13 +40,5 @@ export const handler: Handler<Request, Success | Failure> = (actions, data) => {
     actions.res({
         success: true,
         user
-    })
-
-    actions.publishGlobal('GlobalOnline-UsersCountUpdate', {
-        onlineUsersCount: state.users.length
-    })
-
-    actions.publishGlobal('GlobalOnline-UsersUpdate', {
-        users: state.users
     })
 }

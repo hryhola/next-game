@@ -1,5 +1,4 @@
 import { Handler } from 'uWebSockets/uws.types'
-import { state } from '../../state'
 
 export interface LobbyInfo {
     id: string
@@ -10,8 +9,8 @@ export interface Success {
     lobbies: LobbyInfo[]
 }
 
-export const handler: Handler<null, Success> = actions => {
-    const lobbies = Object.values(state.lobbies)
+export const handler: Handler<null, Success> = (actions, state) => {
+    const lobbies = Object.values(state.lobbies.lobbies)
 
     actions.res({
         lobbies: lobbies.map(l => ({

@@ -1,8 +1,7 @@
 // Next.js API route support: https://nextjs.org/docs/api-routes/introduction
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { state } from 'state'
-import { Jeopardy } from 'model/Jeopardy'
 import { parseForm } from 'util/formDataRequest'
+import { uWSRest } from 'uWebSockets/rest'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     const [result, error] = await parseForm(req)
@@ -46,34 +45,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         })
     }
 
-    if (fields.lobbyId in state.lobbies) {
-        return res.status(400).json({
-            success: false,
-            message: 'Room already exists',
-            lobbyId: fields.lobbyId
-        })
-    }
+    const createResult = await fetch(uWSRest.lobby, {
+        method: 'POST',
+        body: JSON.stringify({ fields, files })
+    }).then(r => r.json())
 
-    console.log(state)
-
-    const user = state.users.find(u => u.nickname === fields.creatorId)!
-
-    if (!user) {
-        return res.status(500).json({
-            success: false,
-            message: 'Cannot find user with such nickname',
-            lobbyId: fields.lobbyId
-        })
-    }
-
-    const lobby = new Jeopardy(fields.lobbyId, user, fields.password)
-
-    state.lobbies[lobby.id] = lobby
-
-    return res.status(200).json({
-        success: true,
-        lobby: lobby.id
-    })
+    res.json(createResult)
 }
 
 export const config = {

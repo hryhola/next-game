@@ -2,6 +2,7 @@ import { WebSocket, HttpResponse, HttpRequest } from 'uWebSockets.js'
 import type { HandlerName } from 'uWebSockets/ws'
 import type { GlobalPublishedEvents, GlobalEventName } from 'uWebSockets/globalSocketEvents'
 import queryString from 'query-string'
+import { State } from 'state'
 
 export interface AbstractSocketMessage<Ctx extends string = string, Data extends null | {} = null | {}> {
     ctx: Ctx
@@ -19,11 +20,12 @@ export type ResponseActions<ResponseType = unknown> = {
 
 export type Handler<RequestData extends Object | null = null, ResponseType = any> = (
     actions: ResponseActions<ResponseType>,
+    state: State,
     data: RequestData,
     token?: string
 ) => void
 
-export type RequestData<R extends HandlerName> = Parameters<typeof import('uWebSockets/ws')['handlers'][R]>[1]
+export type RequestData<R extends HandlerName> = Parameters<typeof import('uWebSockets/ws')['handlers'][R]>[2]
 export type RequestHandler<R extends HandlerName> = (data: Parameters<Parameters<typeof import('uWebSockets/ws')['handlers'][R]>[0]['res']>[0]) => void
 export type GlobalEventHandler<E extends GlobalEventName> = (data: GlobalPublishedEvents[E]) => void
 
@@ -42,6 +44,6 @@ export type ResWrapper<R = {}> = {
     json: (data: R) => void
 }
 
-export type WrapperHTTPHandler<Body = any, Response = any> = (res: ResWrapper<Response>, req: ReqWrapper<Body>) => void | Promise<void>
+export type WrapperHTTPHandler<Body = any, Response = any> = (state: State) => (res: ResWrapper<Response>, req: ReqWrapper<Body>) => void | Promise<void>
 
 export type RestHandlers = Partial<Record<HTTPMethod, WrapperHTTPHandler>>

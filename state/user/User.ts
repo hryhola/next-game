@@ -1,9 +1,9 @@
-import { state } from 'state'
+import { makeAutoObservable } from 'mobx'
 import { v4 } from 'uuid'
 
 export class User {
-    private token?: string
-    private online: boolean = true
+    token?: string
+    online: boolean = true
 
     nickname: string
     avatarRes?: string
@@ -12,7 +12,7 @@ export class User {
         this.nickname = id
         this.token = v4()
 
-        state.auth[this.token] = this
+        makeAutoObservable(this)
     }
 
     setOnline(val: boolean) {
@@ -26,11 +26,4 @@ export class User {
     getToken() {
         return this.token!
     }
-
-    destroyToken() {
-        delete state.auth[this.token!]
-        delete this.token
-    }
 }
-
-export type TUser = ExcludeMethods<User>

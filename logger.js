@@ -10,7 +10,7 @@ if (process.env.NODE_ENV === 'production') {
 } else {
     logger = pino(
         {
-            level: 'debug',
+            level: 'warn',
             transport: {
                 target: 'pino-pretty',
                 options: {

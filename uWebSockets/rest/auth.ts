@@ -1,14 +1,13 @@
-import { state } from 'state'
 import { RestHandlers, WrapperHTTPHandler } from 'uWebSockets/uws.types'
 
 export interface PostRequest {
     token: string
 }
 
-const post: WrapperHTTPHandler<PostRequest> = async (res, req) => {
+const post: WrapperHTTPHandler<PostRequest> = state => async (res, req) => {
     const data = await req.body
 
-    const isValid = data.token in state.auth
+    const isValid = typeof state.users.auth(data.token) !== 'undefined'
 
     res.json({
         isValid

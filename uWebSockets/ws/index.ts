@@ -2,6 +2,7 @@ import uws from 'uWebSockets.js'
 import util from 'util'
 import { AbstractSocketMessage, ResponseActions } from '../uws.types'
 import logger from 'logger'
+import { WSMessageResponseActions } from 'uWebSockets/utils/ws/wrappers'
 
 // @index('./*.ts', f => `import { handler as ${f.name.replaceAll('-', '')} } from '${f.path}'`)
 import { handler as AuthLogin } from './Auth-Login'
@@ -15,6 +16,7 @@ import { handler as GlobalOnlineGetUsers } from './GlobalOnline-GetUsers'
 import { handler as GlobalOnlineGetUsersCount } from './GlobalOnline-GetUsersCount'
 import { handler as LobbyCreate } from './Lobby-Create'
 import { handler as LobbyGetList } from './Lobby-GetList'
+import { State } from 'state'
 // @endindex
 
 export const handlers = {
@@ -35,7 +37,7 @@ export const handlers = {
 
 export type HandlerName = keyof typeof handlers
 
-export const WSHandler = (app: uws.TemplatedApp) => {
+export const WSHandlerRegister = (app: uws.TemplatedApp, state: State) => {
     logger.debug('Registering handling for WS connection type')
 
     app.ws('/ws', {
@@ -99,48 +101,11 @@ export const WSHandler = (app: uws.TemplatedApp) => {
                     )
                 }
 
-                const response: ResponseActions = {
-                    publish(channel: string, message: AbstractSocketMessage) {
-                        const messageString = JSON.stringify(message)
-
-                        logger.info(`publishing to ${channel} ${messageString}`)
-
-                        app.publish(channel, messageString)
-                    },
-                    publishGlobal(channelCtx: string, data: any) {
-                        const message: AbstractSocketMessage = {
-                            ctx: channelCtx,
-                            data
-                        }
-
-                        logger.info(data, `publishing global event to ${channelCtx}`)
-
-                        app.publish(channelCtx, JSON.stringify(message))
-                    },
-                    res<T>(data: T) {
-                        logger.info(data, 'Responding to ' + request.ctx)
-                        ws.send(
-                            JSON.stringify({
-                                ctx: request.ctx,
-                                data
-                            })
-                        )
-                    },
-                    send<T>(ctx: string, data: T) {
-                        logger.info(data, 'Sending to ' + ctx)
-                        ws.send(
-                            JSON.stringify({
-                                ctx: ctx,
-                                data
-                            })
-                        )
-                    },
-                    ws
-                }
+                const response: ResponseActions = new WSMessageResponseActions(app, ws, request)
 
                 logger.info(request, 'Retrieved message')
 
-                handlers[request.ctx](response, request.data, request.token)
+                handlers[request.ctx](response, state, request.data, request.token)
             } catch (e) {
                 const message = e instanceof Error ? e.message : (e as string)
 

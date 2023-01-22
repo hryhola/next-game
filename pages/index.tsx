@@ -4,13 +4,13 @@ import Head from 'next/head'
 import { AppContext } from 'client/context/AppContext'
 import { Route } from 'client/context/list/router'
 import { deleteCookie } from 'cookies-next'
-import { TUser } from 'model'
 import logger from 'logger'
 import { uWSRest } from 'uWebSockets/rest'
+import { User } from 'state'
 
 type Props = {
     defaultRoute: Route
-    user?: TUser
+    user?: User
 }
 
 const Home: NextPage<Props> = props => {
