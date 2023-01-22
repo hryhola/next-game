@@ -2,7 +2,7 @@ import { makeAutoObservable } from 'mobx'
 import { v4 } from 'uuid'
 
 export class User {
-    token?: string
+    token: string
     online: boolean = true
 
     nickname: string
@@ -15,15 +15,19 @@ export class User {
         makeAutoObservable(this)
     }
 
+    setAvatarRes(val: string) {
+        this.avatarRes = val
+    }
+
+    setNickname(val: string) {
+        this.nickname = val
+    }
+
     setOnline(val: boolean) {
         this.online = val
     }
 
     isOnline() {
         return this.online
-    }
-
-    getToken() {
-        return this.token!
     }
 }

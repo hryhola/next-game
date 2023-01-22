@@ -1,4 +1,4 @@
-import uws from 'uWebSockets.js'
+import uws, { TemplatedApp } from 'uWebSockets.js'
 
 import { WSHandlerRegister } from './ws'
 import { RestHandlersRegister } from './rest'
@@ -11,7 +11,7 @@ import { ReactionActions } from './utils/reactions'
 
 export const port = Number(process.env.NEXT_PUBLIC_WS_PORT)
 
-export const createSocketServer = () => {
+export const createSocketServer = (): [TemplatedApp, State] => {
     const state = new State()
 
     let app: uws.TemplatedApp
@@ -41,5 +41,5 @@ export const createSocketServer = () => {
         }
     })
 
-    return app
+    return [app, state]
 }

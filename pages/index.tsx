@@ -29,6 +29,8 @@ export const getServerSideProps: GetServerSideProps = async context => {
         defaultRoute: 'Login'
     }
 
+    // context.req.
+
     const token = context.req.cookies.token
 
     await fetch((process.env.NODE_ENV === 'production' ? 'https://' : 'http://') + 'localhost:3000/api/init')

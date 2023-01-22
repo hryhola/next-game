@@ -28,18 +28,18 @@ export const handler: Handler<Request, Success | Failure> = (actions, state, dat
             message: 'User exists'
         })
     } else if (existingUser) {
-        state.users.destroy(existingUser.getToken())
+        state.users.destroy(existingUser.token)
     }
 
     const user = new User(data.username)
 
-    state.users.add(user, user.getToken())
+    state.users.add(user, user.token)
 
     logger.info('New login: ' + user.nickname)
 
     actions.res({
         success: true,
         username: data.username,
-        token: user.getToken()
+        token: user.token
     })
 }
