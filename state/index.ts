@@ -1,6 +1,8 @@
 // @index('./**/*.ts', f => `export * from '${f.path}'`)
 export * from './AppState'
-export * from './games/jeopardy/Jeopardy'
+export * from './games/AbstractGame'
+export * from './games/index'
+export * from './games/tic-tac-toe/TicTacToe'
 export * from './global/Chat'
 export * from './lobby/LobbiesRegistry'
 export * from './lobby/Lobby'

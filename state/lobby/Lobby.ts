@@ -1,26 +1,49 @@
 import { makeAutoObservable } from 'mobx'
+import { GameCtors, GameName } from 'state/games'
+import { AbstractGame } from 'state/games/AbstractGame'
 import { Chat } from 'state/global/Chat'
 import { User } from 'state/user/User'
 import { LobbyMember } from './LobbyMember'
 
-export class Lobby {
+export type LobbyCreateOptions<G extends GameName> = {
     id: string
-    users: LobbyMember[] = []
+    creator: User
+    password?: string
+    gameName: G
+    sessionStartData?: any
+}
+
+export class Lobby<G extends GameName = GameName> {
+    id: string
+    members: LobbyMember[] = []
     creatorID: string
     password?: string
     chat: Chat = new Chat()
+    game!: AbstractGame
+    sessionStartData: any
 
-    constructor(id: string, creator: User, password?: string) {
-        this.id = id
-        this.password = password
-        this.creatorID = creator.nickname
+    constructor(data: LobbyCreateOptions<G>) {
+        this.id = data.id
+        this.password = data.password
+        this.creatorID = data.creator.nickname
+        this.sessionStartData = data.sessionStartData
 
-        const creatorMember = new LobbyMember(creator)
+        const creatorAsMember = new LobbyMember(data.creator)
 
-        creatorMember.isCreator = true
+        creatorAsMember.isCreator = true
 
-        this.users.push(creatorMember)
+        this.members.push(creatorAsMember)
+
+        const GameConstructor = GameCtors[data.gameName]
+
+        this.game = new GameConstructor()
+
+        this.game.join(creatorAsMember)
 
         makeAutoObservable(this)
+    }
+
+    join(user: User) {
+        this.members.push(new LobbyMember(user))
     }
 }

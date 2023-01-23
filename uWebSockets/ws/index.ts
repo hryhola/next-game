@@ -14,7 +14,6 @@ import { handler as GlobalChatGet } from './GlobalChat-Get'
 import { handler as GlobalChatSend } from './GlobalChat-Send'
 import { handler as GlobalOnlineGetUsers } from './GlobalOnline-GetUsers'
 import { handler as GlobalOnlineGetUsersCount } from './GlobalOnline-GetUsersCount'
-import { handler as LobbyCreate } from './Lobby-Create'
 import { handler as LobbyGetList } from './Lobby-GetList'
 import { State } from 'state'
 // @endindex
@@ -30,7 +29,6 @@ export const handlers = {
     'GlobalChat-Send': GlobalChatSend,
     'GlobalOnline-GetUsers': GlobalOnlineGetUsers,
     'GlobalOnline-GetUsersCount': GlobalOnlineGetUsersCount,
-    'Lobby-Create': LobbyCreate,
     'Lobby-GetList': LobbyGetList
     // @endindex
 }

@@ -1,60 +1,61 @@
 import { UserContext } from 'client/context/list/user'
-import { JeopardyContext } from 'client/context/list/jeopardy'
+import { LobbyContext } from 'client/context/list/lobby'
 import { RouterContext } from 'client/context/list/router'
 import { WSContext } from 'client/context/list/ws'
 import { FormEventHandler, useContext, useEffect, useState, useRef } from 'react'
-import { Request } from 'uWebSockets/ws/Lobby-Create'
 import { TextField, Button, Box, FormControl, InputLabel, MenuItem, Select, Input, CircularProgress, Backdrop, Alert, Grid } from '@mui/material'
 import FileUploadIcon from '@mui/icons-material/FileUpload'
 import { LoadingOverlay } from 'client/ui'
+import { api } from 'client/network-utils/api'
+import { URL as ApiUrl } from 'client/network-utils/const'
+import { GeneralFailure, GeneralSuccess } from 'util/t'
+import { GameName } from 'state/games'
 
 export const LobbyCreator: React.FC = () => {
     const router = useContext(RouterContext)
     const user = useContext(UserContext)
-    const jeopardy = useContext(JeopardyContext)
+    const lobby = useContext(LobbyContext)
 
     const formRef = useRef<HTMLFormElement | null>(null)
 
     const [name, setName] = useState('')
     const [password, setPassword] = useState('')
     const [error, setError] = useState('')
-    const [game, setGame] = useState('tic-tac-toe')
+    const [gameName, setGameName] = useState<GameName>('TicTacToe')
     const [isLoading, setIsLoading] = useState(false)
 
-    const handleSubmit: FormEventHandler<HTMLFormElement> = event => {
+    const handleSubmit: FormEventHandler<HTMLFormElement> = async event => {
         event.preventDefault()
 
         const data = new FormData(formRef.current!)
 
-        data.set('creatorId', user.username)
-
         setIsLoading(true)
 
-        fetch('http://localhost:3000/api/lobby', {
-            method: 'POST',
-            body: data
-        })
-            .then(res => res.json())
-            .then(res => {
-                if (!res.success) {
-                    setError(res.message)
+        const [response, postError] = await api.post<GeneralSuccess | GeneralFailure>(ApiUrl.Lobby, data).finally(() => setIsLoading(false))
 
-                    return
-                }
+        if (!response) {
+            return setError(String(postError))
+        }
 
-                jeopardy.setName(name)
-                jeopardy.setMembers([
-                    {
-                        user: user,
-                        isCreator: true,
-                        isMaster: true
-                    }
-                ])
+        if (!response.success) {
+            setError(response.message)
 
-                router.setCurrentRoute('Lobby')
-            })
-            .catch(e => setError(e.toString()))
-            .finally(() => setIsLoading(false))
+            return
+        }
+
+        lobby.setLobbyId(name)
+        lobby.setGameName(gameName)
+        lobby.setMembers([
+            {
+                user: {
+                    nickname: user.username,
+                    avatarRes: user.profilePictureUrl
+                },
+                isCreator: true
+            }
+        ])
+
+        router.setCurrentRoute('Lobby')
     }
 
     return (
@@ -74,16 +75,16 @@ export const LobbyCreator: React.FC = () => {
                             Game
                         </InputLabel>
                         <Select
-                            value={game}
-                            onChange={e => setGame(e.target.value)}
+                            value={gameName}
+                            onChange={e => setGameName(e.target.value as GameName)}
                             labelId="game-type-selector"
                             id="game-type-selector"
-                            name="game"
+                            name="gameName"
                             label="Game"
                             fullWidth
                         >
                             {/* <MenuItem value="jeopardy">Jeopardy</MenuItem> */}
-                            <MenuItem value="tic-tac-toe">Tic Tac Toe</MenuItem>
+                            <MenuItem value="TicTacToe">Tic Tac Toe</MenuItem>
                         </Select>
                     </FormControl>
                 </Grid>

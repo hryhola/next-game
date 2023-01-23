@@ -10,7 +10,7 @@ export interface Success {
 }
 
 export const handler: Handler<null, Success> = (actions, state) => {
-    const lobbies = Object.values(state.lobbies.lobbies)
+    const lobbies = Object.values(state.lobbies.container)
 
     actions.res({
         lobbies: lobbies.map(l => ({

@@ -19,5 +19,12 @@ export const URL = {
         } else {
             return `http://${location.hostname}:3000/api/profile`
         }
+    },
+    get Lobby() {
+        if (location.protocol.includes('https')) {
+            return `https://${location.host}/api/lobby`
+        } else {
+            return `http://${location.hostname}:3000/api/lobby`
+        }
     }
 }
