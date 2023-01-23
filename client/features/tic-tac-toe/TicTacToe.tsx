@@ -1,11 +1,19 @@
-import { Box, Button, Grid, Container } from '@mui/material'
+import { Box, Button, Grid, Container, styled, ButtonProps, Typography } from '@mui/material'
 import React, { useState, createContext } from 'react'
-import styles from './TicTacToe.module.scss'
+import CloseIcon from '@mui/icons-material/Close'
+import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked'
+
+const Cell = styled(Button)<ButtonProps>(({ theme }) => ({
+    width: '200px',
+    height: '200px',
+    borderRadius: 0,
+    border: '1px solid black'
+}))
 
 export const TicTacToeContext = createContext({})
 
 export const TicTacToe: React.FC = props => {
-    const [cellValues, setCellValues] = useState<(string | null)[][]>([
+    const [cellValues, setCellValues] = useState<('x' | 'o' | null)[][]>([
         [null, null, null],
         [null, null, null],
         [null, null, null]
@@ -19,71 +27,28 @@ export const TicTacToe: React.FC = props => {
         const [x, y] = button.id.split('-')
 
         setCellValues(value => {
-            value[Number(x)][Number(y)] = 'value'
-
-            console.log(value)
+            value[Number(x)][Number(y)] = 'o'
 
             return value.slice()
         })
     }
 
-    console.log(cellValues)
-
     return (
         <TicTacToeContext.Provider value={context}>
             <Container sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
                 <Box>
-                    <Grid container>
-                        <Grid item>
-                            <Button id="0-0" className={styles.cell} onClick={cellClickHandler}>
-                                {cellValues[0][0]}
-                            </Button>
+                    {cellValues.map((row, x) => (
+                        <Grid key={x} container>
+                            {row.map((cell, y) => (
+                                <Grid key={y} item>
+                                    <Cell id={x + '-' + y} onClick={cellClickHandler} variant="contained" color="primary">
+                                        {cell === 'x' && <CloseIcon sx={{ fontSize: 80 }} />}
+                                        {cell === 'o' && <RadioButtonUncheckedIcon sx={{ fontSize: 80 }} />}
+                                    </Cell>
+                                </Grid>
+                            ))}
                         </Grid>
-                        <Grid item>
-                            <Button id="0-1" className={styles.cell} onClick={cellClickHandler}>
-                                {cellValues[0][1]}
-                            </Button>
-                        </Grid>
-                        <Grid item>
-                            <Button id="0-2" className={styles.cell} onClick={cellClickHandler}>
-                                {cellValues[0][2]}
-                            </Button>
-                        </Grid>
-                    </Grid>
-                    <Grid container>
-                        <Grid item>
-                            <Button id="1-0" className={styles.cell} onClick={cellClickHandler}>
-                                {cellValues[1][0]}
-                            </Button>
-                        </Grid>
-                        <Grid item>
-                            <Button id="1-1" className={styles.cell} onClick={cellClickHandler}>
-                                {cellValues[1][1]}
-                            </Button>
-                        </Grid>
-                        <Grid item>
-                            <Button id="1-2" className={styles.cell} onClick={cellClickHandler}>
-                                {cellValues[1][2]}
-                            </Button>
-                        </Grid>
-                    </Grid>
-                    <Grid container>
-                        <Grid item>
-                            <Button id="2-0" className={styles.cell} onClick={cellClickHandler}>
-                                {cellValues[2][0]}
-                            </Button>
-                        </Grid>
-                        <Grid item>
-                            <Button id="2-1" className={styles.cell} onClick={cellClickHandler}>
-                                {cellValues[2][1]}
-                            </Button>
-                        </Grid>
-                        <Grid item>
-                            <Button id="2-2" className={styles.cell} onClick={cellClickHandler}>
-                                {cellValues[2][2]}
-                            </Button>
-                        </Grid>
-                    </Grid>
+                    ))}
                 </Box>
             </Container>
         </TicTacToeContext.Provider>

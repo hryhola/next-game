@@ -1,14 +1,21 @@
 import { makeAutoObservable } from 'mobx'
-import { Lobby } from './Lobby'
+import { GameName } from 'state/games'
+import { Lobby, LobbyCreateOptions } from './Lobby'
 
 export class LobbiesRegistry {
-    lobbies: Record<string, Lobby> = {}
+    container: Record<string, Lobby<GameName>> = {}
 
     constructor() {
         makeAutoObservable(this)
     }
 
-    add(lobby: Lobby) {
-        this.lobbies[lobby.id] = lobby
+    createLobby<G extends GameName>(data: LobbyCreateOptions<G>) {
+        if (data.id in this.container) {
+            throw new Error(`Lobby with id ${data.id} already exists`)
+        }
+
+        const lobby = new Lobby(data)
+
+        this.container[data.id] = lobby
     }
 }

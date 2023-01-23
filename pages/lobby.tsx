@@ -1,8 +1,14 @@
 import { NextPage } from 'next'
-import { TicTacToe } from 'client/features/tic-tac-toe/TicTacToe'
+import dynamic from 'next/dynamic'
+
+const DynamicComponent = dynamic(() => import('client/features/tic-tac-toe/TicTacToe').then(mod => mod.TicTacToe), { ssr: false })
 
 const Lobby: NextPage = props => {
-    return <TicTacToe />
+    return (
+        <>
+            <DynamicComponent />
+        </>
+    )
 }
 
 export default Lobby

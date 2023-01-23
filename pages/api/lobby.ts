@@ -1,10 +1,30 @@
 // Next.js API route support: https://nextjs.org/docs/api-routes/introduction
+import { deleteCookie } from 'cookies-next'
 import logger from 'logger'
 import type { NextApiRequest, NextApiResponse } from 'next'
+import { GameCtors, GameName } from 'state/games'
 import { parseForm } from 'util/formDataRequest'
-import { uWSRest } from 'uWebSockets/rest'
+import { NextApiResponseUWS } from 'util/t'
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(req: NextApiRequest, res: NextApiResponseUWS) {
+    const token = req.cookies.token
+
+    if (!token) {
+        return res.status(400).json({
+            success: false,
+            message: 'Auth token is missing'
+        })
+    }
+
+    const creator = res.socket.server.appState.users.auth(token)
+
+    if (!creator) {
+        return res.status(400).json({
+            success: false,
+            message: 'Invalid token: ' + token
+        })
+    }
+
     const [result, error] = await parseForm(req)
 
     if (error) {
@@ -18,24 +38,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const { fields, files } = result!
 
-    if (!fields.lobbyId) {
+    if (!fields.lobbyId || Array.isArray(fields.lobbyId)) {
         return res.status(400).json({
             success: false,
-            message: 'Room ID cannot be empty'
+            message: 'Lobby ID is not valid'
         })
     }
 
-    if (!fields.creatorId) {
+    if (!fields.gameName || Array.isArray(fields.gameName) || !(fields.gameName in GameCtors)) {
         return res.status(400).json({
             success: false,
-            message: 'Creator ID cannot be empty'
-        })
-    }
-
-    if (Array.isArray(fields.lobbyId)) {
-        return res.status(400).json({
-            success: false,
-            message: 'Not correct lobby type'
+            message: 'Game name is not valid'
         })
     }
 
@@ -46,12 +59,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         })
     }
 
-    const createResult = await fetch(uWSRest.lobby, {
-        method: 'POST',
-        body: JSON.stringify({ fields, files })
-    }).then(r => r.json())
+    res.socket.server.appState.lobbies.createLobby({
+        id: fields.lobbyId,
+        creator,
+        gameName: fields.gameName as GameName,
+        password: fields.password
+        // sessionStartData
+    })
 
-    res.json(createResult)
+    res.json({
+        success: true
+    })
 }
 
 export const config = {

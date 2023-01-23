@@ -13,3 +13,12 @@ export type NextApiResponseUWS<T = any> = NextApiResponse<T> & {
         }
     }
 }
+
+export type GeneralFailure = {
+    success: false
+    message: string
+}
+
+export type GeneralSuccess = {
+    success: true
+}

@@ -26,4 +26,10 @@ export const ReactionsRegister = (actions: ReactionActions, state: State) => {
             })
         }
     )
+
+    reaction(
+        () => state.users.add,
+        () => {},
+        {}
+    )
 }

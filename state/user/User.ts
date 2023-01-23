@@ -31,3 +31,5 @@ export class User {
         return this.online
     }
 }
+
+export type TUser = Pick<User, 'nickname' | 'avatarRes'>
