@@ -12,8 +12,7 @@ export const LobbyRoute: React.FC = () => {
     const [isLoaded, setIsLoaded] = useState(false)
 
     useEffect(() => {
-        game.current = dynamic(() => import('client/features/tic-tac-toe/TicTacToe').then(mod => mod.TicTacToe), {
-            ssr: false,
+        game.current = dynamic(() => import('client/features/tic-tac-toe/TicTacToe').then(mod => mod.default), {
             loading: () => <LoadingOverlay isLoading={true} />
         })
 

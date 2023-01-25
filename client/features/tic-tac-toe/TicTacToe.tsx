@@ -2,11 +2,12 @@ import { Box, Button, Grid, Container, styled, ButtonProps } from '@mui/material
 import React, { useState, createContext, useContext } from 'react'
 import CloseIcon from '@mui/icons-material/Close'
 import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked'
-import { TTicTacToePlayer } from 'state'
+import { TicTacToePlayer, TTicTacToePlayer } from 'state'
 import { Player } from '../player/Player'
-import { ChatBox } from 'client/ui'
+import { ChatBox, LoadingOverlay } from 'client/ui'
 import { LobbyContext } from 'client/context/list/lobby'
 import { Chat } from '../chat/Chat'
+import { GetServerSideProps, NextPage } from 'next'
 
 const Cell = styled(Button)<ButtonProps>(({ theme }) => ({
     maxWidth: '200px',
@@ -19,27 +20,40 @@ const Cell = styled(Button)<ButtonProps>(({ theme }) => ({
 
 interface HeaderProps {
     members: TTicTacToePlayer[]
+    isLoading: boolean
 }
 
 const Header: React.FC<HeaderProps> = props => {
     return (
-        <Grid container justifyContent="space-around">
-            {props.members.map(m => (
-                <Grid key={m.user.nickname} item>
-                    <Player {...m} />
+        <Grid container justifyContent="center">
+            {props.isLoading ? (
+                <Grid item>
+                    <Player isLoading />
                 </Grid>
-            ))}
+            ) : (
+                props.members.map(m => (
+                    <Grid key={m.user.nickname} item>
+                        <Player {...m} />
+                    </Grid>
+                ))
+            )}
         </Grid>
     )
 }
 
-const initialContext = {
-    players: [] as TTicTacToePlayer[]
-}
-
-export const TicTacToeContext = createContext(initialContext)
-
-export const TicTacToe: React.FC = props => {
+const TicTacToe = () => {
+    const [players, setPlayers] = useState<TTicTacToePlayer[]>([
+        {
+            char: 'x',
+            isCreator: true,
+            isPlayer: true,
+            score: 0,
+            user: {
+                nickname: 'asdasd'
+            }
+        }
+    ])
+    const [isLoading, setIsLoading] = useState(false)
     const lobby = useContext(LobbyContext)
 
     const [cellValues, setCellValues] = useState<('x' | 'o' | null)[][]>([
@@ -61,9 +75,9 @@ export const TicTacToe: React.FC = props => {
     }
 
     return (
-        <TicTacToeContext.Provider value={initialContext}>
+        <>
             <Container sx={{ py: 4 }}>
-                <TicTacToeContext.Consumer>{c => <Header members={c.players} />}</TicTacToeContext.Consumer>
+                <Header members={players} isLoading={isLoading} />
                 <Box sx={{ pt: 4 }}>
                     {cellValues.map((row, x) => (
                         <Grid key={x} justifyContent="center" wrap="nowrap" container>
@@ -80,6 +94,9 @@ export const TicTacToe: React.FC = props => {
                 </Box>
                 <Chat scope="lobby" lobbyId={lobby.lobbyId} />
             </Container>
-        </TicTacToeContext.Provider>
+            <LoadingOverlay isLoading={isLoading} />
+        </>
     )
 }
+
+export default TicTacToe
