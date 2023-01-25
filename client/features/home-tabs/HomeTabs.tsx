@@ -7,13 +7,14 @@ import Tab from '@mui/material/Tab'
 import Typography from '@mui/material/Typography'
 import Box from '@mui/material/Box'
 import { LobbyBrowser } from '../lobby-browser/LobbyBrowser'
-import { GlobalChat } from '../global-chat/GlobalChat'
+import { Chat } from '../chat/Chat'
 import { GetProps } from 'react-redux'
 import { headerHeight } from '../header/Header'
 import { chatInputHeight } from 'client/ui'
 import ListItemText from '@mui/material/ListItemText'
-import { List, ListItem } from '@mui/material'
+import { CircularProgress, List, ListItem } from '@mui/material'
 import { GlobalUsersList } from '../global-users-list/GlobalUsersList'
+import { GlobalUsersListTitle } from '../global-users-list/GlobalUsersListTitle'
 
 interface TabPanelProps {
     children?: React.ReactNode
@@ -69,8 +70,8 @@ export const HomeTabs: React.FC<GetProps<typeof Box>> = props => {
             <AppBar sx={{ height: tabsHeaderHeight }} position="static">
                 <Tabs value={value} onChange={handleChange} indicatorColor="primary" textColor="inherit" variant="fullWidth" aria-label="Home page navigation">
                     <Tab label="Lobbies" {...a11yProps(0)} />
-                    <Tab label="Global chat" {...a11yProps(1)} />
-                    <Tab label="Online users" {...a11yProps(2)} />
+                    <Tab label="chat" {...a11yProps(1)} />
+                    <Tab label={<GlobalUsersListTitle />} {...a11yProps(2)} />
                 </Tabs>
             </AppBar>
             <SwipeableViews
@@ -84,7 +85,7 @@ export const HomeTabs: React.FC<GetProps<typeof Box>> = props => {
                     <LobbyBrowser />
                 </TabPanel>
                 <TabPanel sx={{ height: `calc(100vh - ${headersHeight})` }} value={value} index={1} dir={theme.direction}>
-                    <GlobalChat messagesWrapperBoxSx={{ height: `calc(100vh - ${headersHeight} - ${chatInputHeight})` }} />
+                    <Chat scope="global" messagesWrapperBoxSx={{ height: `calc(100vh - ${headersHeight} - ${chatInputHeight})` }} />
                 </TabPanel>
                 <TabPanel sx={{ height: `calc(100vh - ${headersHeight})` }} value={value} index={2} dir={theme.direction}>
                     <GlobalUsersList />

@@ -46,4 +46,22 @@ export class Lobby<G extends GameName = GameName> {
     join(user: User) {
         this.members.push(new LobbyMember(user))
     }
+
+    getPublicData(): TLobbyPublicData {
+        return {
+            id: this.id,
+            private: Boolean(this.password),
+            gameName: (Object.getPrototypeOf(this.game).constructor as typeof AbstractGame).gameName as GameName,
+            membersCount: this.members.length,
+            creatorID: this.creatorID
+        }
+    }
+}
+
+export type TLobbyPublicData = {
+    id: string
+    private: boolean
+    gameName: GameName
+    membersCount: number
+    creatorID: string
 }

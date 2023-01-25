@@ -3,19 +3,19 @@ import util from 'util'
 import { AbstractSocketMessage, ResponseActions } from '../uws.types'
 import logger from 'logger'
 import { WSMessageResponseActions } from 'uWebSockets/utils/ws/wrappers'
+import { State } from 'state'
 
 // @index('./*.ts', f => `import { handler as ${f.name.replaceAll('-', '')} } from '${f.path}'`)
 import { handler as AuthLogin } from './Auth-Login'
 import { handler as AuthLogout } from './Auth-Logout'
 import { handler as AuthRegister } from './Auth-Register'
-import { handler as GlobalSubscribe } from './Global-Subscribe'
-import { handler as GlobalUnsubscribe } from './Global-Unsubscribe'
-import { handler as GlobalChatGet } from './GlobalChat-Get'
-import { handler as GlobalChatSend } from './GlobalChat-Send'
-import { handler as GlobalOnlineGetUsers } from './GlobalOnline-GetUsers'
-import { handler as GlobalOnlineGetUsersCount } from './GlobalOnline-GetUsersCount'
+import { handler as ChatGet } from './Chat-Get'
+import { handler as ChatSend } from './Chat-Send'
 import { handler as LobbyGetList } from './Lobby-GetList'
-import { State } from 'state'
+import { handler as LobbyGetPublicInfo } from './Lobby-GetPublicInfo'
+import { handler as UniversalSubscription } from './Universal-Subscription'
+import { handler as UsersGet } from './Users-Get'
+import { handler as UsersGetCount } from './Users-GetCount'
 // @endindex
 
 export const handlers = {
@@ -23,13 +23,13 @@ export const handlers = {
     'Auth-Login': AuthLogin,
     'Auth-Logout': AuthLogout,
     'Auth-Register': AuthRegister,
-    'Global-Subscribe': GlobalSubscribe,
-    'Global-Unsubscribe': GlobalUnsubscribe,
-    'GlobalChat-Get': GlobalChatGet,
-    'GlobalChat-Send': GlobalChatSend,
-    'GlobalOnline-GetUsers': GlobalOnlineGetUsers,
-    'GlobalOnline-GetUsersCount': GlobalOnlineGetUsersCount,
-    'Lobby-GetList': LobbyGetList
+    'Chat-Get': ChatGet,
+    'Chat-Send': ChatSend,
+    'Lobby-GetList': LobbyGetList,
+    'Lobby-GetPublicInfo': LobbyGetPublicInfo,
+    'Universal-Subscription': UniversalSubscription,
+    'Users-Get': UsersGet,
+    'Users-GetCount': UsersGetCount
     // @endindex
 }
 

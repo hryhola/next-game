@@ -1,16 +1,15 @@
 import { WSContext } from 'client/context/list/ws'
-import { UsersListBox } from 'client/ui'
 import React, { useContext, useEffect, useState } from 'react'
 import { RequestHandler } from 'uWebSockets/uws.types'
 
-export const GlobalUsersList: React.FC = () => {
+export const GlobalUsersListTitle: React.FC = () => {
     const ws = useContext(WSContext)
 
-    const [users, setUsers] = useState<{ nickname: string }[]>([])
+    const [count, setCount] = useState<number | null>(null)
 
-    const handleUsersGot: RequestHandler<'Users-Get'> = data => {
-        if ('data' in data) {
-            setUsers(data.data)
+    const handleCountGot: RequestHandler<'Users-GetCount'> = data => {
+        if ('count' in data) {
+            setCount(data.count)
         } else {
             console.error(data)
         }
@@ -19,16 +18,16 @@ export const GlobalUsersList: React.FC = () => {
     const sendSubscribeRequest = () => {
         ws.send('Universal-Subscription', {
             mode: 'subscribe',
-            topic: 'Universal-UsersUpdate',
-            scope: 'global'
+            scope: 'global',
+            topic: 'Universal-UsersCountUpdate'
         })
     }
 
     useEffect(() => {
-        ws.on('Users-Get', handleUsersGot)
-        ws.on('Universal-UsersUpdate', handleUsersGot)
+        ws.on('Users-GetCount', handleCountGot)
+        ws.on('Universal-UsersCountUpdate', handleCountGot)
 
-        ws.send('Users-Get', {
+        ws.send('Users-GetCount', {
             scope: 'global'
         })
 
@@ -36,7 +35,7 @@ export const GlobalUsersList: React.FC = () => {
             ws.send('Universal-Subscription', {
                 mode: 'unsubscribe',
                 scope: 'global',
-                topic: 'Universal-UsersUpdate'
+                topic: 'Universal-UsersCountUpdate'
             })
         }
     }, [])
@@ -45,5 +44,10 @@ export const GlobalUsersList: React.FC = () => {
         sendSubscribeRequest()
     }, [ws.isConnected])
 
-    return <UsersListBox users={users} />
+    return (
+        <>
+            Online
+            {typeof count === 'number' && <>&nbsp;({count})</>}
+        </>
+    )
 }

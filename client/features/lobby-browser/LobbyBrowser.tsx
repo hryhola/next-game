@@ -1,7 +1,7 @@
 import { Box, FormControl, IconButton, InputAdornment, List, ListItem, ListItemButton, ListItemIcon, ListItemText, TextField, Toolbar } from '@mui/material'
 import { WSContext } from 'client/context/list/ws'
 import { useContext, useEffect, useState } from 'react'
-import { LobbyInfo } from 'uWebSockets/ws/Lobby-GetList'
+import { LobbyBaseInfo } from 'uWebSockets/ws/Lobby-GetList'
 import { RequestData, RequestHandler } from 'uWebSockets/uws.types'
 import AddIcon from '@mui/icons-material/Add'
 import { styled, alpha } from '@mui/material/styles'
@@ -10,21 +10,13 @@ import InputBase from '@mui/material/InputBase'
 import SearchIcon from '@mui/icons-material/Search'
 import LockIcon from '@mui/icons-material/Lock'
 import { HomeContext } from 'client/context/list/home'
-
-const LobbyRecord: React.FC<LobbyInfo> = props => (
-    <ListItem disablePadding>
-        <ListItemButton>
-            <ListItemText>{props.id}</ListItemText>
-            {props.private && <LockIcon />}
-        </ListItemButton>
-    </ListItem>
-)
+import { LobbyRecord } from './LobbyRecord'
 
 export const LobbyBrowser: React.FC = () => {
     const ws = useContext(WSContext)
     const home = useContext(HomeContext)
 
-    const [lobbiesList, setLobbiesList] = useState<LobbyInfo[]>([])
+    const [lobbiesList, setLobbiesList] = useState<LobbyBaseInfo[]>([])
 
     const [searchString, setSearchString] = useState('')
 

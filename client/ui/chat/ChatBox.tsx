@@ -18,13 +18,16 @@ type Props = ChatSXProps & {
 
 export const chatInputHeight = '56px'
 
-export const Chat: React.FunctionComponent<Props> = props => {
+export const ChatBox: React.FunctionComponent<Props> = props => {
     const [text, setText] = useState('')
 
     const handleMessageSent = () => {
-        props.onSendMessage(text)
-        setText('')
+        if (text.length) {
+            props.onSendMessage(text)
+            setText('')
+        }
     }
+
     const handleFormSubmit: FormEventHandler<HTMLFormElement> = e => {
         e.preventDefault()
         handleMessageSent()

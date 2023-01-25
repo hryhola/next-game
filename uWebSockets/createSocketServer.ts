@@ -12,8 +12,6 @@ import { ReactionActions } from './utils/reactions'
 export const port = Number(process.env.NEXT_PUBLIC_WS_PORT)
 
 export const createSocketServer = (): [TemplatedApp, State] => {
-    const state = new State()
-
     let app: uws.TemplatedApp
 
     if (process.env.NODE_ENV === 'production') {
@@ -29,9 +27,10 @@ export const createSocketServer = (): [TemplatedApp, State] => {
         app = uws.App()
     }
 
+    const state = new State(new ReactionActions(app))
+
     WSHandlerRegister(app, state)
     RestHandlersRegister(app, state)
-    ReactionsRegister(new ReactionActions(app), state)
 
     app.listen(port, listenSocket => {
         if (listenSocket) {

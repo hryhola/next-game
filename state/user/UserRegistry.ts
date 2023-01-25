@@ -7,7 +7,7 @@ export class UserRegistry {
     readonly list: User[] = []
 
     get onlineUsers() {
-        return this.list.filter(u => u.isOnline)
+        return this.list.filter(u => u.online)
     }
 
     constructor() {

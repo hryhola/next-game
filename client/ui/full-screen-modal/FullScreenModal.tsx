@@ -60,7 +60,7 @@ const transitionMap = {
     down: DownTransition
 }
 
-const FullScreenModal: React.FC<{
+export const FullScreenModal: React.FC<{
     isOpen: boolean
     setIsOpen: (value: boolean) => void
     children: JSX.Element
@@ -101,5 +101,3 @@ const FullScreenModal: React.FC<{
         </Dialog>
     )
 }
-
-export default FullScreenModal
