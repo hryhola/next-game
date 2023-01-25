@@ -1,5 +1,5 @@
 import { rotateMatrix } from 'util/matrix'
-import { LobbyMember } from 'state'
+import { LobbyMember, TUser } from 'state'
 import { AbstractGame, AbstractGameSession, AbstractPlayer } from '../AbstractGame'
 
 type MoveChar = 'x' | 'o'
@@ -18,6 +18,10 @@ export class TicTacToePlayer extends AbstractPlayer {
 
         this.char = char
     }
+}
+
+export type TTicTacToePlayer = Omit<TicTacToePlayer, 'user'> & {
+    user: TUser
 }
 
 class TicTacToeState {

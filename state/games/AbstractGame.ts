@@ -1,5 +1,6 @@
 import { LobbyMember } from 'state/lobby/LobbyMember'
 import logger from 'logger'
+import { TUser } from 'state/user/User'
 
 type AbstractSessionStartData = Record<string, string>
 
@@ -34,6 +35,11 @@ export abstract class AbstractGameSession {
 
 export abstract class AbstractPlayer extends LobbyMember {
     readonly isPlayer = true
+    score: number = 0
+}
+
+export type TAbstractPlayer = Omit<AbstractPlayer, 'user'> & {
+    user: TUser
 }
 
 class ReadyCheck {

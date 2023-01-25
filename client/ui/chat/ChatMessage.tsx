@@ -1,6 +1,5 @@
 import ListItem from '@mui/material/ListItem'
 import { TChatMessage } from 'state'
-import styles from './Chat.module.scss'
 
 interface Props {
     message: TChatMessage

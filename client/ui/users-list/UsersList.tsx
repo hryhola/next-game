@@ -5,9 +5,9 @@ interface Props {
     users: Array<{ nickname: string }>
 }
 
-export const UsersList: React.FC<Props> = props => {
+export const UsersListBox: React.FC<Props> = props => {
     if (!props.users.length) {
-        return <>There are no users.</>
+        return <></>
     }
 
     return (

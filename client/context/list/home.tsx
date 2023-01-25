@@ -1,5 +1,6 @@
 import React, { useState, createContext } from 'react'
 
+// ? Could be moved to HomeRoute itself
 export const HomeContext = createContext({
     isProfileEditOpen: false,
     setIsProfileEditOpen: (_value: boolean) => {},

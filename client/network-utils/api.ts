@@ -21,6 +21,19 @@ const createHandler = (method: string) => {
     }
 }
 
+type WSEventContext = {
+    scope?: string
+    lobbyId?: string
+}
+
+export const isCurrentContext = (response: WSEventContext, current: WSEventContext) => {
+    if (response.scope === 'global') {
+        return current.scope === 'global'
+    } else {
+        return response.scope === current.scope && response.lobbyId === current.lobbyId
+    }
+}
+
 export const api = {
     post: createHandler('POST')
 }

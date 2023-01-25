@@ -1,6 +1,4 @@
 import React from 'react'
-import classnames from 'classnames'
-import styles from './LoadingOverlay.module.scss'
 import { Backdrop, CircularProgress } from '@mui/material'
 
 type Props = {

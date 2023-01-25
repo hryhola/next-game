@@ -18,7 +18,7 @@ export const LobbyCreator: React.FC = () => {
 
     const formRef = useRef<HTMLFormElement | null>(null)
 
-    const [name, setName] = useState('')
+    const [lobbyId, setLobbyId] = useState('')
     const [password, setPassword] = useState('')
     const [error, setError] = useState('')
     const [gameName, setGameName] = useState<GameName>('TicTacToe')
@@ -43,7 +43,7 @@ export const LobbyCreator: React.FC = () => {
             return
         }
 
-        lobby.setLobbyId(name)
+        lobby.setLobbyId(lobbyId)
         lobby.setGameName(gameName)
         lobby.setMembers([
             {
@@ -67,7 +67,7 @@ export const LobbyCreator: React.FC = () => {
                     </Grid>
                 )}
                 <Grid item>
-                    <TextField required label="Lobby name" name="lobbyId" value={name} onChange={e => setName(e.target.value)} fullWidth />
+                    <TextField required label="Lobby name" name="lobbyId" value={lobbyId} onChange={e => setLobbyId(e.target.value)} fullWidth />
                 </Grid>
                 <Grid item>
                     <FormControl fullWidth>

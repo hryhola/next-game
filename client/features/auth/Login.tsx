@@ -35,9 +35,15 @@ export const Login: React.FC = () => {
     const handleSubmit: FormEventHandler<HTMLFormElement> = e => {
         e.preventDefault()
 
-        setError('')
+        const nickname = username.trim()
 
-        ws.send('Auth-Register', { username })
+        if (nickname.length) {
+            setError('')
+
+            ws.send('Auth-Register', { username })
+        } else {
+            setError('nickname cannot be empty')
+        }
     }
 
     return (

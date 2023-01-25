@@ -1,12 +1,12 @@
 import { Handler } from 'uWebSockets/uws.types'
 
-export interface LobbyInfo {
+export interface LobbyBaseInfo {
     id: string
     private: boolean
 }
 
 export interface Success {
-    lobbies: LobbyInfo[]
+    lobbies: LobbyBaseInfo[]
 }
 
 export const handler: Handler<null, Success> = (actions, state) => {

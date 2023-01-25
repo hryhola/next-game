@@ -15,7 +15,7 @@ export const handler: Handler<Request> = (actions, state, data, token) => {
 
     user.setOnline(false)
 
-    logger.info(user.nickname + 'is offline')
+    logger.info(user.nickname + ' is offline')
 
     // TODO tokenExpireTimeout
 }

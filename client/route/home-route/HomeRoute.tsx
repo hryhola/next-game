@@ -6,9 +6,8 @@ import { HomeTabs } from 'client/features/home-tabs/HomeTabs'
 import { Navigation } from 'client/features/navigation/Navigation'
 import { Grid } from '@mui/material'
 import { ProfileEditor } from 'client/features/profile-editor/ProfileEditor'
-import FullScreenModal from 'client/ui/full-screen-modal/FullScreenModal'
+import { FullScreenModal } from 'client/ui/full-screen-modal/FullScreenModal'
 import { LobbyCreator } from 'client/features/lobby-creator/LobbyCreator'
-import { DevToolsOverlay } from 'client/features/dev/DevToolsOverlay'
 
 export const HomeRoute: React.FC = () => {
     const home = useContext(HomeContext)

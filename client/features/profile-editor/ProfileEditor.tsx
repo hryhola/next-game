@@ -1,17 +1,13 @@
-/* eslint-disable @next/next/no-img-element */
-
 import { Alert, Box, Button, FormGroup, FormLabel, Grid, OutlinedInput } from '@mui/material'
 import TextField from '@mui/material/TextField'
 import { UserContext } from 'client/context/list/user'
 import React, { useState, useContext, useRef } from 'react'
-import FileUploadIcon from '@mui/icons-material/FileUpload'
 import { LoadingOverlay } from 'client/ui'
 import { URL as ApiUrl } from 'client/network-utils/const'
 import { api } from 'client/network-utils/api'
-import Image from 'next/image'
-import { P } from 'pino'
 
 import type { Failure, Success } from 'pages/api/profile'
+import { ProfilePicture } from '../profile-picture/ProfilePicture'
 
 interface Props {
     onUpdated?: () => void
@@ -77,31 +73,7 @@ export const ProfileEditor: React.FC<Props> = props => {
                     </Grid>
                 )}
                 <Grid item alignSelf="center">
-                    <Button
-                        component="label"
-                        variant="outlined"
-                        sx={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            width: '300px',
-                            height: '300px',
-                            padding: 0
-                        }}
-                    >
-                        <input type="file" name="image" accept="image/*" onChange={e => setImageFile(e.target.files![0])} hidden />
-                        {displayedImage.url ? (
-                            displayedImage.local ? (
-                                <img alt="user avatar" src={displayedImage.url} />
-                            ) : (
-                                <Image alt="user avatar" src={displayedImage.url} width={300} height={300} className="next-img" />
-                            )
-                        ) : (
-                            <>
-                                <FileUploadIcon />
-                                <FormLabel sx={{ fontSize: '0.8rem', mt: 1 }}>avatar</FormLabel>
-                            </>
-                        )}
-                    </Button>
+                    <ProfilePicture editable {...displayedImage} onChange={file => setImageFile(file)} />
                 </Grid>
                 <Grid item>
                     <TextField label="nickname" name="nickname" value={nickname} onChange={e => setNickname(e.target.value)} fullWidth />

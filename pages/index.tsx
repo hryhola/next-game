@@ -5,12 +5,12 @@ import { AppContext } from 'client/context/AppContext'
 import { Route } from 'client/context/list/router'
 import { deleteCookie } from 'cookies-next'
 import logger from 'logger'
-import { uWSRest } from 'uWebSockets/rest'
-import { User } from 'state'
+import { TUser } from 'state'
+import { NextApiResponseUWS } from 'util/t'
 
 type Props = {
     defaultRoute: Route
-    user?: User
+    user?: TUser
 }
 
 const Home: NextPage<Props> = props => {
@@ -25,26 +25,31 @@ const Home: NextPage<Props> = props => {
 }
 
 export const getServerSideProps: GetServerSideProps = async context => {
+    await fetch((process.env.NODE_ENV === 'production' ? 'https://' : 'http://') + 'localhost:3000/api/init')
+
     const props: Props = {
         defaultRoute: 'Login'
     }
 
-    // context.req.
-
     const token = context.req.cookies.token
-
-    await fetch((process.env.NODE_ENV === 'production' ? 'https://' : 'http://') + 'localhost:3000/api/init')
 
     if (token) {
         try {
-            const res = await fetch(uWSRest.profile + '?token=' + token)
-            const data = await res.json()
+            const { appState } = (context.res as NextApiResponseUWS).socket?.server
+            const user = appState.users.auth(token)
 
-            if (!data.success) {
+            if (!user) {
                 deleteCookie('token')
             } else {
+                user.setOnline(true)
                 props.defaultRoute = 'Home'
-                props.user = data.user
+                props.user = {
+                    nickname: user.nickname
+                }
+
+                if (user.avatarRes) {
+                    props.user.avatarRes = user.avatarRes
+                }
             }
         } catch (e) {
             logger.error(e)
