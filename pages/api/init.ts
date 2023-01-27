@@ -3,11 +3,11 @@ import { createSocketServer } from 'uWebSockets/createSocketServer'
 import logger from 'logger'
 import { NextApiResponseUWS } from 'util/t'
 
-const SocketHandler = (_req: NextApiRequest, res: NextApiResponseUWS) => {
+export const createUWS = (res: NextApiResponseUWS) => {
     if (res.socket.server.uws) {
         logger.debug('Socket is already running')
 
-        return res.end()
+        return
     }
 
     logger.info('Socket is initializing')
@@ -16,8 +16,11 @@ const SocketHandler = (_req: NextApiRequest, res: NextApiResponseUWS) => {
 
     res.socket.server.uws = uws
     res.socket.server.appState = state
+}
 
-    res.status(201)
+const SocketHandler = (_req: NextApiRequest, res: NextApiResponseUWS) => {
+    createUWS(res)
+
     res.end()
 }
 
