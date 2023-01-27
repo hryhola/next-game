@@ -5,7 +5,7 @@ import CloseIcon from '@mui/icons-material/Close'
 import ArrowBackIosIcon from '@mui/icons-material/ArrowBackIos'
 
 export const DevToolsOverlay: React.FC = () => {
-    const [isEnabled, setIsEnabled] = useState(process.env.NODE_ENV !== 'production')
+    const [isEnabled, setIsEnabled] = useState(false)
     const [isVisible, setIsVisible] = useState(false)
 
     const ws = useContext(WSContext)

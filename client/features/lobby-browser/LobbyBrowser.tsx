@@ -38,8 +38,8 @@ export const LobbyBrowser: React.FC = () => {
 
     return (
         <>
-            <Toolbar>
-                <IconButton size="large" edge="start" color="inherit" aria-label="menu" sx={{ mr: 2 }} onClick={() => home.setIsCreateLobbyOpen(true)}>
+            <Toolbar sx={{ pt: 2 }}>
+                <IconButton size="large" edge="start" color="inherit" aria-label="menu" onClick={() => home.setIsCreateLobbyOpen(true)}>
                     <AddIcon />
                 </IconButton>
                 <FormControl fullWidth variant="filled">

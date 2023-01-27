@@ -5,10 +5,9 @@ import AppBar from '@mui/material/AppBar'
 import Tabs from '@mui/material/Tabs'
 import Tab from '@mui/material/Tab'
 import Typography from '@mui/material/Typography'
-import Box from '@mui/material/Box'
+import Box, { BoxProps } from '@mui/material/Box'
 import { LobbyBrowser } from '../lobby-browser/LobbyBrowser'
 import { Chat } from '../chat/Chat'
-import { GetProps } from 'react-redux'
 import { headerHeight } from '../header/Header'
 import { chatInputHeight } from 'client/ui'
 import ListItemText from '@mui/material/ListItemText'
@@ -43,7 +42,7 @@ function a11yProps(index: number) {
 
 export const tabsHeaderHeight = '48px'
 
-export const HomeTabs: React.FC<GetProps<typeof Box>> = props => {
+export const HomeTabs: React.FC<BoxProps> = props => {
     const theme = useTheme()
     const [value, setValue] = React.useState(0)
 

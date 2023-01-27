@@ -1,4 +1,4 @@
-import { FormEventHandler, useState } from 'react'
+import { FormEventHandler, RefObject, useState } from 'react'
 import { ChatMessageComponent } from './ChatMessage'
 import { TChatMessage } from 'state'
 import { List, IconButton, InputAdornment, FilledInput, Box, SxProps, Theme } from '@mui/material'
@@ -9,6 +9,7 @@ export type ChatSXProps = {
     sx?: SxProps<Theme>
     messagesWrapperBoxSx?: SxProps<Theme>
     inputSx?: SxProps<Theme>
+    inputRef?: RefObject<HTMLInputElement>
 }
 
 type Props = ChatSXProps & {
@@ -43,10 +44,16 @@ export const ChatBox: React.FunctionComponent<Props> = props => {
             <FormControl sx={props.inputSx || { height: chatInputHeight }} fullWidth variant="filled">
                 <FilledInput
                     autoFocus
+                    disableUnderline
                     fullWidth
                     hiddenLabel
                     value={text}
                     onChange={e => setText(e.target.value)}
+                    {...(props.inputRef
+                        ? {
+                              inputRef: props.inputRef
+                          }
+                        : {})}
                     endAdornment={
                         <InputAdornment position="end">
                             <IconButton size="small" onClick={handleMessageSent}>

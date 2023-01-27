@@ -1,100 +1,49 @@
-import { Box, Button, Grid, Container, styled, ButtonProps } from '@mui/material'
-import React, { useState, createContext, useContext } from 'react'
-import CloseIcon from '@mui/icons-material/Close'
-import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked'
-import { TicTacToePlayer, TTicTacToePlayer } from 'state'
-import { Player } from '../player/Player'
-import { ChatBox, LoadingOverlay } from 'client/ui'
+import { Container } from '@mui/material'
+import React, { useState, useContext, useRef } from 'react'
+import { TTicTacToePlayer } from 'state'
+import { chatInputHeight, LoadingOverlay } from 'client/ui'
 import { LobbyContext } from 'client/context/list/lobby'
 import { Chat } from '../chat/Chat'
-import { GetServerSideProps, NextPage } from 'next'
-
-const Cell = styled(Button)<ButtonProps>(({ theme }) => ({
-    maxWidth: '200px',
-    maxHeight: '200px',
-    width: '30vw',
-    height: '30vw',
-    borderRadius: 0,
-    border: '1px solid'
-}))
-
-interface HeaderProps {
-    members: TTicTacToePlayer[]
-    isLoading: boolean
-}
-
-const Header: React.FC<HeaderProps> = props => {
-    return (
-        <Grid container justifyContent="center">
-            {props.isLoading ? (
-                <Grid item>
-                    <Player isLoading />
-                </Grid>
-            ) : (
-                props.members.map(m => (
-                    <Grid key={m.user.nickname} item>
-                        <Player {...m} />
-                    </Grid>
-                ))
-            )}
-        </Grid>
-    )
-}
+import Field from './Field'
+import Header from './Header'
+import OverlayedTabs, { overlayedTabsToolbarHeight } from 'client/ui/overlayed-tabs/OverlayedTabs'
+import ChatIcon from '@mui/icons-material/Chat'
+import { UserContext } from 'client/context/list/user'
 
 const TicTacToe = () => {
-    const [players, setPlayers] = useState<TTicTacToePlayer[]>([
-        {
-            char: 'x',
-            isCreator: true,
-            isPlayer: true,
-            score: 0,
-            user: {
-                nickname: 'asdasd'
-            }
-        }
-    ])
-    const [isLoading, setIsLoading] = useState(false)
+    const [players, setPlayers] = useState<TTicTacToePlayer[]>([])
+    const [isLoading, setIsLoading] = useState(true)
+    const chatInputRef = useRef<HTMLInputElement | null>(null)
     const lobby = useContext(LobbyContext)
+    const user = useContext(UserContext)
 
-    const [cellValues, setCellValues] = useState<('x' | 'o' | null)[][]>([
-        [null, null, null],
-        [null, null, null],
-        [null, null, null]
-    ])
-
-    const cellClickHandler: React.MouseEventHandler<HTMLButtonElement> = e => {
-        const button = e.target as HTMLButtonElement
-
-        const [x, y] = button.id.split('-')
-
-        setCellValues(value => {
-            value[Number(x)][Number(y)] = 'o'
-
-            return value.slice()
-        })
-    }
+    const isPlayable = players.some(p => p.user.nickname === user.username)
 
     return (
         <>
-            <Container sx={{ py: 4 }}>
+            <Container>
+                <Field sx={{ my: 3 }} isLoading={isLoading} isPlayable={isPlayable} />
                 <Header members={players} isLoading={isLoading} />
-                <Box sx={{ pt: 4 }}>
-                    {cellValues.map((row, x) => (
-                        <Grid key={x} justifyContent="center" wrap="nowrap" container>
-                            {row.map((cell, y) => (
-                                <Grid justifyContent="center" key={y} item>
-                                    <Cell id={x + '-' + y} onClick={cellClickHandler} variant="contained" color="primary">
-                                        {cell === 'x' && <CloseIcon sx={{ fontSize: 80 }} />}
-                                        {cell === 'o' && <RadioButtonUncheckedIcon sx={{ fontSize: 80 }} />}
-                                    </Cell>
-                                </Grid>
-                            ))}
-                        </Grid>
-                    ))}
-                </Box>
-                <Chat scope="lobby" lobbyId={lobby.lobbyId} />
             </Container>
-            <LoadingOverlay isLoading={isLoading} />
+            <OverlayedTabs
+                label="tic-tac-toe"
+                views={[
+                    {
+                        onFullscreen: () => chatInputRef.current?.focus(),
+                        header: <ChatIcon />,
+                        view: fullscreen => (
+                            <Chat
+                                messagesWrapperBoxSx={{
+                                    height: `calc(${fullscreen ? `100vh - ${overlayedTabsToolbarHeight}` : '50vh'} - ${chatInputHeight})`
+                                }}
+                                scope="lobby"
+                                lobbyId={lobby.lobbyId}
+                                inputRef={chatInputRef}
+                            />
+                        )
+                    }
+                ]}
+            />
         </>
     )
 }

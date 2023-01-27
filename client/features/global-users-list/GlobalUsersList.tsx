@@ -16,10 +16,13 @@ export const GlobalUsersList: React.FC = () => {
         }
     }
 
-    const sendSubscribeRequest = () => {
+    const onIsConnected = () => {
         ws.send('Universal-Subscription', {
             mode: 'subscribe',
             topic: 'Universal-UsersUpdate',
+            scope: 'global'
+        })
+        ws.send('Users-Get', {
             scope: 'global'
         })
     }
@@ -27,10 +30,6 @@ export const GlobalUsersList: React.FC = () => {
     useEffect(() => {
         ws.on('Users-Get', handleUsersGot)
         ws.on('Universal-UsersUpdate', handleUsersGot)
-
-        ws.send('Users-Get', {
-            scope: 'global'
-        })
 
         return () => {
             ws.send('Universal-Subscription', {
@@ -42,7 +41,9 @@ export const GlobalUsersList: React.FC = () => {
     }, [])
 
     useEffect(() => {
-        sendSubscribeRequest()
+        if (ws.isConnected) {
+            onIsConnected()
+        }
     }, [ws.isConnected])
 
     return <UsersListBox users={users} />
