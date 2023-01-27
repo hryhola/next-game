@@ -26,5 +26,12 @@ export const URL = {
         } else {
             return `http://${location.hostname}:3000/api/lobby`
         }
+    },
+    get LobbyJoin() {
+        if (location.protocol.includes('https')) {
+            return `https://${location.host}/api/lobby-join`
+        } else {
+            return `http://${location.hostname}:3000/api/lobby-join`
+        }
     }
 }

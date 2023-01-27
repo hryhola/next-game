@@ -17,7 +17,9 @@ export const LobbyRecord: React.FC<LobbyBaseInfo> = props => {
             return console.log(data.message)
         }
 
-        setLobbyInfo(data.lobbyData)
+        if (props.id === data.lobbyData.id) {
+            setLobbyInfo(data.lobbyData)
+        }
     }
 
     const sendGetRequest = () => {

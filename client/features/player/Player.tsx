@@ -23,7 +23,7 @@ export const Player: React.FC<Props> = props => {
                 </>
             ) : (
                 <>
-                    <ProfilePicture size={200} maxSize="30vw" editable={user.nickname === props.user.nickname} local={false} url={props.user.avatarRes} />
+                    <ProfilePicture size={200} maxSize="30vw" local={false} url={props.user.avatarRes} />
                     <Typography variant="h6">{props.user.nickname}</Typography>
                     <Typography>{props.score}</Typography>
                 </>
