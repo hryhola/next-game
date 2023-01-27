@@ -14,7 +14,6 @@ export class UserRegistry {
         makeAutoObservable(this)
     }
 
-    @action
     add(user: User, token: string) {
         this.list.push(user)
         this.tokenMap[token] = user

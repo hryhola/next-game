@@ -13,12 +13,13 @@ export const Login: React.FC = () => {
     const user = useContext(UserContext)
     const router = useContext(RouterContext)
 
-    const [username, setUsername] = useState('')
+    const [nickname, setNickname] = useState('')
     const [error, setError] = useState('')
 
     const handleRegister: RequestHandler<'Auth-Register'> = data => {
         if (data.success) {
-            user.setUsername(data.username)
+            user.setNickname(data.user.nickname)
+            user.setNicknameColor(data.user.nicknameColor)
 
             setCookie('token', data.token, { maxAge: inSeconds90Days })
 
@@ -35,12 +36,12 @@ export const Login: React.FC = () => {
     const handleSubmit: FormEventHandler<HTMLFormElement> = e => {
         e.preventDefault()
 
-        const nickname = username.trim()
+        const nicknameTrimmed = nickname.trim()
 
-        if (nickname.length) {
+        if (nicknameTrimmed.length) {
             setError('')
 
-            ws.send('Auth-Register', { username })
+            ws.send('Auth-Register', { nickname: nicknameTrimmed })
         } else {
             setError('nickname cannot be empty')
         }
@@ -51,11 +52,11 @@ export const Login: React.FC = () => {
             <Grid item minWidth="300px">
                 <TextField
                     id="outlined-basic"
-                    name="username"
+                    name="nickname"
                     label="nickname"
                     variant="outlined"
-                    value={username}
-                    onChange={e => setUsername(e.target.value)}
+                    value={nickname}
+                    onChange={e => setNickname(e.target.value)}
                     error={Boolean(error)}
                     helperText={error || undefined}
                     fullWidth

@@ -25,7 +25,7 @@ export class State {
         )
 
         reaction(
-            () => this.users.list.map(({ nickname, online }) => ({ nickname, online })),
+            () => this.users.list.map(({ nickname, online, nicknameColor: color }) => ({ nickname, online, color })),
             curr => {
                 const onlineUsers = curr.filter(u => u.online)
 

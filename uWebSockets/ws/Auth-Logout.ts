@@ -1,7 +1,7 @@
 import { Handler } from '../uws.types'
 import logger from 'logger'
 export interface Request {
-    username: string
+    nickname: string
 }
 
 export const handler: Handler<Request> = (actions, state, data, token) => {

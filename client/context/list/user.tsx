@@ -1,24 +1,43 @@
-import { User } from 'state'
+import { TUser, User } from 'state'
 import React, { useState, createContext } from 'react'
 
 export type Route = 'Login'
 
 export const UserContext = createContext({
-    username: '',
-    setUsername: (_val: string) => {},
-    profilePictureUrl: '',
-    setProfilePictureUrl: (_val: string) => {}
+    nickname: '',
+    setNickname: (_val: string) => {},
+    nicknameColor: '',
+    setNicknameColor: (_val: string) => {},
+    avatarRes: '',
+    setAvatarRes: (_val: string) => {}
 })
 
 interface Props {
     children?: JSX.Element
-    user?: User // SSR user
-    userAvatarUrl: string // SSR avatar link
+    user: TUser
 }
 
 export const UserProvider: React.FC<Props> = props => {
-    const [username, setUsername] = useState(props.user?.nickname || '')
-    const [profilePictureUrl, setProfilePictureUrl] = useState(props.user?.avatarRes ? '/res/' + props.user?.avatarRes : '')
+    const [user, setUser] = useState({
+        nicknameColor: props.user?.nicknameColor || 'deeppink',
+        nickname: props.user?.nickname || '',
+        avatarRes: props.user?.avatarRes || ''
+    })
 
-    return <UserContext.Provider value={{ username, setUsername, profilePictureUrl, setProfilePictureUrl }}>{props.children}</UserContext.Provider>
+    const setNickname = (val: string) => setUser(u => ({ ...u, nickname: val }))
+    const setNicknameColor = (val: string) => setUser(u => ({ ...u, nicknameColor: val }))
+    const setAvatarRes = (val: string) => setUser(u => ({ ...u, avatarRes: val }))
+
+    return (
+        <UserContext.Provider
+            value={{
+                ...user,
+                setNickname,
+                setAvatarRes,
+                setNicknameColor
+            }}
+        >
+            {props.children}
+        </UserContext.Provider>
+    )
 }

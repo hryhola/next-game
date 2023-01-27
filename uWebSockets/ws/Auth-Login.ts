@@ -1,6 +1,6 @@
 import { Handler } from '../uws.types'
 import logger from 'logger'
-import { User } from 'state'
+import { TUser } from 'state'
 
 export interface Request {
     token: string
@@ -8,7 +8,7 @@ export interface Request {
 
 export interface Success {
     success: true
-    user: User
+    user: TUser
 }
 
 export interface Failure {

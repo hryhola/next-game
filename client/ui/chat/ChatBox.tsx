@@ -23,8 +23,8 @@ export const ChatBox: React.FunctionComponent<Props> = props => {
     const [text, setText] = useState('')
 
     const handleMessageSent = () => {
-        if (text.length) {
-            props.onSendMessage(text)
+        if (text.trim().length) {
+            props.onSendMessage(text.trim())
             setText('')
         }
     }

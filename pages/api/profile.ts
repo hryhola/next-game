@@ -13,7 +13,7 @@ export type Failure = {
 
 export type Success = {
     success: true
-    avatarRes: string
+    avatarRes?: string
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponseUWS<Success | Failure>) {
@@ -54,14 +54,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponseU
 
     const { fields, files } = result!
 
-    const avatarFullPath = (files.image as formidable.File).filepath
+    let avatarResourceId
 
-    const parsedPath = path.parse(avatarFullPath)
+    if (files.image) {
+        const avatarFullPath = (files.image as formidable.File).filepath
+        const parsedPath = path.parse(avatarFullPath)
+        avatarResourceId = 'avatar/' + parsedPath.base
 
-    const avatarResourceId = 'avatar/' + parsedPath.base
+        user.setAvatarRes(avatarResourceId)
+    }
 
     user.setNickname(fields.nickname as string)
-    user.setAvatarRes(avatarResourceId)
+
+    if (fields.nicknameColor) {
+        user.setNicknameColor(fields.nicknameColor as string)
+    }
 
     res.status(200).json({
         success: true,

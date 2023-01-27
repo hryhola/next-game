@@ -17,7 +17,7 @@ const TicTacToe = () => {
     const lobby = useContext(LobbyContext)
     const user = useContext(UserContext)
 
-    const isPlayable = players.some(p => p.user.nickname === user.username)
+    const isPlayable = players.some(p => p.user.nickname === user.nickname)
 
     return (
         <>
