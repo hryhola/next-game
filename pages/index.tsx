@@ -7,6 +7,7 @@ import { deleteCookie } from 'cookies-next'
 import logger from 'logger'
 import { TUser } from 'state'
 import { NextApiResponseUWS } from 'util/t'
+import { createUWS } from './api/init'
 
 type Props = {
     defaultRoute: Route
@@ -25,7 +26,7 @@ const Home: NextPage<Props> = props => {
 }
 
 export const getServerSideProps: GetServerSideProps = async context => {
-    await fetch((process.env.NODE_ENV === 'production' ? 'https://' : 'http://') + 'localhost:3000/api/init')
+    createUWS(context.res as NextApiResponseUWS)
 
     const props: Props = {
         defaultRoute: 'Login'
