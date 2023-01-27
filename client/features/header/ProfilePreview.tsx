@@ -1,10 +1,9 @@
-import Button from '@mui/material/Button'
+import Button, { ButtonProps } from '@mui/material/Button'
 import { UserContext } from 'client/context/list/user'
 import PersonIcon from '@mui/icons-material/Person'
 import Image from 'next/image'
 import { useContext } from 'react'
-import { SxProps, Theme, Typography } from '@mui/material'
-import { GetProps } from 'react-redux'
+import { Typography } from '@mui/material'
 
 function ProfilePicture() {
     const user = useContext(UserContext)
@@ -21,7 +20,7 @@ function ProfilePicture() {
     return <PersonIcon sx={{ fontSize: 40 }} />
 }
 
-export const ProfilePreview: React.FC<GetProps<typeof Button>> = props => {
+export const ProfilePreview: React.FC<ButtonProps> = props => {
     const auth = useContext(UserContext)
 
     return (

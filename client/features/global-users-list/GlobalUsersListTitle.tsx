@@ -15,21 +15,21 @@ export const GlobalUsersListTitle: React.FC = () => {
         }
     }
 
-    const sendSubscribeRequest = () => {
+    const onIsConnected = () => {
         ws.send('Universal-Subscription', {
             mode: 'subscribe',
             scope: 'global',
             topic: 'Universal-UsersCountUpdate'
+        })
+
+        ws.send('Users-GetCount', {
+            scope: 'global'
         })
     }
 
     useEffect(() => {
         ws.on('Users-GetCount', handleCountGot)
         ws.on('Universal-UsersCountUpdate', handleCountGot)
-
-        ws.send('Users-GetCount', {
-            scope: 'global'
-        })
 
         return () => {
             ws.send('Universal-Subscription', {
@@ -41,7 +41,9 @@ export const GlobalUsersListTitle: React.FC = () => {
     }, [])
 
     useEffect(() => {
-        sendSubscribeRequest()
+        if (ws.isConnected) {
+            onIsConnected()
+        }
     }, [ws.isConnected])
 
     return (
