@@ -1,37 +1,37 @@
 import { Handler } from '../uws.types'
-import { User } from 'state'
+import { TUser, User } from 'state'
 import logger from 'logger'
 
 export interface Request {
-    username: string
+    nickname: string
 }
 
 export interface Success {
     success: true
-    username: string
+    user: TUser
     token: string
 }
 
 export interface Failure {
     success: false
-    username: string
+    nickname: string
     message: string
 }
 
 export const handler: Handler<Request, Success | Failure> = (actions, state, data) => {
-    const existingUser = state.users.getByNickname(data.username)
+    const existingUser = state.users.getByNickname(data.nickname)
 
     if (existingUser?.isOnline()) {
         return actions.res({
             success: false,
-            username: data.username,
+            nickname: data.nickname,
             message: 'User exists'
         })
     } else if (existingUser) {
         state.users.destroy(existingUser.token)
     }
 
-    const user = new User(data.username)
+    const user = new User(data.nickname)
 
     state.users.add(user, user.token)
 
@@ -39,7 +39,7 @@ export const handler: Handler<Request, Success | Failure> = (actions, state, dat
 
     actions.res({
         success: true,
-        username: data.username,
+        user,
         token: user.token
     })
 }

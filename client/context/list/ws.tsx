@@ -24,7 +24,7 @@ interface Props {
 }
 
 export const WSProvider: React.FC<Props> = props => {
-    const auth = useContext(UserContext)
+    const user = useContext(UserContext)
 
     const wsRef = useRef<WebSocket | null>(null)
 
@@ -81,14 +81,14 @@ export const WSProvider: React.FC<Props> = props => {
     if (wsRef.current) wsRef.current.onmessage = messageHandler
 
     useEffect(() => {
-        if (auth.username) {
+        if (user.nickname) {
             window.addEventListener('beforeunload', () => {
                 const token = getCookie('token') as string | undefined
 
                 const data: AbstractSocketMessage = {
                     ctx: 'Auth-Logout',
                     data: {
-                        username: auth.username
+                        nickname: user.nickname
                     }
                 }
 
@@ -99,7 +99,7 @@ export const WSProvider: React.FC<Props> = props => {
                 wsRef.current?.send(JSON.stringify(data))
             })
         }
-    }, [wsRef.current, auth.username])
+    }, [wsRef.current, user.nickname])
 
     return <WSContext.Provider value={{ wsRef, isConnected, setIsConnected, on, send }}>{props.children}</WSContext.Provider>
 }

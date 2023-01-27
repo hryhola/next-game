@@ -44,11 +44,9 @@ export const getServerSideProps: GetServerSideProps = async context => {
                 user.setOnline(true)
                 props.defaultRoute = 'Home'
                 props.user = {
-                    nickname: user.nickname
-                }
-
-                if (user.avatarRes) {
-                    props.user.avatarRes = user.avatarRes
+                    nicknameColor: user.nicknameColor,
+                    nickname: user.nickname,
+                    avatarRes: user.avatarRes || ''
                 }
             }
         } catch (e) {

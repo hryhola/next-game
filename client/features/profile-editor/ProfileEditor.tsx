@@ -1,13 +1,14 @@
-import { Alert, Box, Button, FormGroup, FormLabel, Grid, OutlinedInput } from '@mui/material'
+import { Alert, Box, Button, FormGroup, FormLabel, Grid, IconButton, InputAdornment, OutlinedInput } from '@mui/material'
 import TextField from '@mui/material/TextField'
 import { UserContext } from 'client/context/list/user'
 import React, { useState, useContext, useRef } from 'react'
 import { LoadingOverlay } from 'client/ui'
 import { URL as ApiUrl } from 'client/network-utils/const'
 import { api } from 'client/network-utils/api'
-
+import CircleIcon from '@mui/icons-material/Circle'
 import type { Failure, Success } from 'pages/api/profile'
 import { ProfilePicture } from '../profile-picture/ProfilePicture'
+import randomColor from 'randomcolor'
 
 interface Props {
     onUpdated?: () => void
@@ -18,7 +19,8 @@ export const ProfileEditor: React.FC<Props> = props => {
 
     const user = useContext(UserContext)
 
-    const [nickname, setNickname] = useState(user.username)
+    const [nickname, setNickname] = useState(user.nickname)
+    const [nicknameColor, setNicknameColor] = useState(user.nicknameColor)
     const [imageFile, setImageFile] = useState<File | null>(null)
 
     const [error, setError] = useState('')
@@ -31,13 +33,17 @@ export const ProfileEditor: React.FC<Props> = props => {
           }
         : {
               local: false,
-              url: user.profilePictureUrl
+              url: user.avatarRes
           }
 
     const handleSubmit: React.FormEventHandler<HTMLFormElement> = async event => {
         event.preventDefault()
 
         const data = new FormData(formRef.current!)
+
+        if (!imageFile) {
+            data.delete('image')
+        }
 
         setIsLoading(true)
 
@@ -53,10 +59,11 @@ export const ProfileEditor: React.FC<Props> = props => {
             return
         }
 
-        user.setUsername(nickname)
+        user.setNickname(nickname)
+        user.setNicknameColor(nicknameColor)
 
         if (response.avatarRes) {
-            user.setProfilePictureUrl('/res/' + response.avatarRes)
+            user.setAvatarRes('/res/' + response.avatarRes)
         }
 
         if (props.onUpdated) {
@@ -76,7 +83,12 @@ export const ProfileEditor: React.FC<Props> = props => {
                     <ProfilePicture editable {...displayedImage} onChange={file => setImageFile(file)} />
                 </Grid>
                 <Grid item>
-                    <TextField label="nickname" name="nickname" value={nickname} onChange={e => setNickname(e.target.value)} fullWidth />
+                    <Box sx={{ display: 'flex', alignItems: 'flex-end' }}>
+                        <IconButton onClick={() => setNicknameColor(randomColor())} sx={{ mr: 2 }} size="small">
+                            <CircleIcon sx={{ color: nicknameColor }} />
+                        </IconButton>
+                        <TextField variant="standard" label="nickname" name="nickname" value={nickname} onChange={e => setNickname(e.target.value)} fullWidth />
+                    </Box>
                 </Grid>
                 <Grid item sx={{ mt: 'auto', mb: 1 }}>
                     <Button fullWidth size="large" variant="contained" color="primary" type="submit">

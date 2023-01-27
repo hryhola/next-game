@@ -48,8 +48,9 @@ export const LobbyCreator: React.FC = () => {
         lobby.setMembers([
             {
                 user: {
-                    nickname: user.username,
-                    avatarRes: user.profilePictureUrl
+                    nickname: user.nickname,
+                    avatarRes: user.avatarRes,
+                    nicknameColor: ''
                 },
                 isCreator: true
             }

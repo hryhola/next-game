@@ -22,7 +22,8 @@ export const handler: Handler<Request, GetUsersSuccess | GeneralFailure> = (act,
         count: users.length,
         data: users.map(u => ({
             nickname: u.nickname,
-            avatarRes: u.avatarRes
+            avatarRes: u.avatarRes,
+            color: u.nicknameColor
         }))
     }
 

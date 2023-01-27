@@ -8,11 +8,11 @@ import { Typography } from '@mui/material'
 function ProfilePicture() {
     const user = useContext(UserContext)
 
-    if (user.profilePictureUrl) {
+    if (user.avatarRes) {
         return (
             <>
                 &nbsp;
-                <Image src={user.profilePictureUrl} alt="profile avatar" width={40} height={40} className="next-img" />
+                <Image src={user.avatarRes} alt="profile avatar" width={40} height={40} className="next-img" />
             </>
         )
     }
@@ -21,12 +21,12 @@ function ProfilePicture() {
 }
 
 export const ProfilePreview: React.FC<ButtonProps> = props => {
-    const auth = useContext(UserContext)
+    const user = useContext(UserContext)
 
     return (
         <Button {...props}>
             <Typography variant="body1" textTransform="none">
-                {auth.username}
+                {user.nickname}
             </Typography>
             <ProfilePicture />
         </Button>
