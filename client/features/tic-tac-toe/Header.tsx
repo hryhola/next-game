@@ -9,11 +9,9 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = props => {
-    const [isLoading, setIsLoading] = useState(true)
-
     return (
         <Grid container justifyContent="center">
-            {isLoading ? (
+            {props.isLoading ? (
                 <Grid item>
                     <Player isLoading />
                 </Grid>

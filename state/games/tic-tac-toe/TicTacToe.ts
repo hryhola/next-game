@@ -87,15 +87,34 @@ export class TicTacToe extends AbstractGame {
         this.currentSession = new TicTacToeSession(this)
     }
 
-    join(user: LobbyMember) {
+    join(member: LobbyMember) {
+        const existed = this.players.find(p => p.user.nickname === member.user.nickname)
+
+        if (existed) {
+            return {
+                success: true,
+                players: this.players,
+                message: 'Already joined'
+            }
+        }
+
         if (this.players.length === this.maxPlayers) {
-            throw new Error('Max players reached')
+            return {
+                success: false,
+                players: this.players,
+                message: 'Max players'
+            }
         }
 
         const char = this.players[0]?.char === 'o' ? 'x' : 'o'
 
-        const player = new TicTacToePlayer(user, char)
+        const player = new TicTacToePlayer(member, char)
 
         this.players.push(player)
+
+        return {
+            success: true,
+            players: this.players
+        }
     }
 }

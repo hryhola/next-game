@@ -44,7 +44,24 @@ export class Lobby<G extends GameName = GameName> {
     }
 
     join(user: User) {
-        this.members.push(new LobbyMember(user))
+        const existed = this.members.find(m => m.user.nickname === user.nickname)
+
+        if (existed) {
+            return {
+                success: true,
+                message: 'Already existed',
+                members: this.members
+            }
+        }
+
+        const member = new LobbyMember(user)
+
+        this.members.push(member)
+
+        return {
+            success: true,
+            members: this.members
+        }
     }
 
     getPublicData(): TLobbyPublicData {
