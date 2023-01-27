@@ -23,7 +23,7 @@ export const handler: Handler<Request, GetUsersSuccess | GeneralFailure> = (act,
         data: users.map(u => ({
             nickname: u.nickname,
             avatarRes: u.avatarRes,
-            color: u.nicknameColor
+            nicknameColor: u.nicknameColor
         }))
     }
 
