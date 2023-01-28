@@ -11,7 +11,7 @@ const post: WrapperHTTPHandler<PostRequest> =
     async (res, req) => {
         const data = await req.body
 
-        const user = users.auth(data.token)
+        const user = users.auth(data.token)!
 
         user.nickname = data.nickname
         user.avatarRes = data.imageResId

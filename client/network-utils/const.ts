@@ -14,5 +14,8 @@ export const URL = {
     },
     get Lobby() {
         return `${location.origin}/api/lobby`
+    },
+    get LobbyJoin() {
+        return `${location.origin}/api/lobby-join`
     }
 }
