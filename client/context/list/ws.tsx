@@ -80,26 +80,5 @@ export const WSProvider: React.FC<Props> = props => {
 
     if (wsRef.current) wsRef.current.onmessage = messageHandler
 
-    useEffect(() => {
-        if (user.nickname) {
-            window.addEventListener('beforeunload', () => {
-                const token = getCookie('token') as string | undefined
-
-                const data: AbstractSocketMessage = {
-                    ctx: 'Auth-Logout',
-                    data: {
-                        nickname: user.nickname
-                    }
-                }
-
-                if (token) {
-                    data.token = token
-                }
-
-                wsRef.current?.send(JSON.stringify(data))
-            })
-        }
-    }, [wsRef.current, user.nickname])
-
     return <WSContext.Provider value={{ wsRef, isConnected, setIsConnected, on, send }}>{props.children}</WSContext.Provider>
 }

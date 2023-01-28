@@ -1,4 +1,19 @@
-import { Alert, Box, Button, FormGroup, FormLabel, Grid, IconButton, InputAdornment, OutlinedInput } from '@mui/material'
+import {
+    Alert,
+    Box,
+    Button,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogContentText,
+    DialogTitle,
+    FormGroup,
+    FormLabel,
+    Grid,
+    IconButton,
+    InputAdornment,
+    OutlinedInput
+} from '@mui/material'
 import TextField from '@mui/material/TextField'
 import { UserContext } from 'client/context/list/user'
 import React, { useState, useContext, useRef } from 'react'
@@ -9,6 +24,8 @@ import CircleIcon from '@mui/icons-material/Circle'
 import type { Failure, Success } from 'pages/api/profile'
 import { ProfilePicture } from '../profile-picture/ProfilePicture'
 import randomColor from 'randomcolor'
+import { WSContext } from 'client/context/list/ws'
+import { deleteCookie } from 'cookies-next'
 
 interface Props {
     onUpdated?: () => void
@@ -18,6 +35,9 @@ export const ProfileEditor: React.FC<Props> = props => {
     const formRef = useRef<HTMLFormElement | null>(null)
 
     const user = useContext(UserContext)
+    const ws = useContext(WSContext)
+
+    const [isLogoutVisible, setIsLogoutVisible] = useState(false)
 
     const [nickname, setNickname] = useState(user.nickname)
     const [nicknameColor, setNicknameColor] = useState(user.nicknameColor)
@@ -71,6 +91,16 @@ export const ProfileEditor: React.FC<Props> = props => {
         }
     }
 
+    const handleLogout = () => {
+        ws.send('Auth-Logout', {
+            nickname: user.nickname
+        })
+
+        deleteCookie('token')
+
+        window.location.reload()
+    }
+
     return (
         <>
             <Grid component="form" container direction="column" spacing={4} height="100%" onSubmit={handleSubmit} ref={formRef}>
@@ -91,11 +121,28 @@ export const ProfileEditor: React.FC<Props> = props => {
                     </Box>
                 </Grid>
                 <Grid item sx={{ mt: 'auto', mb: 1 }}>
+                    <Button fullWidth size="large" variant="outlined" color="error" onClick={() => setIsLogoutVisible(true)}>
+                        log out
+                    </Button>
+                </Grid>
+                <Grid item>
                     <Button fullWidth size="large" variant="contained" color="primary" type="submit">
                         update
                     </Button>
                 </Grid>
             </Grid>
+            <Dialog open={isLogoutVisible} onClose={() => setIsLogoutVisible(true)}>
+                <DialogTitle>Are you sure want to logout?</DialogTitle>
+                <DialogContent>
+                    <DialogContentText>You won&apos;t be able to login into this profile again</DialogContentText>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setIsLogoutVisible(false)}>don&apos;t logout</Button>
+                    <Button onClick={handleLogout} color="error" variant="outlined" autoFocus>
+                        logout
+                    </Button>
+                </DialogActions>
+            </Dialog>
             <LoadingOverlay isLoading={isLoading} />
         </>
     )
