@@ -1,8 +1,6 @@
 import { URL } from './const'
 import { WebSocketCallbacks } from './types'
 
-export const startSocketServer = () => fetch(URL.SocketStartStarter)
-
 const messageLogger = (message: MessageEvent<any>) => {
     if (message.data === 'pong') {
         return
@@ -33,39 +31,35 @@ export const connectToWebSocket = async (callbacks?: WebSocketCallbacks) => {
 
     isHandlingConnectRequest = true
 
-    return startSocketServer()
-        .catch(e => console.log('UWS Init error', e))
-        .then(() => {
-            console.log('WS url is', URL.WS)
+    console.log('WS url is', URL.WS)
 
-            const ws = new WebSocket(URL.WS)
+    const ws = new WebSocket(URL.WS)
 
-            ws.onopen = () => {
-                ws.addEventListener('message', messageLogger)
+    ws.onopen = () => {
+        ws.addEventListener('message', messageLogger)
 
-                callbacks?.onOpen(ws!)
+        callbacks?.onOpen(ws!)
 
-                pingIntervals.push(setInterval(() => ws.send('ping'), 2000))
-            }
+        pingIntervals.push(setInterval(() => ws.send('ping'), 2000))
+    }
 
-            ws.onclose = () => {
-                let i: NodeJS.Timer
+    ws.onclose = () => {
+        let i: NodeJS.Timer
 
-                while (pingIntervals.length) {
-                    i = pingIntervals.pop()!
+        while (pingIntervals.length) {
+            i = pingIntervals.pop()!
 
-                    clearInterval(i)
-                }
+            clearInterval(i)
+        }
 
-                console.log('websocket closed')
-                callbacks?.onClose()
-            }
+        console.log('websocket closed')
+        callbacks?.onClose()
+    }
 
-            ws.onerror = e => {
-                console.error('WS Error', e)
-                callbacks?.onError()
-            }
+    ws.onerror = e => {
+        console.error('WS Error', e)
+        callbacks?.onError()
+    }
 
-            isHandlingConnectRequest = false
-        })
+    isHandlingConnectRequest = false
 }

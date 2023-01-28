@@ -8,10 +8,11 @@ import sslPath from '../ssl-path'
 import logger from 'logger'
 import { State } from 'state'
 import { ReactionActions } from './utils/reactions'
+import { NextApiResponseUWS } from 'util/t'
 
 export const port = Number(process.env.NEXT_PUBLIC_WS_PORT)
 
-export const createSocketServer = (): [TemplatedApp, State] => {
+const createSocketServer = (): [TemplatedApp, State] => {
     let app: uws.TemplatedApp
 
     if (process.env.NODE_ENV === 'production') {
@@ -41,4 +42,19 @@ export const createSocketServer = (): [TemplatedApp, State] => {
     })
 
     return [app, state]
+}
+
+export const initializeSocketServer = (res: NextApiResponseUWS) => {
+    if (res.socket.server.uws) {
+        logger.debug('Socket is already running')
+
+        return
+    }
+
+    logger.info('Socket is initializing')
+
+    const [uws, state] = createSocketServer()
+
+    res.socket.server.uws = uws
+    res.socket.server.appState = state
 }

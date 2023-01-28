@@ -7,31 +7,12 @@ export const URL = {
         }
     },
     get SocketStartStarter() {
-        if (location.protocol.includes('https')) {
-            return `https://${location.host}/api/init`
-        } else {
-            return `http://${location.hostname}:3000/api/init`
-        }
+        return `${location.origin}/api/init`
     },
     get Profile() {
-        if (location.protocol.includes('https')) {
-            return `https://${location.host}/api/profile`
-        } else {
-            return `http://${location.hostname}:3000/api/profile`
-        }
+        return `${location.origin}/api/profile`
     },
     get Lobby() {
-        if (location.protocol.includes('https')) {
-            return `https://${location.host}/api/lobby`
-        } else {
-            return `http://${location.hostname}:3000/api/lobby`
-        }
-    },
-    get LobbyJoin() {
-        if (location.protocol.includes('https')) {
-            return `https://${location.host}/api/lobby-join`
-        } else {
-            return `http://${location.hostname}:3000/api/lobby-join`
-        }
+        return `${location.origin}/api/lobby`
     }
 }
