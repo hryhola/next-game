@@ -5,12 +5,10 @@ const pino = require('pino')
  */
 let logger
 
-if (process.env.NODE_ENV === 'production') {
-    logger = pino({ level: 'info' }, pino.destination('./logs/prod.log'))
-} else {
+if (process.env.NODE_ENV === 'development') {
     logger = pino(
         {
-            level: 'warn',
+            level: 'debug',
             transport: {
                 target: 'pino-pretty',
                 options: {
@@ -20,6 +18,8 @@ if (process.env.NODE_ENV === 'production') {
         },
         pino.destination(process.stdout)
     )
+} else {
+    logger = pino({ level: 'info' }, pino.destination('./logs/prod.log'))
 }
 
 module.exports = logger

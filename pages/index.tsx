@@ -7,7 +7,7 @@ import { deleteCookie } from 'cookies-next'
 import logger from 'logger'
 import { TUser } from 'state'
 import { NextApiResponseUWS } from 'util/t'
-import { createUWS } from './api/init'
+import { initializeSocketServer } from 'uWebSockets/createSocketServer'
 
 type Props = {
     defaultRoute: Route
@@ -26,7 +26,7 @@ const Home: NextPage<Props> = props => {
 }
 
 export const getServerSideProps: GetServerSideProps = async context => {
-    createUWS(context.res as NextApiResponseUWS)
+    initializeSocketServer(context.res as NextApiResponseUWS)
 
     const props: Props = {
         defaultRoute: 'Login'
