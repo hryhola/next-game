@@ -21,7 +21,7 @@ export const UserProvider: React.FC<Props> = props => {
     const [user, setUser] = useState({
         nicknameColor: props.user?.nicknameColor || 'deeppink',
         nickname: props.user?.nickname || '',
-        avatarRes: props.user?.avatarRes || ''
+        avatarRes: props.user?.avatarRes ? '/res/' + props.user?.avatarRes : ''
     })
 
     const setNickname = (val: string) => setUser(u => ({ ...u, nickname: val }))

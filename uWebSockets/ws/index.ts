@@ -121,8 +121,19 @@ export const WSHandlerRegister = (app: uws.TemplatedApp, state: State) => {
                 )
             }
         },
-        close: (_ws, code, message) => {
-            logger.info(message, 'Closing connection. Code: ' + code)
+        close: (ws, code, message) => {
+            const user = state.users.list.find(u => u.ws === ws)
+
+            user?.setOnline(false)
+
+            logger.info(
+                {
+                    message,
+                    code,
+                    user
+                },
+                'Closing connection'
+            )
         }
     })
 }

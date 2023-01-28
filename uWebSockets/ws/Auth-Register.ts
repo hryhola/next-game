@@ -31,7 +31,7 @@ export const handler: Handler<Request, Success | Failure> = (actions, state, dat
         state.users.destroy(existingUser.token)
     }
 
-    const user = new User(data.nickname)
+    const user = new User(data.nickname, actions.ws)
 
     state.users.add(user, user.token)
 

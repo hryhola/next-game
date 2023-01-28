@@ -2,9 +2,7 @@ import { action, makeAutoObservable } from 'mobx'
 import { User } from './User'
 
 export class UserRegistry {
-    readonly tokenMap: Record<string, User> = {}
-
-    readonly list: User[] = []
+    list: User[] = []
 
     get onlineUsers() {
         return this.list.filter(u => u.online)
@@ -16,11 +14,10 @@ export class UserRegistry {
 
     add(user: User, token: string) {
         this.list.push(user)
-        this.tokenMap[token] = user
     }
 
     auth(token: string) {
-        return this.tokenMap[token]
+        return this.list.find(u => u.token === token)
     }
 
     getByNickname(nickname: string) {
@@ -28,6 +25,10 @@ export class UserRegistry {
     }
 
     destroy(token: string) {
-        delete this.tokenMap[token]
+        const user = this.auth(token)
+
+        if (user) {
+            this.list = this.list.filter(u => u !== user)
+        }
     }
 }
