@@ -83,7 +83,7 @@ export const ProfileEditor: React.FC<Props> = props => {
         user.setNicknameColor(nicknameColor)
 
         if (response.avatarRes) {
-            user.setAvatarRes('/res/' + response.avatarRes)
+            user.setAvatarRes(response.avatarRes)
         }
 
         if (props.onUpdated) {

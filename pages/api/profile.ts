@@ -59,7 +59,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponseU
     if (files.image) {
         const avatarFullPath = (files.image as formidable.File).filepath
         const parsedPath = path.parse(avatarFullPath)
-        avatarResourceId = 'avatar/' + parsedPath.base
+        avatarResourceId = 'res/avatar/' + parsedPath.base
 
         user.setAvatarRes(avatarResourceId)
     }
