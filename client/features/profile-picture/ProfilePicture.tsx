@@ -43,9 +43,9 @@ export const ProfilePicture: React.FC<Props> = props => {
             <Box
                 sx={{
                     ...sizeProps,
-                    display: 'grid',
+                    display: 'flex',
                     alignItems: 'center',
-                    justifyItems: 'center'
+                    justifyContent: 'center'
                 }}
             >
                 <img alt="user avatar" src={props.url} />
