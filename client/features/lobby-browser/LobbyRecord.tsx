@@ -1,4 +1,4 @@
-import { Alert, ListItem, ListItemButton, ListItemText, Theme } from '@mui/material'
+import { Alert, Button, ListItem, ListItemButton, ListItemText, Theme } from '@mui/material'
 import { LobbyBaseInfo } from 'uWebSockets/ws/Lobby-GetList'
 import LockIcon from '@mui/icons-material/Lock'
 import { LobbyPreview } from './LobbyPreview'
@@ -6,6 +6,7 @@ import { MouseEventHandler, useContext, useEffect, useState } from 'react'
 import { TLobbyPublicData } from 'state'
 import { RequestHandler } from 'uWebSockets/uws.types'
 import { WSContext } from 'client/context/list/ws'
+import ArrowDropUpIcon from '@mui/icons-material/ArrowDropUp'
 
 export const LobbyRecord: React.FC<LobbyBaseInfo> = props => {
     const ws = useContext(WSContext)
@@ -43,16 +44,22 @@ export const LobbyRecord: React.FC<LobbyBaseInfo> = props => {
     return (
         <ListItem disablePadding>
             {lobbyInfo ? (
-                <ListItemText
-                    sx={(theme: Theme) => ({
-                        p: 2,
-                        ':hover': {
-                            backgroundColor: theme.palette.grey[900]
-                        }
-                    })}
-                >
-                    <LobbyPreview lobby={lobbyInfo!} />
-                </ListItemText>
+                <>
+                    <ListItemText
+                        sx={(theme: Theme) => ({
+                            pt: 0,
+                            mt: 0,
+                            ':hover': {
+                                backgroundColor: theme.palette.grey[900]
+                            }
+                        })}
+                    >
+                        <Button sx={{ borderRadius: 0 }} onClick={() => setLobbyInfo(null)} fullWidth>
+                            <ArrowDropUpIcon />
+                        </Button>
+                        <LobbyPreview sx={{ p: 2 }} lobby={lobbyInfo!} />
+                    </ListItemText>
+                </>
             ) : (
                 <ListItemButton onClick={handleClick}>
                     <ListItemText>{props.id}</ListItemText>
