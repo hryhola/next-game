@@ -64,6 +64,12 @@ export const WSHandlerRegister = (app: uws.TemplatedApp, state: State) => {
                 }
 
                 if (decodedMsg === 'ping') {
+                    const user = state.users.list.find(u => u.ws === ws)
+
+                    if (user) {
+                        user.refreshOnlineChecker()
+                    }
+
                     return ws.send('pong')
                 }
 

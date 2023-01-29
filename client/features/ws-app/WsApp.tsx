@@ -1,4 +1,4 @@
-import { useContext, useEffect, useRef } from 'react'
+import { useContext, useEffect, useRef, useState } from 'react'
 import { LoadingOverlay } from 'client/ui/loading-overlay/LoadingOverlay'
 import { connectToWebSocket } from 'client/network-utils/socket'
 import { WSContext } from 'client/context/list/ws'
@@ -6,8 +6,7 @@ import { sleep } from 'util/time'
 import { DevToolsOverlay } from 'client/features/dev/DevToolsOverlay'
 import { UserContext } from 'client/context/list/user'
 import { RouterContext } from 'client/context/list/router'
-
-let isConnecting = false
+import { Backdrop, Box, Button } from '@mui/material'
 
 type Props = {
     children: JSX.Element | JSX.Element[]
@@ -16,13 +15,15 @@ type Props = {
 export const WsApp: React.FC<Props> = props => {
     const ws = useContext(WSContext)
 
-    useEffect(() => {
-        if (isConnecting) {
-            console.log('Already connecting. Exiting init hook.')
+    const [isHandlingConnection, setIsHandlingConnection] = useState(false)
+
+    const startConnecting = () => {
+        if (isHandlingConnection) {
+            console.log('Already connecting.')
             return
         }
 
-        isConnecting = true
+        setIsHandlingConnection(true)
 
         connectToWebSocket({
             onClose: () => ws.setIsConnected(false),
@@ -33,64 +34,27 @@ export const WsApp: React.FC<Props> = props => {
                 ws.setIsConnected(true)
             }
         }).then(() => {
-            isConnecting = false
+            setIsHandlingConnection(false)
         })
-    }, [])
+    }
 
     useEffect(() => {
-        if (ws.isConnected === false) {
-            if (isConnecting) {
-                console.log('Already connecting. Exiting retry hook.')
-                return
-            }
-
-            const retry = async () => {
-                ws.wsRef.current = null
-
-                isConnecting = true
-
-                console.log('trying to establish connection')
-
-                await connectToWebSocket({
-                    onOpen: (webSocket: WebSocket) => {
-                        console.log('Connection is set.')
-                        ws.wsRef.current = webSocket
-                        ws.setIsConnected(true)
-                    },
-                    onError: async () => {
-                        ws.setIsConnected(false)
-                        console.log('connection error')
-
-                        await sleep(1000)
-
-                        console.log('trying to reconnect...')
-
-                        await retry()
-                    },
-                    onClose: async () => {
-                        ws.setIsConnected(false)
-                        console.log('connection closet')
-
-                        await sleep(1000)
-
-                        console.log('trying to reconnect...')
-
-                        await retry()
-                    }
-                }).then(() => {
-                    isConnecting = false
-                })
-            }
-
-            retry()
-        }
-    }, [ws.isConnected])
+        startConnecting()
+    }, [])
 
     return (
         <>
             {props.children}
             <DevToolsOverlay />
-            <LoadingOverlay isLoading={!ws.isConnected} text="connecting..." />
+            <LoadingOverlay text="connecting..." isLoading={isHandlingConnection} />
+            <Backdrop sx={{ color: '#fff', zIndex: theme => theme.zIndex.drawer + 1 }} open={!isHandlingConnection && !ws.isConnected}>
+                <Box sx={{ display: 'flex', flexFlow: 'column' }}>
+                    Connection to the server is lost.
+                    <Button sx={{ mt: 4 }} variant="contained" color="secondary" onClick={() => startConnecting()}>
+                        reconnect
+                    </Button>
+                </Box>
+            </Backdrop>
         </>
     )
 }

@@ -12,11 +12,21 @@ export class User {
     nicknameColor: string
     avatarRes?: string
 
+    refreshOnlineChecker: () => void
+
     constructor(id: string, ws: WebSocket<unknown>) {
         this.ws = ws
         this.nickname = id
         this.token = v4()
         this.nicknameColor = randomColor({ format: 'rgb' })
+
+        let logoutInterval = setTimeout(() => this.setOnline(false), 5000)
+
+        this.refreshOnlineChecker = () => {
+            clearTimeout(logoutInterval)
+
+            logoutInterval = setTimeout(() => this.setOnline(false), 5000)
+        }
 
         makeAutoObservable(this)
     }
