@@ -7,15 +7,15 @@ import { X } from 'util/t'
 
 type PraseFromResult = { fields: formidable.Fields; files: formidable.Files }
 
-export const parseForm = async (req: NextApiRequest, folder?: string, isPublic = false): Promise<X<PraseFromResult>> => {
+export const parseForm = async (req: NextApiRequest, folder?: string): Promise<X<PraseFromResult>> => {
     return new Promise(async (resolve, reject) => {
-        const uploadDirPath = [process.env.ROOT_DIR || process.cwd(), ...(isPublic ? ['public', 'res'] : ['uploads'])]
+        let uploadDir = process.env.NODE_ENV === 'production' ? '/var/www/game-club.click/html' : process.cwd() + '/public'
+
+        uploadDir + '/res'
 
         if (folder) {
-            uploadDirPath.push(folder)
+            uploadDir += '/' + folder + '/'
         }
-
-        const uploadDir = join(...uploadDirPath)
 
         try {
             await stat(uploadDir)

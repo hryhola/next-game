@@ -41,7 +41,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponseU
         })
     }
 
-    const [result, error] = await parseForm(req, 'avatar', true)
+    const [result, error] = await parseForm(req, 'avatar')
 
     if (error) {
         logger.error({ error }, 'form data parsing failure')
