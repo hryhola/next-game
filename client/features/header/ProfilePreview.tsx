@@ -12,7 +12,14 @@ function ProfilePicture() {
         return (
             <>
                 &nbsp;
-                <Image src={user.avatarRes} alt="profile avatar" width={40} height={40} className="next-img" />
+                <img
+                    style={{
+                        maxWidth: '40px',
+                        maxHeight: '40px'
+                    }}
+                    src={user.avatarRes}
+                    alt="profile avatar"
+                />
             </>
         )
     }
