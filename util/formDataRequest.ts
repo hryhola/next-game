@@ -11,7 +11,7 @@ export const parseForm = async (req: NextApiRequest, folder?: string): Promise<X
     return new Promise(async (resolve, reject) => {
         let uploadDir = process.env.NODE_ENV === 'production' ? '/var/www/game-club.click/html' : process.cwd() + '/public'
 
-        uploadDir + '/res'
+        uploadDir += '/res'
 
         if (folder) {
             uploadDir += '/' + folder + '/'
