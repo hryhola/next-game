@@ -39,7 +39,18 @@ export const ProfilePicture: React.FC<Props> = props => {
             )
         }
 
-        return <Image alt="user avatar" src={props.url} width={size} height={size} className="next-img" />
+        return (
+            <Box
+                sx={{
+                    ...sizeProps,
+                    display: 'grid',
+                    alignItems: 'center',
+                    justifyItems: 'center'
+                }}
+            >
+                <img alt="user avatar" src={props.url} />
+            </Box>
+        )
     }
 
     const buttonSx: SxProps<Theme> = {

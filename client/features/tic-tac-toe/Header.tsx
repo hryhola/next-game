@@ -10,15 +10,15 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = props => {
     return (
-        <Grid container justifyContent="center">
+        <Grid container justifyContent="center" gap={2}>
             {props.isLoading ? (
                 <Grid item>
                     <Player isLoading />
                 </Grid>
             ) : (
-                props.members.map(m => (
-                    <Grid key={m.user.nickname} item>
-                        <Player {...m} />
+                props.members.map(p => (
+                    <Grid key={p.user.nickname} item>
+                        <Player {...p} />
                     </Grid>
                 ))
             )}

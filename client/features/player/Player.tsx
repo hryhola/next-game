@@ -7,7 +7,7 @@ import { ProfilePicture } from '../profile-picture/ProfilePicture'
 type Props =
     | TAbstractPlayer
     | {
-          isLoading: boolean
+          isLoading: true
       }
 
 export const Player: React.FC<Props> = props => {
