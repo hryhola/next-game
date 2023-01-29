@@ -4,6 +4,7 @@ import formidable from 'formidable'
 import { mkdir, stat } from 'fs/promises'
 import { v4 } from 'uuid'
 import { X } from 'util/t'
+import logger from 'logger'
 
 type PraseFromResult = { fields: formidable.Fields; files: formidable.Files }
 
@@ -16,6 +17,8 @@ export const parseForm = async (req: NextApiRequest, folder?: string): Promise<X
         if (folder) {
             uploadDir += '/' + folder + '/'
         }
+
+        logger.info('Uploading files to' + uploadDir)
 
         try {
             await stat(uploadDir)
