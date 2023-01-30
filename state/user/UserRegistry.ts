@@ -1,6 +1,7 @@
-import { action, makeAutoObservable } from 'mobx'
+import { makeAutoObservable } from 'mobx'
 import { User } from './User'
 import { reactions } from './UserRegistry.reactions'
+import { WebSocket } from 'uWebSockets.js'
 
 export class UserRegistry {
     list: User[] = []
@@ -15,8 +16,12 @@ export class UserRegistry {
         reactions(this)
     }
 
-    add(user: User) {
+    createUser(nickname: string, ws: WebSocket<unknown>) {
+        const user = new User(nickname, ws)
+
         this.list.push(user)
+
+        return user
     }
 
     auth(token: string) {

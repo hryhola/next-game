@@ -15,15 +15,18 @@ type Props = {
 export const WsApp: React.FC<Props> = props => {
     const ws = useContext(WSContext)
 
+    const isFirstConnection = useRef(true)
     const [isHandlingConnection, setIsHandlingConnection] = useState(false)
 
     const startConnecting = () => {
+        setIsHandlingConnection(true)
+
+        isFirstConnection.current = false
+
         if (isHandlingConnection) {
             console.log('Already connecting.')
             return
         }
-
-        setIsHandlingConnection(true)
 
         connectToWebSocket({
             onClose: () => ws.setIsConnected(false),
@@ -32,26 +35,33 @@ export const WsApp: React.FC<Props> = props => {
                 console.log('Connection is set.')
                 ws.wsRef.current = webSocket
                 ws.setIsConnected(true)
+
+                setIsHandlingConnection(false)
             }
-        }).then(() => {
-            setIsHandlingConnection(false)
         })
     }
-
-    useEffect(() => {
-        startConnecting()
-    }, [])
 
     return (
         <>
             {props.children}
             <DevToolsOverlay />
-            <LoadingOverlay text="connecting..." isLoading={isHandlingConnection} />
-            <Backdrop sx={{ color: '#fff', zIndex: theme => theme.zIndex.drawer + 1 }} open={!isHandlingConnection && !ws.isConnected}>
+            <LoadingOverlay transitionDuration={0} text="connecting..." isLoading={isHandlingConnection} />
+            <Backdrop
+                transitionDuration={0}
+                sx={{
+                    zIndex: theme => theme.zIndex.drawer + 1,
+                    ...(isFirstConnection.current
+                        ? {
+                              background: 'black'
+                          }
+                        : {})
+                }}
+                open={!isHandlingConnection && !ws.isConnected}
+            >
                 <Box sx={{ display: 'flex', flexFlow: 'column' }}>
-                    Connection to the server is lost.
+                    {isFirstConnection.current ? 'Connect to the game server to join' : 'Connection to the server is lost.'}
                     <Button sx={{ mt: 4 }} variant="contained" color="secondary" onClick={() => startConnecting()}>
-                        reconnect
+                        {isFirstConnection.current ? 'connect' : 'reconnect'}
                     </Button>
                 </Box>
             </Backdrop>
