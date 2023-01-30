@@ -1,5 +1,7 @@
 import { makeAutoObservable } from 'mobx'
 import randomColor from 'randomcolor'
+import { reactions } from './User.reactions'
+import { Lobby } from 'state/lobby/Lobby'
 import { v4 } from 'uuid'
 import { WebSocket } from 'uWebSockets.js'
 
@@ -11,6 +13,7 @@ export class User {
     nickname: string
     nicknameColor: string
     avatarRes?: string
+    lobbies: Lobby[] = []
 
     refreshOnlineChecker: () => void
 
@@ -18,7 +21,7 @@ export class User {
         this.ws = ws
         this.nickname = id
         this.token = v4()
-        this.nicknameColor = randomColor({ format: 'rgb' })
+        this.nicknameColor = randomColor()
 
         let logoutInterval = setTimeout(() => this.setOnline(false), 5000)
 
@@ -29,6 +32,8 @@ export class User {
         }
 
         makeAutoObservable(this)
+
+        reactions(this)
     }
 
     setAvatarRes(val: string) {

@@ -2,7 +2,6 @@ import uws, { TemplatedApp } from 'uWebSockets.js'
 
 import { WSHandlerRegister } from './ws'
 import { RestHandlersRegister } from './rest'
-import { ReactionsRegister } from './reactions'
 
 import sslPath from '../ssl-path'
 import logger from 'logger'
