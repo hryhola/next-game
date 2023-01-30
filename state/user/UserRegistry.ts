@@ -1,5 +1,6 @@
 import { action, makeAutoObservable } from 'mobx'
 import { User } from './User'
+import { reactions } from './UserRegistry.reactions'
 
 export class UserRegistry {
     list: User[] = []
@@ -10,9 +11,11 @@ export class UserRegistry {
 
     constructor() {
         makeAutoObservable(this)
+
+        reactions(this)
     }
 
-    add(user: User, token: string) {
+    add(user: User) {
         this.list.push(user)
     }
 

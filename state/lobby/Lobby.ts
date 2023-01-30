@@ -3,6 +3,7 @@ import { GameCtors, GameName } from 'state/games'
 import { AbstractGame } from 'state/games/AbstractGame'
 import { Chat } from 'state/global/Chat'
 import { User } from 'state/user/User'
+import { reactions } from './Lobby.reactions'
 import { LobbyMember } from './LobbyMember'
 
 export type LobbyCreateOptions<G extends GameName> = {
@@ -41,6 +42,8 @@ export class Lobby<G extends GameName = GameName> {
         this.game.join(creatorAsMember)
 
         makeAutoObservable(this)
+
+        reactions(this)
     }
 
     join(user: User) {

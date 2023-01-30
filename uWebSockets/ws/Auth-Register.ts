@@ -33,7 +33,7 @@ export const handler: Handler<Request, Success | Failure> = (actions, state, dat
 
     const user = new User(data.nickname, actions.ws)
 
-    state.users.add(user, user.token)
+    state.users.add(user)
 
     logger.info('New login: ' + user.nickname)
 
