@@ -31,9 +31,7 @@ export const handler: Handler<Request, Success | Failure> = (actions, state, dat
         state.users.destroy(existingUser.token)
     }
 
-    const user = new User(data.nickname, actions.ws)
-
-    state.users.add(user)
+    const user = state.users.createUser(data.nickname, actions.ws)
 
     logger.info('New login: ' + user.nickname)
 
