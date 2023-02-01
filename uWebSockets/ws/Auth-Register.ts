@@ -21,7 +21,7 @@ export interface Failure {
 export const handler: Handler<Request, Success | Failure> = (actions, state, data) => {
     const existingUser = state.users.getByNickname(data.nickname)
 
-    if (existingUser?.isOnline()) {
+    if (existingUser?.online) {
         return actions.res({
             success: false,
             nickname: data.nickname,

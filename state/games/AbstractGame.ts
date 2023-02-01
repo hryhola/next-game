@@ -77,6 +77,8 @@ export abstract class AbstractGame {
 
     abstract startSession(data?: AbstractSessionStartData): void
 
+    abstract toJSON(): any
+
     endSession() {
         if (!this.currentSession) {
             logger.warn('Cannot end session that is not started')

@@ -22,4 +22,12 @@ export class LobbiesRegistry {
     get(id: string) {
         return this.container[id] || null
     }
+
+    toJSON() {
+        return Object.values(this.container).map(lobby => ({
+            id: lobby.id,
+            creatorID: lobby.creatorID,
+            game: lobby.game.toJSON()
+        }))
+    }
 }
