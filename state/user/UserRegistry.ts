@@ -39,4 +39,8 @@ export class UserRegistry {
             this.list = this.list.filter(u => u !== user)
         }
     }
+
+    toJSON() {
+        return this.list.map(u => u.toJSON())
+    }
 }

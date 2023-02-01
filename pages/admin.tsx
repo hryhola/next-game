@@ -11,7 +11,7 @@ const Admin: NextPage<Props> = props => {
 
 export const getServerSideProps: GetServerSideProps = async context => {
     const props: Props = {
-        state: JSON.stringify((context.res as NextApiResponseUWS).socket?.server?.appState, null, 4)
+        state: JSON.stringify((context.res as NextApiResponseUWS).socket?.server?.appState.toJSON(), null, 4)
     }
 
     return {

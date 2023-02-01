@@ -18,6 +18,13 @@ export class TicTacToePlayer extends AbstractPlayer {
 
         this.char = char
     }
+
+    toJSON() {
+        return {
+            ...super.toJSON(),
+            char: this.char
+        }
+    }
 }
 
 export type TTicTacToePlayer = Omit<TicTacToePlayer, 'user'> & {
@@ -115,6 +122,17 @@ export class TicTacToe extends AbstractGame {
         return {
             success: true,
             players: this.players
+        }
+    }
+
+    toJSON() {
+        return {
+            name: TicTacToe.gameName,
+            state: this.currentSession?.state,
+            players: this.players.map(p => ({
+                user: p.user,
+                char: p.char
+            }))
         }
     }
 }

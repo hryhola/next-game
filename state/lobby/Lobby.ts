@@ -1,8 +1,6 @@
 import { makeAutoObservable } from 'mobx'
-import { GameCtors, GameName } from 'state/games'
-import { AbstractGame } from 'state/games/AbstractGame'
-import { Chat } from 'state/global/Chat'
-import { User } from 'state/user/User'
+import { AbstractSocketMessage } from 'uWebSockets/uws.types'
+import { AbstractGame, Chat, State, GameCtors, GameName, User } from 'state'
 import { reactions } from './Lobby.reactions'
 import { LobbyMember } from './LobbyMember'
 
@@ -46,6 +44,10 @@ export class Lobby<G extends GameName = GameName> {
         reactions(this)
     }
 
+    publish(message: AbstractSocketMessage) {
+        State.res.publish(`lobby-${this.id}-all`, message)
+    }
+
     join(user: User) {
         const existed = this.members.find(m => m.user.nickname === user.nickname)
 
@@ -74,6 +76,15 @@ export class Lobby<G extends GameName = GameName> {
             gameName: (Object.getPrototypeOf(this.game).constructor as typeof AbstractGame).gameName as GameName,
             membersCount: this.members.length,
             creatorID: this.creatorID
+        }
+    }
+
+    toJSON() {
+        return {
+            id: this.id,
+            creatorID: this.creatorID,
+            members: this.members.map(m => m.toJSON()),
+            game: this.game
         }
     }
 }

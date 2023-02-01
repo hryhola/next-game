@@ -28,4 +28,8 @@ export class Chat implements TChat {
             this.messages = this.messages.slice(-this.limit)
         }
     }
+
+    toJSON() {
+        return this.messages
+    }
 }

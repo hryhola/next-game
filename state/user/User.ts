@@ -13,7 +13,6 @@ export class User {
     nickname: string
     nicknameColor: string
     avatarRes?: string
-    lobbies: Lobby[] = []
 
     refreshOnlineChecker: () => void
 
@@ -52,8 +51,13 @@ export class User {
         this.online = val
     }
 
-    isOnline() {
-        return this.online
+    toJSON() {
+        return {
+            nickname: this.nickname,
+            nicknameColor: this.nicknameColor,
+            avatarRes: this.avatarRes,
+            online: this.online
+        }
     }
 }
 

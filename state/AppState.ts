@@ -17,4 +17,12 @@ export class State {
 
         reactions(this)
     }
+
+    toJSON() {
+        return {
+            globalChat: this.globalChat.toJSON(),
+            lobbies: this.lobbies.toJSON(),
+            users: this.users.toJSON()
+        }
+    }
 }
