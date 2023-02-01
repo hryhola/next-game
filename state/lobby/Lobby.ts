@@ -1,8 +1,7 @@
 import { makeAutoObservable } from 'mobx'
+import { AbstractGame, Chat, State, GameCtors, GameName, LobbyMember, User } from 'state'
 import { AbstractSocketMessage } from 'uWebSockets/uws.types'
-import { AbstractGame, Chat, State, GameCtors, GameName, User } from 'state'
 import { reactions } from './Lobby.reactions'
-import { LobbyMember } from './LobbyMember'
 
 export type LobbyCreateOptions<G extends GameName> = {
     id: string
@@ -27,7 +26,7 @@ export class Lobby<G extends GameName = GameName> {
         this.creatorID = data.creator.nickname
         this.sessionStartData = data.sessionStartData
 
-        const creatorAsMember = new LobbyMember(data.creator)
+        const creatorAsMember = new LobbyMember(this, data.creator)
 
         creatorAsMember.isCreator = true
 
@@ -35,7 +34,7 @@ export class Lobby<G extends GameName = GameName> {
 
         const GameConstructor = GameCtors[data.gameName]
 
-        this.game = new GameConstructor()
+        this.game = new GameConstructor(this)
 
         this.game.join(creatorAsMember)
 
@@ -59,9 +58,20 @@ export class Lobby<G extends GameName = GameName> {
             }
         }
 
-        const member = new LobbyMember(user)
+        const member = new LobbyMember(this, user)
 
         this.members.push(member)
+
+        this.publish({
+            ctx: 'Lobby-Join',
+            data: {
+                success: true,
+                lobbyId: this.id,
+                member: member.toJSON()
+            }
+        })
+
+        this.game.join(member)
 
         return {
             success: true,

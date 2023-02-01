@@ -1,7 +1,7 @@
-import { makeAutoObservable } from 'mobx'
 import { User } from './User'
 import { reactions } from './UserRegistry.reactions'
 import { WebSocket } from 'uWebSockets.js'
+import { makeAutoObservable } from 'mobx'
 
 export class UserRegistry {
     list: User[] = []

@@ -1,6 +1,7 @@
 import { LobbyMember } from 'state/lobby/LobbyMember'
 import logger from 'logger'
-import { TUser } from 'state/user/User'
+import { TUser, User } from 'state/user/User'
+import { Lobby } from 'state'
 
 type AbstractSessionStartData = Record<string, string>
 
@@ -34,8 +35,12 @@ export abstract class AbstractGameSession {
 }
 
 export abstract class AbstractPlayer extends LobbyMember {
-    readonly isPlayer = true
     score: number = 0
+
+    constructor(lobby: Lobby, user: User) {
+        super(lobby, user)
+        this.isPlayer = true
+    }
 }
 
 export type TAbstractPlayer = Omit<AbstractPlayer, 'user'> & {
@@ -70,6 +75,11 @@ export abstract class AbstractGame {
     currentSession?: AbstractGameSession
 
     prevSessions: AbstractGameSession[] = []
+    lobby: Lobby
+
+    constructor(lobby: Lobby) {
+        this.lobby = lobby
+    }
 
     abstract players: AbstractPlayer[]
 
@@ -77,7 +87,11 @@ export abstract class AbstractGame {
 
     abstract startSession(data?: AbstractSessionStartData): void
 
+    abstract onPlayerOffline(user: AbstractPlayer): void
+
     abstract toJSON(): any
+
+    readyCheck?: ReadyCheck
 
     endSession() {
         if (!this.currentSession) {
@@ -89,8 +103,6 @@ export abstract class AbstractGame {
 
         delete this.currentSession
     }
-
-    readyCheck?: ReadyCheck
 
     startReadyCheck() {
         this.readyCheck = new ReadyCheck(this)

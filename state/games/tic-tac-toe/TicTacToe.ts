@@ -1,5 +1,5 @@
 import { rotateMatrix } from 'util/matrix'
-import { LobbyMember, TUser } from 'state'
+import { Lobby, LobbyMember, TUser, User } from 'state'
 import { AbstractGame, AbstractGameSession, AbstractPlayer } from '../AbstractGame'
 
 type MoveChar = 'x' | 'o'
@@ -13,8 +13,8 @@ type TicTacToeMove = {
 export class TicTacToePlayer extends AbstractPlayer {
     char: MoveChar
 
-    constructor(member: LobbyMember, char: MoveChar) {
-        super(member.user)
+    constructor(lobby: Lobby, member: LobbyMember, char: MoveChar) {
+        super(lobby, member.user)
 
         this.char = char
     }
@@ -94,6 +94,13 @@ export class TicTacToe extends AbstractGame {
         this.currentSession = new TicTacToeSession(this)
     }
 
+    publish(ctx: string, data: any) {
+        this.lobby.publish({
+            ctx: `TicTacToe-${ctx}`,
+            data
+        })
+    }
+
     join(member: LobbyMember) {
         const existed = this.players.find(p => p.user.nickname === member.user.nickname)
 
@@ -115,14 +122,27 @@ export class TicTacToe extends AbstractGame {
 
         const char = this.players[0]?.char === 'o' ? 'x' : 'o'
 
-        const player = new TicTacToePlayer(member, char)
+        const player = new TicTacToePlayer(this.lobby, member, char)
 
         this.players.push(player)
+
+        this.lobby.publish({
+            ctx: 'TicTacToe-Join',
+            data: {
+                player: player.toJSON()
+            }
+        })
 
         return {
             success: true,
             players: this.players
         }
+    }
+
+    onPlayerOffline(player: TicTacToePlayer): void {
+        this.publish('PlayerOffline', {
+            player: player.toJSON()
+        })
     }
 
     toJSON() {
