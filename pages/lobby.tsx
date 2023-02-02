@@ -6,7 +6,7 @@ import { NextPage } from 'next'
 const Lobby: NextPage = props => {
     return (
         <>
-            <Box sx={{ height: '100vh', backgroundColor: '#123' }}>
+            <Box sx={{ height: 'var(--fullHeight)', backgroundColor: '#123' }}>
                 Lorem ipsum dolor sit amet consectetur, adipisicing elit. Numquam, voluptas. Reprehenderit maiores vel nemo odit quisquam sed veritatis earum ea
                 totam, dicta ab sit magnam alias nesciunt dolores sint fugit. Lorem ipsum dolor sit amet consectetur adipisicing elit. Earum at beatae molestiae
                 facilis qui veritatis, laborum sapiente atque cum corrupti dolor suscipit repudiandae tempora, consectetur fugit similique ratione quia

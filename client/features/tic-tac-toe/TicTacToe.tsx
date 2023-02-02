@@ -65,7 +65,7 @@ const TicTacToe = () => {
                         view: fullscreen => (
                             <Chat
                                 messagesWrapperBoxSx={{
-                                    height: `calc(${fullscreen ? `100vh - ${overlayedTabsToolbarHeight}` : '50vh'} - ${chatInputHeight})`
+                                    height: `calc(${fullscreen ? `var(--fullHeight) - ${overlayedTabsToolbarHeight}` : '50vh'} - ${chatInputHeight})`
                                 }}
                                 scope="lobby"
                                 lobbyId={lobby.lobbyId}

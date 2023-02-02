@@ -48,7 +48,16 @@ export const Login: React.FC = () => {
     }
 
     return (
-        <Grid container component="form" onSubmit={handleSubmit} direction="column" justifyContent="center" alignItems="center" spacing={2} height="100vh">
+        <Grid
+            container
+            component="form"
+            onSubmit={handleSubmit}
+            direction="column"
+            justifyContent="center"
+            alignItems="center"
+            spacing={2}
+            height="var(--fullHeight)"
+        >
             <Grid item minWidth="300px">
                 <TextField
                     id="outlined-basic"

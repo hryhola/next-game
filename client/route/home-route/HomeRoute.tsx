@@ -14,7 +14,7 @@ export const HomeRoute: React.FC = () => {
 
     return (
         <>
-            <Grid display="flex" direction="column" height="100vh" container>
+            <Grid display="flex" direction="column" height="var(--fullHeight)" container>
                 <Grid item>
                     <Header />
                 </Grid>
