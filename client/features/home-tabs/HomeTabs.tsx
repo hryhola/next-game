@@ -80,13 +80,13 @@ export const HomeTabs: React.FC<BoxProps> = props => {
                 index={value}
                 onChangeIndex={handleChangeIndex}
             >
-                <TabPanel sx={{ height: `calc(100vh - ${headersHeight})` }} value={value} index={0} dir={theme.direction}>
+                <TabPanel sx={{ height: `calc(var(--fullHeight) - ${headersHeight})` }} value={value} index={0} dir={theme.direction}>
                     <LobbyBrowser />
                 </TabPanel>
-                <TabPanel sx={{ height: `calc(100vh - ${headersHeight})` }} value={value} index={1} dir={theme.direction}>
-                    <Chat scope="global" messagesWrapperBoxSx={{ height: `calc(100vh - ${headersHeight} - ${chatInputHeight})` }} />
+                <TabPanel sx={{ height: `calc(var(--fullHeight) - ${headersHeight})` }} value={value} index={1} dir={theme.direction}>
+                    <Chat scope="global" messagesWrapperBoxSx={{ height: `calc(var(--fullHeight) - ${headersHeight} - ${chatInputHeight})` }} />
                 </TabPanel>
-                <TabPanel sx={{ height: `calc(100vh - ${headersHeight})` }} value={value} index={2} dir={theme.direction}>
+                <TabPanel sx={{ height: `calc(var(--fullHeight) - ${headersHeight})` }} value={value} index={2} dir={theme.direction}>
                     <GlobalUsersList />
                 </TabPanel>
             </SwipeableViews>

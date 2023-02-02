@@ -61,7 +61,7 @@ const OverlayedTabs: React.FC<Props> = props => {
         setFullscreen(!fullscreen)
     }
 
-    const barMargin = value === false ? '0' : fullscreen ? `calc(100vh - ${overlayedTabsToolbarHeight})` : '50vh'
+    const barMargin = value === false ? '0' : fullscreen ? `calc(var(--fullHeight) - ${overlayedTabsToolbarHeight})` : '50vh'
 
     return (
         <Box>

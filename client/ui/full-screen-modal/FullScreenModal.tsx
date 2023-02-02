@@ -97,7 +97,7 @@ export const FullScreenModal: React.FC<{
                     <CloseIcon />
                 </IconButton>
             </Box>
-            <Box sx={{ ...(props.padding ? { px: 4 } : {}), minHeight: `calc(100vh - ${headerHeight})` }}>{props.children}</Box>
+            <Box sx={{ ...(props.padding ? { px: 4 } : {}), minHeight: `calc(var(--fullHeight) - ${headerHeight})` }}>{props.children}</Box>
         </Dialog>
     )
 }
