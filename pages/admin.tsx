@@ -1,4 +1,5 @@
 import { GetServerSideProps, NextPage } from 'next'
+import { useEffect, useRef, useState } from 'react'
 import { NextApiResponseUWS } from 'util/t'
 
 type Props = {
@@ -6,7 +7,19 @@ type Props = {
 }
 
 const Admin: NextPage<Props> = props => {
-    return <pre>{props.state}</pre>
+    const [isLoaded, setIsLoaded] = useState(false)
+    const ReactJson = useRef<React.ComponentType<any> | null>(null)
+
+    useEffect(() => {
+        import('react-json-view').then(lib => {
+            ReactJson.current = lib.default
+            setIsLoaded(true)
+        })
+    }, [])
+
+    if (!isLoaded || !ReactJson.current) return null
+
+    return <ReactJson.current src={JSON.parse(props.state)} theme="monokai" style={{ minHeight: '100vh' }} />
 }
 
 export const getServerSideProps: GetServerSideProps = async context => {
