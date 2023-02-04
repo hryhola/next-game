@@ -1,3 +1,4 @@
+import { Box, Container } from '@mui/material'
 import { GetServerSideProps, NextPage } from 'next'
 import { useEffect, useRef, useState } from 'react'
 import { NextApiResponseUWS } from 'util/t'
@@ -19,7 +20,13 @@ const Admin: NextPage<Props> = props => {
 
     if (!isLoaded || !ReactJson.current) return null
 
-    return <ReactJson.current src={JSON.parse(props.state)} theme="monokai" style={{ minHeight: '100vh' }} />
+    return (
+        <Box sx={{ background: 'rgb(39, 40, 34)', minHeight: '100vh', pt: 2 }}>
+            <Container>
+                <ReactJson.current src={JSON.parse(props.state)} theme="monokai" />
+            </Container>
+        </Box>
+    )
 }
 
 export const getServerSideProps: GetServerSideProps = async context => {
