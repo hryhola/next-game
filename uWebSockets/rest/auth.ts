@@ -7,7 +7,7 @@ export interface PostRequest {
 const post: WrapperHTTPHandler<PostRequest> = state => async (res, req) => {
     const data = await req.body
 
-    const isValid = typeof state.users.auth(data.token) !== 'undefined'
+    const isValid = typeof state.users.getByToken(data.token) !== 'undefined'
 
     res.json({
         isValid

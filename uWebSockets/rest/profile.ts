@@ -11,10 +11,12 @@ const post: WrapperHTTPHandler<PostRequest> =
     async (res, req) => {
         const data = await req.body
 
-        const user = users.auth(data.token)!
+        const user = users.getByToken(data.token)!
 
-        user.nickname = data.nickname
-        user.avatarRes = data.imageResId
+        user.update({
+            nickname: data.nickname,
+            avatarUrl: data.imageResId
+        })
 
         res.json({
             success: true
@@ -33,7 +35,7 @@ const get: WrapperHTTPHandler =
             })
         }
 
-        const user = users.auth(data.token)
+        const user = users.getByToken(data.token)
 
         if (!user) {
             return res.json({

@@ -1,11 +1,11 @@
 import { Box, Skeleton, Typography } from '@mui/material'
 import { UserContext } from 'client/context/list/user'
 import { useContext } from 'react'
-import { TAbstractPlayer } from 'state'
-import { ProfilePicture } from '../profile-picture/ProfilePicture'
+import { AbstractPlayerData } from 'state'
+import { ProfilePicture } from '../../profile-picture/ProfilePicture'
 
 type Props =
-    | TAbstractPlayer
+    | AbstractPlayerData
     | {
           isLoading: true
       }
@@ -23,8 +23,8 @@ export const Player: React.FC<Props> = props => {
                 </>
             ) : (
                 <>
-                    <ProfilePicture size={200} maxSize="30vw" local={false} url={props.user.avatarRes} />
-                    <Typography variant="h6">{props.user.nickname}</Typography>
+                    <ProfilePicture size={200} maxSize="30vw" local={false} url={props.avatarUrl} />
+                    <Typography variant="h6">{props.nickname}</Typography>
                     <Typography>{props.score}</Typography>
                 </>
             )}

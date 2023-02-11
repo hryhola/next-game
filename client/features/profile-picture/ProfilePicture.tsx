@@ -1,5 +1,4 @@
 import { Box, Button, FormLabel, SvgIconTypeMap, SxProps, Theme } from '@mui/material'
-import Image from 'next/image'
 import PersonIcon from '@mui/icons-material/Person'
 import { OverridableComponent } from '@mui/material/OverridableComponent'
 

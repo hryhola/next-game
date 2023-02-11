@@ -7,6 +7,6 @@ interface Props {
 
 export const ChatMessageComponent: React.FC<Props> = ({ message }) => (
     <ListItem sx={{ overflowWrap: 'anywhere' }}>
-        <b style={{ display: 'contents', color: message.nicknameColor }}>{message.nickname}</b>&nbsp;{message.text}
+        <b style={{ display: 'contents', color: message.fromColor }}>{message.from}</b>&nbsp;{message.text}
     </ListItem>
 )

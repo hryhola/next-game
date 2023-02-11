@@ -30,7 +30,7 @@ export const handler: Handler<Request, Success | GeneralFailure> = (actions, sta
     const response: Success = {
         success: true,
         scope: data.scope,
-        messages: chat.messages.slice(-50).reverse()
+        messages: chat.getMessages(-50).reverse()
     }
 
     if (data.scope === 'lobby') {

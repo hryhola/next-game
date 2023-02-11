@@ -64,7 +64,7 @@ export const WSHandlerRegister = (app: uws.TemplatedApp, state: State) => {
                 }
 
                 if (decodedMsg === 'ping') {
-                    const user = state.users.list.find(u => u.ws === ws)
+                    const user = state.users.getByConnection(ws)
 
                     if (user) {
                         user.refreshOnlineChecker()
@@ -128,9 +128,9 @@ export const WSHandlerRegister = (app: uws.TemplatedApp, state: State) => {
             }
         },
         close: (ws, code, message) => {
-            const user = state.users.list.find(u => u.ws === ws)
+            const user = state.users.getByConnection(ws)
 
-            user?.setOnline(false)
+            user?.update({ isOnline: false })
 
             logger.info(
                 {

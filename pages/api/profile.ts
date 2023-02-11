@@ -13,7 +13,7 @@ export type Failure = {
 
 export type Success = {
     success: true
-    avatarRes?: string
+    avatarUrl?: string
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponseUWS<Success | Failure>) {
@@ -32,7 +32,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponseU
         })
     }
 
-    const user = res.socket.server.appState.users.auth(token)
+    const user = res.socket.server.appState.users.getByToken(token)
 
     if (!user) {
         return res.status(400).json({
@@ -54,25 +54,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponseU
 
     const { fields, files } = result!
 
-    let avatarResourceId
+    let avatar
+
+    const updatedInfo: Record<string, string> = {}
 
     if (files.image) {
         const avatarFullPath = (files.image as formidable.File).filepath
         const parsedPath = path.parse(avatarFullPath)
-        avatarResourceId = 'res/avatar/' + parsedPath.base
-
-        user.setAvatarRes(avatarResourceId)
+        avatar = 'res/avatar/' + parsedPath.base
+        updatedInfo.avatarUrl = avatar
     }
 
-    user.setNickname(fields.nickname as string)
+    updatedInfo.nickname = fields.nickname as string
 
     if (fields.nicknameColor) {
-        user.setNicknameColor(fields.nicknameColor as string)
+        updatedInfo.nicknameColor = fields.nicknameColor as string
     }
+
+    user.update(updatedInfo)
 
     res.status(200).json({
         success: true,
-        avatarRes: avatarResourceId
+        avatarUrl: avatar
     })
 }
 

@@ -1,14 +1,13 @@
 import { Grid } from '@mui/material'
-import { useState } from 'react'
-import { TTicTacToePlayer } from 'state'
-import { Player } from '../player/Player'
+import { AbstractPlayerData } from 'state'
+import { Player } from './Player'
 
 interface HeaderProps {
-    members: TTicTacToePlayer[]
+    members: AbstractPlayerData[]
     isLoading: boolean
 }
 
-const Header: React.FC<HeaderProps> = props => {
+const PlayersHeader: React.FC<HeaderProps> = props => {
     return (
         <Grid container justifyContent="center" gap={2}>
             {props.isLoading ? (
@@ -17,7 +16,7 @@ const Header: React.FC<HeaderProps> = props => {
                 </Grid>
             ) : (
                 props.members.map(p => (
-                    <Grid key={p.user.nickname} item>
+                    <Grid key={p.nickname} item>
                         <Player {...p} />
                     </Grid>
                 ))
@@ -26,4 +25,4 @@ const Header: React.FC<HeaderProps> = props => {
     )
 }
 
-export default Header
+export default PlayersHeader

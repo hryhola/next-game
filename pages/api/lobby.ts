@@ -16,7 +16,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponseU
         })
     }
 
-    const creator = res.socket.server.appState.users.auth(token)
+    const creator = res.socket.server.appState.users.getByToken(token)
 
     if (!creator) {
         return res.status(400).json({

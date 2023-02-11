@@ -22,12 +22,12 @@ import {
     Theme
 } from '@mui/material'
 import { LoadingOverlay } from 'client/ui'
-import { TLobbyPublicData } from 'state'
+import { LobbyData } from 'state'
 import { api } from 'client/network-utils/api'
 import { URL } from 'client/network-utils/const'
 
 interface Props {
-    lobby: TLobbyPublicData
+    lobby: LobbyData
     sx?: SxProps<Theme>
 }
 
@@ -71,7 +71,7 @@ export const LobbyPreview: React.FC<Props> = props => {
                     <Grid item>{props.lobby.id}</Grid>
                     <Grid item>
                         <Typography color="secondary">
-                            {props.lobby.membersCount} {props.lobby.membersCount === 1 ? 'member' : 'members'}
+                            {props.lobby.members.length} {props.lobby.members.length === 1 ? 'member' : 'members'}
                         </Typography>
                     </Grid>
                 </Grid>
@@ -81,7 +81,7 @@ export const LobbyPreview: React.FC<Props> = props => {
                     </Grid>
                     <Grid item>
                         <Typography color="secondary" variant="overline">
-                            by&nbsp;{props.lobby.creatorID}
+                            by&nbsp;{props.lobby.creator.nickname}
                         </Typography>
                     </Grid>
                 </Grid>

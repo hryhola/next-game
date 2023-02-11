@@ -1,9 +1,9 @@
 import { TemplatedApp } from 'uWebSockets.js'
 import { GlobalPublishedEvents } from 'uWebSockets/globalSocketEvents'
 import { AbstractSocketMessage } from 'uWebSockets/uws.types'
-import { WSMessageResponseActions } from '../ws/wrappers'
+import { WSMessageResponseActions } from './wrappers'
 
-export class ReactionActions {
+class Publisher {
     app: TemplatedApp
 
     constructor(app: TemplatedApp) {
@@ -18,3 +18,5 @@ export class ReactionActions {
         WSMessageResponseActions.prototype.publishGlobal.call({ app: this.app }, channelCtx, data)
     }
 }
+
+export default Publisher

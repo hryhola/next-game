@@ -5,7 +5,10 @@ export interface Request {
 }
 
 export const handler: Handler<Request> = (actions, state, data, token) => {
-    const user = state.users.auth(token!)
+    const user = state.users.logout({
+        token: token!,
+        nickname: data.nickname
+    })
 
     if (!user) {
         logger.warn({ token, data }, 'Cannot find user for logout')
@@ -13,9 +16,5 @@ export const handler: Handler<Request> = (actions, state, data, token) => {
         return
     }
 
-    user.setOnline(false)
-
-    logger.info(user.nickname + ' is offline')
-
-    // TODO tokenExpireTimeout
+    logger.info(user.state.nickname + ' is offline')
 }

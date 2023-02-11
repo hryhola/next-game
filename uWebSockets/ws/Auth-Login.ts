@@ -1,6 +1,6 @@
 import { Handler } from '../uws.types'
 import logger from 'logger'
-import { TUser } from 'state'
+import { UserData } from 'state'
 
 export interface Request {
     token: string
@@ -8,7 +8,7 @@ export interface Request {
 
 export interface Success {
     success: true
-    user: TUser
+    user: UserData
 }
 
 export interface Failure {
@@ -24,7 +24,7 @@ export const handler: Handler<Request, Success | Failure> = (actions, state, dat
         })
     }
 
-    const user = state.users.auth(data.token)
+    const user = state.users.login(data.token)
 
     if (!user) {
         return actions.res({
@@ -33,12 +33,10 @@ export const handler: Handler<Request, Success | Failure> = (actions, state, dat
         })
     }
 
-    user.setOnline(true)
-
-    logger.info('New login: ' + user.nickname)
+    logger.info('New login: ' + user.state.nickname)
 
     actions.res({
         success: true,
-        user
+        user: user.data()
     })
 }

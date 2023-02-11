@@ -1,158 +1,138 @@
-import { rotateMatrix } from 'util/matrix'
-import { Lobby, LobbyMember, TUser, User } from 'state'
-import { AbstractGame, AbstractGameSession, AbstractPlayer } from '../AbstractGame'
+// import { rotateMatrix } from 'util/matrix'
+// import { Lobby, LobbyMember,User } from 'state'
+// import { AbstractGame, AbstractGameSession, AbstractPlayer } from '../AbstractGame'
 
-type MoveChar = 'x' | 'o'
-type CellValue = MoveChar | null
-type TicTacToeMove = {
-    player: TicTacToePlayer
-    cell: [number, number]
-    value: MoveChar
-}
+// type MoveChar = 'x' | 'o'
+// type CellValue = MoveChar | null
+// type TicTacToeMove = {
+//     player: TicTacToePlayer
+//     cell: [number, number]
+//     value: MoveChar
+// }
 
-export class TicTacToePlayer extends AbstractPlayer {
-    char: MoveChar
+// export class TicTacToePlayer extends AbstractPlayer {
+//     char: MoveChar
 
-    constructor(lobby: Lobby, member: LobbyMember, char: MoveChar) {
-        super(lobby, member.user)
+//     constructor(lobby: Lobby, member: LobbyMember, char: MoveChar) {
+//         super(lobby, member.user)
 
-        this.char = char
-    }
+//         this.char = char
+//     }
+// }
 
-    toJSON() {
-        return {
-            ...super.toJSON(),
-            char: this.char
-        }
-    }
-}
+// class TicTacToeSessionState {
+//     board: CellValue[][] = [
+//         [null, null, null],
+//         [null, null, null],
+//         [null, null, null]
+//     ]
+//     maxPlayers = 2
+//     moves: TicTacToeMove[] = []
+//     winner?: TicTacToePlayer
+// }
 
-export type TTicTacToePlayer = Omit<TicTacToePlayer, 'user'> & {
-    user: TUser
-}
+// class TicTacToeSession extends AbstractGameSession {
+//     game!: TicTacToe
+//     state = new TicTacToeSessionState()
 
-class TicTacToeState {
-    board: CellValue[][] = [
-        [null, null, null],
-        [null, null, null],
-        [null, null, null]
-    ]
-    maxPlayers = 2
-    moves: TicTacToeMove[] = []
-    winner?: TicTacToePlayer
-}
+//     Move(data: { playerNickname: string; cell: [number, number] }) {
+//         const [x, y] = data.cell
 
-class TicTacToeSession extends AbstractGameSession {
-    game!: TicTacToe
-    state = new TicTacToeState()
+//         const player = this.game.players.find(p => p.user.nickname === data.playerNickname)!
 
-    Move(data: { playerNickname: string; cell: [number, number] }) {
-        const [x, y] = data.cell
+//         this.state.board[x][y] = player.char
 
-        const player = this.game.players.find(p => p.user.nickname === data.playerNickname)!
+//         const winnerChar = this.checkWin()
 
-        this.state.board[x][y] = player.char
+//         if (winnerChar) {
+//             this.state.winner = this.game.players.find(p => p.char === winnerChar)
+//             this.game.endSession()
+//         }
+//     }
 
-        const winnerChar = this.checkWin()
+//     isWinRow(row: CellValue[]) {
+//         return row.every(cell => cell === 'x') || row.every(cell => cell === 'o')
+//     }
 
-        if (winnerChar) {
-            this.state.winner = this.game.players.find(p => p.char === winnerChar)
-            this.game.endSession()
-        }
-    }
+//     checkWin(): CellValue | false {
+//         const winRow = this.state.board.find(row => this.isWinRow(row))
 
-    isWinRow(row: CellValue[]) {
-        return row.every(cell => cell === 'x') || row.every(cell => cell === 'o')
-    }
+//         if (winRow) {
+//             return winRow[0]!
+//         }
 
-    checkWin(): CellValue | false {
-        const winRow = this.state.board.find(row => this.isWinRow(row))
+//         const winColumn = rotateMatrix(this.state.board).find((row: CellValue[]) => this.isWinRow(row))
 
-        if (winRow) {
-            return winRow[0]!
-        }
+//         if (winColumn) {
+//             return winColumn[0]!
+//         }
 
-        const winColumn = rotateMatrix(this.state.board).find((row: CellValue[]) => this.isWinRow(row))
+//         return false
 
-        if (winColumn) {
-            return winColumn[0]!
-        }
+//         // todo directional win
+//     }
+// }
 
-        return false
+// export class TicTacToe extends AbstractGame {
+//     static gameName = 'TicTacToe'
 
-        // todo directional win
-    }
-}
+//     maxPlayers = 2
+//     players: TicTacToePlayer[] = []
 
-export class TicTacToe extends AbstractGame {
-    static gameName = 'TicTacToe'
+//     startSession(): void {
+//         this.currentSession = new TicTacToeSession(this)
+//     }
 
-    maxPlayers = 2
-    players: TicTacToePlayer[] = []
+//     publish(ctx: string, data: any) {
+//         this.lobby.publish({
+//             ctx: `TicTacToe-${ctx}`,
+//             data
+//         })
+//     }
 
-    startSession(): void {
-        this.currentSession = new TicTacToeSession(this)
-    }
+//     join(member: LobbyMember) {
+//         const existed = this.players.find(p => p.user === member.user)
 
-    publish(ctx: string, data: any) {
-        this.lobby.publish({
-            ctx: `TicTacToe-${ctx}`,
-            data
-        })
-    }
+//         if (existed) {
+//             return {
+//                 success: true,
+//                 players: this.players,
+//                 message: 'Already joined'
+//             }
+//         }
 
-    join(member: LobbyMember) {
-        const existed = this.players.find(p => p.user.nickname === member.user.nickname)
+//         if (this.players.length === this.maxPlayers) {
+//             return {
+//                 success: false,
+//                 players: this.players,
+//                 message: 'Max players'
+//             }
+//         }
 
-        if (existed) {
-            return {
-                success: true,
-                players: this.players,
-                message: 'Already joined'
-            }
-        }
+//         const char = this.players[0]?.char === 'o' ? 'x' : 'o'
 
-        if (this.players.length === this.maxPlayers) {
-            return {
-                success: false,
-                players: this.players,
-                message: 'Max players'
-            }
-        }
+//         const player = new TicTacToePlayer(this.lobby, member, char)
 
-        const char = this.players[0]?.char === 'o' ? 'x' : 'o'
+//         this.players.push(player)
 
-        const player = new TicTacToePlayer(this.lobby, member, char)
+//         this.lobby.publish({
+//             ctx: 'TicTacToe-Join',
+//             data: {
+//                 player: player
+//             }
+//         })
 
-        this.players.push(player)
+//         return {
+//             success: true,
+//             players: this.players
+//         }
+//     }
 
-        this.lobby.publish({
-            ctx: 'TicTacToe-Join',
-            data: {
-                player: player.toJSON()
-            }
-        })
+//     onPlayerOffline(player: TicTacToePlayer): void {
+//         this.publish('PlayerOffline', {
+//             player: player.toJSON()
+//         })
+//     }
+// }
 
-        return {
-            success: true,
-            players: this.players
-        }
-    }
-
-    onPlayerOffline(player: TicTacToePlayer): void {
-        this.publish('PlayerOffline', {
-            player: player.toJSON()
-        })
-    }
-
-    toJSON() {
-        return {
-            name: TicTacToe.gameName,
-            state: this.currentSession?.state,
-            players: this.players.map(p => ({
-                user: p.user,
-                char: p.char
-            }))
-        }
-    }
-}
+export {}

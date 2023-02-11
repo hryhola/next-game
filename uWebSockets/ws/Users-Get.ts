@@ -1,4 +1,4 @@
-import { TUser, User } from 'state'
+import { UserData } from 'state'
 import { GeneralFailure, GeneralSuccess } from 'util/t'
 import { Handler } from 'uWebSockets/uws.types'
 
@@ -10,7 +10,7 @@ export type GetUsersSuccess = GeneralSuccess & {
     scope: string
     lobbyId?: string
     count: number
-    data: TUser[]
+    data: UserData[]
 }
 
 export const handler: Handler<Request, GetUsersSuccess | GeneralFailure> = (act, state, data) => {
@@ -20,11 +20,7 @@ export const handler: Handler<Request, GetUsersSuccess | GeneralFailure> = (act,
         success: true,
         scope: data.scope,
         count: users.length,
-        data: users.map(u => ({
-            nickname: u.nickname,
-            avatarRes: u.avatarRes,
-            nicknameColor: u.nicknameColor
-        }))
+        data: users.map(u => u.state)
     }
 
     act.res(response)

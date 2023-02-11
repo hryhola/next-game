@@ -35,8 +35,8 @@ export const Chat: React.FC<Props> = props => {
 
     const handlerSend = (text: string) => {
         const message: TChatMessage = {
-            nickname: user.nickname,
-            nicknameColor: user.nicknameColor,
+            from: user.nickname,
+            fromColor: user.nicknameColor,
             text,
             id: uuid()
         }

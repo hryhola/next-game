@@ -1,4 +1,4 @@
-import { TUser, User } from 'state'
+import { UserData } from 'state'
 import React, { useState, createContext } from 'react'
 
 export type Route = 'Login'
@@ -8,25 +8,25 @@ export const UserContext = createContext({
     setNickname: (_val: string) => {},
     nicknameColor: '',
     setNicknameColor: (_val: string) => {},
-    avatarRes: '',
+    avatarUrl: '',
     setAvatarRes: (_val: string) => {}
 })
 
 interface Props {
     children?: JSX.Element
-    user: TUser
+    user: UserData
 }
 
 export const UserProvider: React.FC<Props> = props => {
     const [user, setUser] = useState({
         nicknameColor: props.user?.nicknameColor || 'deeppink',
         nickname: props.user?.nickname || '',
-        avatarRes: props.user?.avatarRes || ''
+        avatarUrl: props.user?.avatarUrl || ''
     })
 
     const setNickname = (val: string) => setUser(u => ({ ...u, nickname: val }))
     const setNicknameColor = (val: string) => setUser(u => ({ ...u, nicknameColor: val }))
-    const setAvatarRes = (val: string) => setUser(u => ({ ...u, avatarRes: val }))
+    const setAvatarRes = (val: string) => setUser(u => ({ ...u, avatarUrl: val }))
 
     return (
         <UserContext.Provider

@@ -1,6 +1,5 @@
-import { TChatMessage, User } from 'state'
+import { TChatMessage } from 'state'
 import { GetUsersSuccess } from './ws/Users-Get'
-import { GetUsersCountSuccess } from './ws/Users-GetCount'
 
 export type GlobalPublishedEvents = {
     'Chat-NewMessage': {
@@ -8,8 +7,10 @@ export type GlobalPublishedEvents = {
         lobbyId?: string
         message: TChatMessage
     }
-    'Universal-UsersUpdate': GetUsersSuccess
-    'Universal-UsersCountUpdate': GetUsersCountSuccess
+    'UserRegistry-OnlineUpdate': {
+        scope: 'global'
+        list: { nickname: string }[]
+    }
 }
 
 export type GlobalEventName = keyof GlobalPublishedEvents
