@@ -5,13 +5,13 @@ import { AppContext } from 'client/context/AppContext'
 import { Route } from 'client/context/list/router'
 import { deleteCookie } from 'cookies-next'
 import logger from 'logger'
-import { TUser } from 'state'
+import { UserData } from 'state'
 import { NextApiResponseUWS } from 'util/t'
 import { initializeSocketServer } from 'uWebSockets/createSocketServer'
 
 type Props = {
     defaultRoute: Route
-    user?: TUser
+    user?: UserData
 }
 
 const Home: NextPage<Props> = props => {
@@ -37,18 +37,14 @@ export const getServerSideProps: GetServerSideProps = async context => {
     if (token) {
         try {
             const { appState } = (context.res as NextApiResponseUWS).socket?.server
-            const user = appState.users.auth(token)
+            const user = appState.users.getByToken(token)
 
             if (!user) {
                 deleteCookie('token')
             } else {
-                user.setOnline(true)
+                user.update({ isOnline: true })
                 props.defaultRoute = 'Home'
-                props.user = {
-                    nicknameColor: user.nicknameColor,
-                    nickname: user.nickname,
-                    avatarRes: user.avatarRes || ''
-                }
+                props.user = user.data()
             }
         } catch (e) {
             logger.error(e)

@@ -1,12 +1,19 @@
-// Next.js API route support: https://nextjs.org/docs/api-routes/introduction
-import { deleteCookie } from 'cookies-next'
-import logger from 'logger'
-import type { NextApiRequest, NextApiResponse } from 'next'
-import { GameCtors, GameName } from 'state/games'
-import { parseForm } from 'util/formDataRequest'
+import type { NextApiRequest } from 'next'
+import { AbstractGameData, LobbyData } from 'state'
 import { NextApiResponseUWS } from 'util/t'
 
-export default async function handler(req: NextApiRequest, res: NextApiResponseUWS) {
+export interface Failure {
+    success: false
+    message: string
+}
+
+export interface Success {
+    success: true
+    lobby: LobbyData
+    game: AbstractGameData
+}
+
+export default async function handler(req: NextApiRequest, res: NextApiResponseUWS<Success | Failure>) {
     const token = req.cookies.token
 
     if (!token) {
@@ -18,7 +25,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponseU
 
     const { appState } = res.socket.server
 
-    const user = appState.users.auth(token)
+    const user = appState.users.getByToken(token)
 
     if (!user) {
         return res.status(400).json({
@@ -40,11 +47,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponseU
 
     const lobbyJoinResult = lobby.join(user)
 
-    const gameJoinResult = lobby.game.join(lobbyJoinResult.members.find(m => m.user.nickname === user.nickname)!)
+    if (lobbyJoinResult.success === false) {
+        return res.json({
+            success: false,
+            message: lobbyJoinResult.message!
+        })
+    }
 
     res.json({
         success: true,
-        lobbyJoinResult,
-        gameJoinResult
+        lobby: lobby.data(),
+        game: lobby.game.data()
     })
 }

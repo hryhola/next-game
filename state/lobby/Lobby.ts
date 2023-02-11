@@ -1,7 +1,5 @@
-import { makeAutoObservable } from 'mobx'
 import { AbstractGame, Chat, State, GameCtors, GameName, LobbyMember, User } from 'state'
 import { AbstractSocketMessage } from 'uWebSockets/uws.types'
-import { reactions } from './Lobby.reactions'
 
 export type LobbyCreateOptions<G extends GameName> = {
     id: string
@@ -14,21 +12,22 @@ export type LobbyCreateOptions<G extends GameName> = {
 export class Lobby<G extends GameName = GameName> {
     id: string
     members: LobbyMember[] = []
-    creatorID: string
+    creator: User
     password?: string
-    chat: Chat = new Chat()
+    chat: Chat
     game!: AbstractGame
     sessionStartData: any
 
     constructor(data: LobbyCreateOptions<G>) {
         this.id = data.id
         this.password = data.password
-        this.creatorID = data.creator.nickname
+        this.creator = data.creator
         this.sessionStartData = data.sessionStartData
+        this.chat = new Chat(this.id)
 
         const creatorAsMember = new LobbyMember(this, data.creator)
 
-        creatorAsMember.isCreator = true
+        creatorAsMember.update({ isCreator: true })
 
         this.members.push(creatorAsMember)
 
@@ -37,24 +36,19 @@ export class Lobby<G extends GameName = GameName> {
         this.game = new GameConstructor(this)
 
         this.game.join(creatorAsMember)
-
-        makeAutoObservable(this)
-
-        reactions(this)
     }
 
     publish(message: AbstractSocketMessage) {
-        State.res.publish(`lobby-${this.id}-all`, message)
+        State.res.publish(`Lobby-${this.id}`, message)
     }
 
     join(user: User) {
-        const existed = this.members.find(m => m.user.nickname === user.nickname)
+        const existed = this.members.find(m => m.user === user)
 
         if (existed) {
             return {
                 success: true,
-                message: 'Already existed',
-                members: this.members
+                message: 'Already existed'
             }
         }
 
@@ -67,42 +61,45 @@ export class Lobby<G extends GameName = GameName> {
             data: {
                 success: true,
                 lobbyId: this.id,
-                member: member.toJSON()
+                member: member.data()
             }
         })
 
         this.game.join(member)
 
         return {
-            success: true,
-            members: this.members
+            success: true
         }
     }
 
-    getPublicData(): TLobbyPublicData {
+    leave(user: User) {
+        const member = this.members.find(m => m.user === user)
+
+        if (!member) {
+            return {
+                success: false,
+                message: 'Not found'
+            }
+        }
+
+        if (member.state.isPlayer) {
+            const player = this.game.players.find(p => p.member.user === user)!
+
+            this.game.leave(player)
+        }
+
+        this.members = this.members.filter(m => m !== member)
+    }
+
+    data() {
         return {
             id: this.id,
             private: Boolean(this.password),
             gameName: (Object.getPrototypeOf(this.game).constructor as typeof AbstractGame).gameName as GameName,
-            membersCount: this.members.length,
-            creatorID: this.creatorID
-        }
-    }
-
-    toJSON() {
-        return {
-            id: this.id,
-            creatorID: this.creatorID,
-            members: this.members.map(m => m.toJSON()),
-            game: this.game
+            members: this.members.map(m => m.data()),
+            creator: this.creator.data()
         }
     }
 }
 
-export type TLobbyPublicData = {
-    id: string
-    private: boolean
-    gameName: GameName
-    membersCount: number
-    creatorID: string
-}
+export type LobbyData = ReturnType<Lobby['data']>

@@ -3,7 +3,7 @@ import { LobbyBaseInfo } from 'uWebSockets/ws/Lobby-GetList'
 import LockIcon from '@mui/icons-material/Lock'
 import { LobbyPreview } from './LobbyPreview'
 import { MouseEventHandler, useContext, useEffect, useState } from 'react'
-import { TLobbyPublicData } from 'state'
+import { LobbyData } from 'state'
 import { RequestHandler } from 'uWebSockets/uws.types'
 import { WSContext } from 'client/context/list/ws'
 import ArrowDropUpIcon from '@mui/icons-material/ArrowDropUp'
@@ -11,7 +11,7 @@ import ArrowDropUpIcon from '@mui/icons-material/ArrowDropUp'
 export const LobbyRecord: React.FC<LobbyBaseInfo> = props => {
     const ws = useContext(WSContext)
 
-    const [lobbyInfo, setLobbyInfo] = useState<TLobbyPublicData | null>(null)
+    const [lobbyInfo, setLobbyInfo] = useState<LobbyData | null>(null)
 
     const handleLoadInfo: RequestHandler<'Lobby-GetPublicInfo'> = data => {
         if (!data.success) {

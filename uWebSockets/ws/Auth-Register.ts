@@ -1,5 +1,5 @@
 import { Handler } from '../uws.types'
-import { TUser, User } from 'state'
+import { UserData, User } from 'state'
 import logger from 'logger'
 
 export interface Request {
@@ -8,7 +8,7 @@ export interface Request {
 
 export interface Success {
     success: true
-    user: TUser
+    user: UserData
     token: string
 }
 
@@ -21,7 +21,7 @@ export interface Failure {
 export const handler: Handler<Request, Success | Failure> = (actions, state, data) => {
     const existingUser = state.users.getByNickname(data.nickname)
 
-    if (existingUser?.online) {
+    if (existingUser?.state.isOnline) {
         return actions.res({
             success: false,
             nickname: data.nickname,
@@ -31,13 +31,13 @@ export const handler: Handler<Request, Success | Failure> = (actions, state, dat
         state.users.destroy(existingUser.token)
     }
 
-    const user = state.users.createUser(data.nickname, actions.ws)
+    const user = state.users.register(data.nickname, actions.ws)
 
-    logger.info('New login: ' + user.nickname)
+    logger.info('New login: ' + user.state.nickname)
 
     actions.res({
         success: true,
-        user,
+        user: user.data(),
         token: user.token
     })
 }

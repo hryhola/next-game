@@ -1,4 +1,3 @@
-import { TUser, User } from 'state'
 import { GeneralFailure, GeneralSuccess } from 'util/t'
 import { Handler } from 'uWebSockets/uws.types'
 

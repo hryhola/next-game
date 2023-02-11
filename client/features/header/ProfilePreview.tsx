@@ -1,14 +1,13 @@
 import Button, { ButtonProps } from '@mui/material/Button'
 import { UserContext } from 'client/context/list/user'
 import PersonIcon from '@mui/icons-material/Person'
-import Image from 'next/image'
 import { useContext } from 'react'
 import { Typography } from '@mui/material'
 
 function ProfilePicture() {
     const user = useContext(UserContext)
 
-    if (user.avatarRes) {
+    if (user.avatarUrl) {
         return (
             <>
                 &nbsp;
@@ -17,7 +16,7 @@ function ProfilePicture() {
                         maxWidth: '40px',
                         maxHeight: '40px'
                     }}
-                    src={user.avatarRes}
+                    src={user.avatarUrl}
                     alt="profile avatar"
                 />
             </>

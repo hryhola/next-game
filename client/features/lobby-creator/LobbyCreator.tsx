@@ -21,7 +21,7 @@ export const LobbyCreator: React.FC = () => {
     const [lobbyId, setLobbyId] = useState('')
     const [password, setPassword] = useState('')
     const [error, setError] = useState('')
-    const [gameName, setGameName] = useState<GameName>('TicTacToe')
+    const [gameName, setGameName] = useState<GameName>('Clicker')
     const [isLoading, setIsLoading] = useState(false)
 
     const handleSubmit: FormEventHandler<HTMLFormElement> = async event => {
@@ -45,12 +45,6 @@ export const LobbyCreator: React.FC = () => {
 
         lobby.setLobbyId(lobbyId)
         lobby.setGameName(gameName)
-        lobby.setMembers([
-            {
-                user,
-                isCreator: true
-            }
-        ])
 
         router.setCurrentRoute('Lobby')
     }
@@ -81,7 +75,8 @@ export const LobbyCreator: React.FC = () => {
                             fullWidth
                         >
                             {/* <MenuItem value="jeopardy">Jeopardy</MenuItem> */}
-                            <MenuItem value="TicTacToe">Tic Tac Toe</MenuItem>
+                            {/* <MenuItem value="TicTacToe">Tic Tac Toe</MenuItem> */}
+                            <MenuItem value="Clicker">Clicker</MenuItem>
                         </Select>
                     </FormControl>
                 </Grid>

@@ -1,64 +1,75 @@
-import { makeAutoObservable } from 'mobx'
-import randomColor from 'randomcolor'
-import { reactions } from './User.reactions'
-import { Lobby } from 'state/lobby/Lobby'
-import { v4 } from 'uuid'
+import { EventEmitter } from 'node:events'
 import { WebSocket } from 'uWebSockets.js'
+import randomColor from 'randomcolor'
+import { v4 } from 'uuid'
+import { Lobby } from 'state'
+
+type onUpdateCb = (user: Partial<User['state']>) => void
 
 export class User {
-    ws: WebSocket<unknown>
-    token: string
-    online: boolean = true
+    static readonly AutoLogoutMs = 5000
 
-    nickname: string
-    nicknameColor: string
-    avatarRes?: string
+    private readonly emitter: EventEmitter
+    private logoutInterval: NodeJS.Timeout
+    private lobbies: Lobby[] = []
 
-    refreshOnlineChecker: () => void
+    readonly ws: WebSocket<unknown>
+
+    readonly token: string
+
+    readonly state: {
+        readonly nickname: string
+        readonly nicknameColor: string
+        readonly avatarUrl?: string
+        readonly isOnline: boolean
+    }
 
     constructor(id: string, ws: WebSocket<unknown>) {
+        this.emitter = new EventEmitter()
         this.ws = ws
-        this.nickname = id
         this.token = v4()
-        this.nicknameColor = randomColor()
-
-        let logoutInterval = setTimeout(() => this.setOnline(false), 5000)
-
-        this.refreshOnlineChecker = () => {
-            clearTimeout(logoutInterval)
-
-            logoutInterval = setTimeout(() => this.setOnline(false), 5000)
+        this.state = {
+            nickname: id,
+            nicknameColor: randomColor(),
+            isOnline: true
         }
 
-        makeAutoObservable(this)
-
-        reactions(this)
+        this.logoutInterval = setTimeout(() => {
+            this.update({ isOnline: false })
+        }, User.AutoLogoutMs)
     }
 
-    setAvatarRes(val: string) {
-        this.avatarRes = val
+    refreshOnlineChecker() {
+        clearTimeout(this.logoutInterval)
+
+        this.logoutInterval = setTimeout(() => {
+            this.update({ isOnline: false })
+        }, User.AutoLogoutMs)
     }
 
-    setNickname(val: string) {
-        this.nickname = val
+    update(data: Partial<User['state']>) {
+        Object.assign(this.state, data)
+
+        this.emitter.emit('update', data)
     }
 
-    setNicknameColor(val: string) {
-        this.nicknameColor = val
+    onUpdate(callback: onUpdateCb) {
+        this.emitter.on('update', callback)
     }
 
-    setOnline(val: boolean) {
-        this.online = val
+    linkLobby(lobby: Lobby) {
+        this.lobbies.push(lobby)
     }
 
-    toJSON() {
-        return {
-            nickname: this.nickname,
-            nicknameColor: this.nicknameColor,
-            avatarRes: this.avatarRes,
-            online: this.online
-        }
+    leaveAllLobbies() {
+        this.lobbies.forEach(l => l.leave(this))
+
+        this.lobbies = []
+    }
+
+    data() {
+        return this.state
     }
 }
 
-export type TUser = Pick<User, 'nickname' | 'avatarRes' | 'nicknameColor'>
+export type UserData = ReturnType<User['data']>

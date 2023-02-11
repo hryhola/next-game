@@ -1,13 +1,7 @@
-import { makeAutoObservable } from 'mobx'
-import { GameName } from 'state/games'
-import { Lobby, LobbyCreateOptions } from './Lobby'
+import { State, GameName, Lobby, LobbyCreateOptions } from 'state'
 
 export class LobbiesRegistry {
     container: Record<string, Lobby<GameName>> = {}
-
-    constructor() {
-        makeAutoObservable(this)
-    }
 
     createLobby<G extends GameName>(data: LobbyCreateOptions<G>) {
         if (data.id in this.container) {
@@ -21,13 +15,5 @@ export class LobbiesRegistry {
 
     get(id: string) {
         return this.container[id] || null
-    }
-
-    toJSON() {
-        return Object.values(this.container).map(lobby => ({
-            id: lobby.id,
-            creatorID: lobby.creatorID,
-            game: lobby.game.toJSON()
-        }))
     }
 }

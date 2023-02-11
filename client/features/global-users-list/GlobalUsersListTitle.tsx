@@ -1,5 +1,6 @@
 import { WSContext } from 'client/context/list/ws'
 import React, { useContext, useEffect, useState } from 'react'
+import { GlobalPublishedEvents } from 'uWebSockets/globalSocketEvents'
 import { RequestHandler } from 'uWebSockets/uws.types'
 
 export const GlobalUsersListTitle: React.FC = () => {
@@ -15,11 +16,15 @@ export const GlobalUsersListTitle: React.FC = () => {
         }
     }
 
+    const handleOnlineUpdate = (data: GlobalPublishedEvents['UserRegistry-OnlineUpdate']) => {
+        setCount(data.list.length)
+    }
+
     const onIsConnected = () => {
         ws.send('Universal-Subscription', {
             mode: 'subscribe',
             scope: 'global',
-            topic: 'Universal-UsersCountUpdate'
+            topic: 'UserRegistry-OnlineUpdate'
         })
 
         ws.send('Users-GetCount', {
@@ -29,13 +34,13 @@ export const GlobalUsersListTitle: React.FC = () => {
 
     useEffect(() => {
         ws.on('Users-GetCount', handleCountGot)
-        ws.on('Universal-UsersCountUpdate', handleCountGot)
+        ws.on('UserRegistry-OnlineUpdate', handleOnlineUpdate)
 
         return () => {
             ws.send('Universal-Subscription', {
                 mode: 'unsubscribe',
                 scope: 'global',
-                topic: 'Universal-UsersCountUpdate'
+                topic: 'UserRegistry-OnlineUpdate'
             })
         }
     }, [])

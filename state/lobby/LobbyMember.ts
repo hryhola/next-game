@@ -1,36 +1,33 @@
-import { makeObservable, observable } from 'mobx'
-import { Lobby, TUser, User } from 'state'
-import { reactions } from './LobbyMember.reactions'
+import { Lobby, User } from 'state'
 
 export class LobbyMember {
-    user: User
-    isCreator: boolean = false
-    isPlayer: boolean
-    lobby: Lobby
+    readonly user: User
+    readonly lobby: Lobby
+
+    readonly state: {
+        isCreator: boolean
+        isPlayer: boolean
+    }
 
     constructor(lobby: Lobby, user: User) {
         this.user = user
         this.lobby = lobby
-        this.isPlayer = false
-
-        makeObservable(this, {
-            user: observable,
-            isCreator: observable,
-            isPlayer: observable
-        })
-
-        reactions(this)
+        this.state = {
+            isCreator: false,
+            isPlayer: false
+        }
     }
 
-    toJSON() {
+    update(data: Partial<LobbyMember['state']>) {
+        Object.assign(this.state, data)
+    }
+
+    data() {
         return {
-            user: this.user.toJSON(),
-            isCreator: this.isCreator,
-            isPlayer: this.isPlayer
+            ...this.user.data(),
+            ...this.state
         }
     }
 }
 
-export type TLobbyMember = Omit<LobbyMember, 'user'> & {
-    user: TUser
-}
+export type LobbyMemberData = ReturnType<LobbyMember['data']>

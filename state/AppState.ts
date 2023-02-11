@@ -1,28 +1,14 @@
-import { makeAutoObservable } from 'mobx'
-import { Chat, UserRegistry, LobbiesRegistry } from 'state'
-import { ReactionActions } from 'uWebSockets/utils/reactions'
-import { reactions } from './AppState.reactions'
+import { UserRegistry, LobbiesRegistry, Chat } from 'state'
+import Publisher from 'uWebSockets/utils/ws/Publisher'
 
 export class State {
-    static res: ReactionActions
+    static res: Publisher
 
-    globalChat = new Chat(1000)
+    globalChat = new Chat('global', 100, true)
     lobbies = new LobbiesRegistry()
     users = new UserRegistry()
 
-    constructor(res: ReactionActions) {
+    constructor(res: Publisher) {
         State.res = res
-
-        makeAutoObservable(this)
-
-        reactions(this)
-    }
-
-    toJSON() {
-        return {
-            globalChat: this.globalChat.toJSON(),
-            lobbies: this.lobbies.toJSON(),
-            users: this.users.toJSON()
-        }
     }
 }

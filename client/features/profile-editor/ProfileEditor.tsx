@@ -53,7 +53,7 @@ export const ProfileEditor: React.FC<Props> = props => {
           }
         : {
               local: false,
-              url: user.avatarRes
+              url: user.avatarUrl
           }
 
     const handleSubmit: React.FormEventHandler<HTMLFormElement> = async event => {
@@ -82,8 +82,8 @@ export const ProfileEditor: React.FC<Props> = props => {
         user.setNickname(nickname)
         user.setNicknameColor(nicknameColor)
 
-        if (response.avatarRes) {
-            user.setAvatarRes(response.avatarRes)
+        if (response.avatarUrl) {
+            user.setAvatarRes(response.avatarUrl)
         }
 
         if (props.onUpdated) {

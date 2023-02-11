@@ -1,4 +1,4 @@
-import { TLobbyPublicData } from 'state'
+import { LobbyData } from 'state'
 import { GeneralFailure, GeneralSuccess } from 'util/t'
 import { Handler } from 'uWebSockets/uws.types'
 
@@ -7,7 +7,7 @@ interface Request {
 }
 
 type Success = GeneralSuccess & {
-    lobbyData: TLobbyPublicData
+    lobbyData: LobbyData
 }
 
 export const handler: Handler<Request, Success | GeneralFailure> = (actions, state, data) => {
@@ -29,6 +29,6 @@ export const handler: Handler<Request, Success | GeneralFailure> = (actions, sta
 
     actions.res({
         success: true,
-        lobbyData: lobby.getPublicData()
+        lobbyData: lobby.data()
     })
 }

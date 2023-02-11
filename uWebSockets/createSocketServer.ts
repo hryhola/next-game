@@ -6,7 +6,7 @@ import { RestHandlersRegister } from './rest'
 import sslPath from '../ssl-path'
 import logger from 'logger'
 import { State } from 'state'
-import { ReactionActions } from './utils/reactions'
+import Publisher from './utils/ws/Publisher'
 import { NextApiResponseUWS } from 'util/t'
 
 export const port = Number(process.env.NEXT_PUBLIC_WS_PORT)
@@ -27,7 +27,7 @@ const createSocketServer = (): [TemplatedApp, State] => {
         app = uws.App()
     }
 
-    const state = new State(new ReactionActions(app))
+    const state = new State(new Publisher(app))
 
     WSHandlerRegister(app, state)
     RestHandlersRegister(app, state)
