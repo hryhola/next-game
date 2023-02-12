@@ -136,7 +136,7 @@ export const WSHandlerRegister = (app: uws.TemplatedApp, state: State) => {
                 {
                     message,
                     code,
-                    user
+                    user: user?.data()
                 },
                 'Closing connection'
             )

@@ -16,4 +16,8 @@ export class LobbiesRegistry {
     get(id: string) {
         return this.container[id] || null
     }
+
+    data() {
+        return Object.values(this.container).map(lobby => lobby.data())
+    }
 }

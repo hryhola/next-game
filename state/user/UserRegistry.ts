@@ -22,12 +22,16 @@ export class UserRegistry {
         const user = new User(nickname, ws)
 
         user.onUpdate(data => {
-            if ('online' in data || 'nickname' in data) {
+            if ('isOnline' in data || 'nickname' in data) {
                 this.publishOnlineUpdate()
             }
         })
 
+        user.onUpdate(data => console.log('UserRegistry: user update', data))
+
         this.list.push(user)
+
+        this.publishOnlineUpdate()
 
         return user
     }
@@ -83,5 +87,9 @@ export class UserRegistry {
 
     getByConnection(ws: WebSocket<unknown>) {
         return this.list.find(u => u.ws === ws)
+    }
+
+    data() {
+        return this.list.map(u => u.data())
     }
 }

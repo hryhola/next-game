@@ -10,7 +10,7 @@ export class User {
     static readonly AutoLogoutMs = 5000
 
     private readonly emitter: EventEmitter
-    private logoutInterval: NodeJS.Timeout
+    private logoutTimeout: NodeJS.Timeout
     private lobbies: Lobby[] = []
 
     readonly ws: WebSocket<unknown>
@@ -34,15 +34,19 @@ export class User {
             isOnline: true
         }
 
-        this.logoutInterval = setTimeout(() => {
+        this.logoutTimeout = setTimeout(() => {
             this.update({ isOnline: false })
         }, User.AutoLogoutMs)
     }
 
     refreshOnlineChecker() {
-        clearTimeout(this.logoutInterval)
+        clearTimeout(this.logoutTimeout)
 
-        this.logoutInterval = setTimeout(() => {
+        if (!this.state.isOnline) {
+            this.update({ isOnline: true })
+        }
+
+        this.logoutTimeout = setTimeout(() => {
             this.update({ isOnline: false })
         }, User.AutoLogoutMs)
     }

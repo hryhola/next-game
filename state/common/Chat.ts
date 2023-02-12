@@ -55,4 +55,11 @@ export class Chat {
 
         return this.messages
     }
+
+    data() {
+        return {
+            id: this.id,
+            messages: this.messages
+        }
+    }
 }

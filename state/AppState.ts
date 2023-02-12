@@ -11,4 +11,12 @@ export class State {
     constructor(res: Publisher) {
         State.res = res
     }
+
+    data() {
+        return {
+            globalChat: this.globalChat.data(),
+            lobbies: this.lobbies.data(),
+            users: this.users.data()
+        }
+    }
 }
