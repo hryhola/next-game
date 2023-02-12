@@ -37,12 +37,11 @@ export const getServerSideProps: GetServerSideProps = async context => {
     if (token) {
         try {
             const { appState } = (context.res as NextApiResponseUWS).socket?.server
-            const user = appState.users.getByToken(token)
+            const user = appState.users.login(token)
 
             if (!user) {
                 deleteCookie('token')
             } else {
-                user.update({ isOnline: true })
                 props.defaultRoute = 'Home'
                 props.user = user.data()
             }

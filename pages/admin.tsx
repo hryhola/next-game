@@ -31,7 +31,7 @@ const Admin: NextPage<Props> = props => {
 
 export const getServerSideProps: GetServerSideProps = async context => {
     const props: Props = {
-        state: '{}'
+        state: JSON.stringify((context.res as NextApiResponseUWS).socket?.server?.appState?.data(), null, 4)
     }
 
     return {
