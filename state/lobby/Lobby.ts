@@ -30,8 +30,11 @@ export class Lobby<G extends GameName = GameName> {
         this.game = new GameConstructor(this)
     }
 
-    publish(message: AbstractSocketMessage) {
-        State.res.publish(`Lobby-${this.id}`, message)
+    publish(сtx: AbstractSocketMessage['ctx'], data: AbstractSocketMessage['data']) {
+        State.res.publish(`Lobby-${this.id}`, {
+            ctx: сtx,
+            data
+        })
     }
 
     join(user: User) {
@@ -48,13 +51,10 @@ export class Lobby<G extends GameName = GameName> {
 
         this.members.push(member)
 
-        this.publish({
-            ctx: 'Lobby-Join',
-            data: {
-                success: true,
-                lobbyId: this.id,
-                member: member.data()
-            }
+        this.publish('Lobby-Join', {
+            success: true,
+            lobbyId: this.id,
+            member: member.data()
         })
 
         this.game.join(member)
@@ -81,6 +81,12 @@ export class Lobby<G extends GameName = GameName> {
         }
 
         this.members = this.members.filter(m => m !== member)
+
+        this.publish('Lobby-Leave', {
+            success: true,
+            lobbyId: this.id,
+            member: member.data()
+        })
     }
 
     data() {

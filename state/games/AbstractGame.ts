@@ -40,13 +40,10 @@ export abstract class AbstractGameSession {
 
         const gameClass = (this.game.constructor as typeof AbstractGame).gameName
 
-        this.game.lobby.publish({
-            ctx: gameClass + '-SessionAction',
-            data: {
-                type,
-                payload,
-                result
-            }
+        this.game.lobby.publish(gameClass + '-SessionAction', {
+            type,
+            payload,
+            result
         })
     }
 }
@@ -60,6 +57,7 @@ export abstract class AbstractPlayer {
 
     constructor(member: LobbyMember) {
         this.member = member
+        member.update({ isPlayer: true })
     }
 
     data() {
@@ -101,9 +99,11 @@ export abstract class AbstractGame {
 
     prevSessions: AbstractGameSession[] = []
     lobby: Lobby
+    publish: Lobby['publish']
 
     constructor(lobby: Lobby) {
         this.lobby = lobby
+        this.publish = lobby.publish.bind(lobby)
     }
 
     abstract players: AbstractPlayer[]
