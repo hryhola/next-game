@@ -37,7 +37,7 @@ export class Chat {
                 message: message
             })
         } else {
-            State.res.publish(this.id, {
+            State.res.publish('Lobby-' + this.id, {
                 ctx: 'Chat-NewMessage',
                 data: {
                     scope: 'lobby',

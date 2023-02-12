@@ -25,17 +25,9 @@ export class Lobby<G extends GameName = GameName> {
         this.sessionStartData = data.sessionStartData
         this.chat = new Chat(this.id)
 
-        const creatorAsMember = new LobbyMember(this, data.creator)
-
-        creatorAsMember.update({ isCreator: true })
-
-        this.members.push(creatorAsMember)
-
         const GameConstructor = GameCtors[data.gameName]
 
         this.game = new GameConstructor(this)
-
-        this.game.join(creatorAsMember)
     }
 
     publish(message: AbstractSocketMessage) {

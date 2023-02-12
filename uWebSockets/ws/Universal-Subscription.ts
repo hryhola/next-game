@@ -16,7 +16,7 @@ export type Request = {
 )
 
 export const handler: Handler<Request> = (actions, state, data) => {
-    const id = 'lobbyId' in data ? `lobby-${data.lobbyId}-${data.topic}` : data.topic
+    const id = 'lobbyId' in data ? `Lobby-${data.lobbyId}` : data.topic
 
     if (data.mode === 'subscribe') {
         logger.info('subscribed to: ' + id)
