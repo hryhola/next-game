@@ -36,7 +36,7 @@ export const GlobalUsersListTitle: React.FC = () => {
         ws.on('Users-GetCount', handleCountGot)
         ws.on('UserRegistry-OnlineUpdate', handleOnlineUpdate)
 
-        onIsConnected()
+        ws.isConnected && onIsConnected()
 
         return () => {
             ws.send('Universal-Subscription', {

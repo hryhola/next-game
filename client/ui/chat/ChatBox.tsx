@@ -43,7 +43,6 @@ export const ChatBox: React.FunctionComponent<Props> = props => {
             </List>
             <FormControl sx={props.inputSx || { height: chatInputHeight }} fullWidth variant="filled">
                 <FilledInput
-                    autoFocus
                     disableUnderline
                     fullWidth
                     hiddenLabel
