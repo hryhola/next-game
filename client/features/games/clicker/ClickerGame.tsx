@@ -11,15 +11,22 @@ import { ClickerPlayerData } from 'state'
 import { Chat } from 'client/features/chat/Chat'
 import PlayersHeader from '../common/PlayersHeader'
 import { Failure, Success } from 'pages/api/lobby-join'
+import { WSContext } from 'client/context/list/ws'
+import { WSEvents } from 'uWebSockets/globalSocketEvents'
 
 export const Clicker = () => {
     const lobby = useContext(LobbyContext)
     const user = useContext(UserContext)
+    const ws = useContext(WSContext)
 
     const [players, setPlayers] = useState<ClickerPlayerData[]>([])
     const [isLoading, setIsLoading] = useState(true)
 
     const chatInputRef = useRef<HTMLInputElement | null>(null)
+
+    const handleJoin = (data: WSEvents['Clicker-Join']) => {
+        setPlayers(ps => [...ps, data.player])
+    }
 
     useEffect(() => {
         ;(async () => {
@@ -33,6 +40,8 @@ export const Clicker = () => {
 
             lobby.setMembers(response.lobby.members)
             setPlayers(response.game.players)
+
+            ws.on('Clicker-Join', handleJoin)
 
             setIsLoading(false)
         })()
