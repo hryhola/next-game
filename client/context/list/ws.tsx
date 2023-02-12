@@ -1,11 +1,11 @@
 import React, { useState, createContext, useContext, useEffect, useRef, MutableRefObject } from 'react'
 import type { HandlerName } from 'uWebSockets/ws'
 import type { AbstractSocketMessage, RequestData } from 'uWebSockets/uws.types'
-import type { GlobalEventName } from 'uWebSockets/globalSocketEvents'
+import type { WSEventName } from 'uWebSockets/globalSocketEvents'
 import { UserContext } from './user'
 import { getCookie } from 'cookies-next'
 
-type HandlerOn = <C extends GlobalEventName | HandlerName>(context: C, handler: Function) => void
+type HandlerOn = <C extends WSEventName | HandlerName>(context: C, handler: Function) => void
 type HandlerSend = <H extends HandlerName>(context: H, data?: RequestData<H>) => void
 
 export interface WSData {

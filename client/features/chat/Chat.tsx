@@ -5,7 +5,7 @@ import { UserContext } from 'client/context/list/user'
 import { useContext } from 'react'
 import { WSContext } from 'client/context/list/ws'
 import { TChatMessage } from 'state'
-import { GlobalPublishedEvents } from 'uWebSockets/globalSocketEvents'
+import { WSEvents } from 'uWebSockets/globalSocketEvents'
 import { RequestData, RequestHandler } from 'uWebSockets/uws.types'
 
 type Props = ChatSXProps & {
@@ -27,7 +27,7 @@ export const Chat: React.FC<Props> = props => {
 
     const [messages, setMessages] = useState<TChatMessage[]>([])
 
-    const handleNewMessage = (data: GlobalPublishedEvents['Chat-NewMessage']) => {
+    const handleNewMessage = (data: WSEvents['Chat-NewMessage']) => {
         if (isCurrentChatMessage(data, props.scope, props.lobbyId)) {
             setMessages(curr => [data.message, ...curr])
         }

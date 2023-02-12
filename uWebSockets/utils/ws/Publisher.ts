@@ -1,5 +1,5 @@
 import { TemplatedApp } from 'uWebSockets.js'
-import { GlobalPublishedEvents } from 'uWebSockets/globalSocketEvents'
+import { WSEvents } from 'uWebSockets/globalSocketEvents'
 import { AbstractSocketMessage } from 'uWebSockets/uws.types'
 import { WSMessageResponseActions } from './wrappers'
 
@@ -14,7 +14,7 @@ class Publisher {
         WSMessageResponseActions.prototype.publish.call({ app: this.app }, channel, publishMessage)
     }
 
-    publishGlobal<T extends keyof GlobalPublishedEvents>(channelCtx: T, data: GlobalPublishedEvents[T]) {
+    publishGlobal<T extends keyof WSEvents>(channelCtx: T, data: WSEvents[T]) {
         WSMessageResponseActions.prototype.publishGlobal.call({ app: this.app }, channelCtx, data)
     }
 }

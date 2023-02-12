@@ -1,7 +1,7 @@
 import { WSContext } from 'client/context/list/ws'
 import { UsersListBox } from 'client/ui'
 import React, { useContext, useEffect, useState } from 'react'
-import { GlobalPublishedEvents } from 'uWebSockets/globalSocketEvents'
+import { WSEvents } from 'uWebSockets/globalSocketEvents'
 import { RequestHandler } from 'uWebSockets/uws.types'
 
 export const GlobalUsersList: React.FC = () => {
@@ -17,7 +17,7 @@ export const GlobalUsersList: React.FC = () => {
         }
     }
 
-    const handleOnlineUpdate = (data: GlobalPublishedEvents['UserRegistry-OnlineUpdate']) => {
+    const handleOnlineUpdate = (data: WSEvents['UserRegistry-OnlineUpdate']) => {
         setUsers(data.list)
     }
 

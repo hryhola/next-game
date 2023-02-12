@@ -1,6 +1,6 @@
 import { WebSocket, HttpResponse, HttpRequest } from 'uWebSockets.js'
 import type { HandlerName } from 'uWebSockets/ws'
-import type { GlobalPublishedEvents, GlobalEventName } from 'uWebSockets/globalSocketEvents'
+import type { WSEvents, WSEventName } from 'uWebSockets/globalSocketEvents'
 import queryString from 'query-string'
 import { State } from 'state'
 
@@ -12,7 +12,7 @@ export interface AbstractSocketMessage<Ctx extends string = string, Data extends
 
 export type ResponseActions<ResponseType = unknown> = {
     publish(channel: string, message: AbstractSocketMessage): void
-    publishGlobal<C extends GlobalEventName>(channel: C, message: GlobalPublishedEvents[C]): void
+    publishGlobal<C extends WSEventName>(channel: C, message: WSEvents[C]): void
     res(data: ResponseType): void
     send(ctx: string, data: any): void
     ws: WebSocket<unknown>
@@ -27,7 +27,7 @@ export type Handler<RequestData extends Object | null = null, ResponseType = any
 
 export type RequestData<R extends HandlerName> = Parameters<typeof import('uWebSockets/ws')['handlers'][R]>[2]
 export type RequestHandler<R extends HandlerName> = (data: Parameters<Parameters<typeof import('uWebSockets/ws')['handlers'][R]>[0]['res']>[0]) => void
-export type GlobalEventHandler<E extends GlobalEventName> = (data: GlobalPublishedEvents[E]) => void
+export type GlobalEventHandler<E extends WSEventName> = (data: WSEvents[E]) => void
 
 export type HTTPMethod = 'get' | 'connect' | 'post' | 'options' | 'del' | 'patch' | 'put' | 'head' | 'trace'
 

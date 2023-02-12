@@ -1,7 +1,6 @@
-import { TChatMessage } from 'state'
-import { GetUsersSuccess } from './ws/Users-Get'
+import { ClickerPlayerData, TChatMessage } from 'state'
 
-export type GlobalPublishedEvents = {
+export type WSEvents = {
     'Chat-NewMessage': {
         scope: 'global' | 'lobby'
         lobbyId?: string
@@ -11,6 +10,11 @@ export type GlobalPublishedEvents = {
         scope: 'global'
         list: { nickname: string }[]
     }
+    'Clicker-Join': {
+        success: true
+        lobbyId: string
+        player: ClickerPlayerData
+    }
 }
 
-export type GlobalEventName = keyof GlobalPublishedEvents
+export type WSEventName = keyof WSEvents
