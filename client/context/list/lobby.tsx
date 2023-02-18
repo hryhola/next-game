@@ -1,5 +1,5 @@
 import React, { useState, createContext } from 'react'
-import { TChatMessage, LobbyMemberData } from 'state'
+import { TChatMessage, LobbyMemberData, LobbyData } from 'state'
 import { GameName } from 'state/games'
 
 export const LobbyContext = createContext({
@@ -15,12 +15,13 @@ export const LobbyContext = createContext({
 
 interface Props {
     children?: JSX.Element
+    lobby?: LobbyData
 }
 
-export const LobbyProvider: React.FC<Props> = props => {
-    const [lobbyId, setLobbyId] = useState('')
-    const [members, setMembers] = useState<LobbyMemberData[]>([])
-    const [gameName, setGameName] = useState<GameName | null>(null)
+export const LobbyProvider: React.FC<Props> = ({ children, lobby }) => {
+    const [lobbyId, setLobbyId] = useState(lobby?.id || '')
+    const [members, setMembers] = useState<LobbyMemberData[]>(lobby?.members || [])
+    const [gameName, setGameName] = useState<GameName | null>(lobby?.gameName || null)
     const [chatMessages, setChatMessages] = useState<TChatMessage[]>([])
 
     return (
@@ -36,7 +37,7 @@ export const LobbyProvider: React.FC<Props> = props => {
                 setChatMessages
             }}
         >
-            {props.children}
+            {children}
         </LobbyContext.Provider>
     )
 }

@@ -2,7 +2,7 @@ import { EventEmitter } from 'node:events'
 import { WebSocket } from 'uWebSockets.js'
 import randomColor from 'randomcolor'
 import { v4 } from 'uuid'
-import { Lobby } from 'state'
+import { AbstractGame, Lobby } from 'state'
 
 type onUpdateCb = (user: Partial<User['state']>) => void
 
@@ -13,7 +13,7 @@ export class User {
     private logoutTimeout: NodeJS.Timeout
     private lobbies: Lobby[] = []
 
-    readonly ws: WebSocket<unknown>
+    ws: WebSocket<unknown>
 
     readonly token: string
 
@@ -54,6 +54,21 @@ export class User {
     update(data: Partial<User['state']>) {
         Object.assign(this.state, data)
 
+        this.lobbies.forEach(l => {
+            l.publish('Lobby-Update', {
+                lobbyId: l.id,
+                updated: {
+                    members: l.members.map(m => m.data())
+                }
+            })
+
+            l.game.publish(`${(l.game.constructor as typeof AbstractGame).gameName}-Update`, {
+                updated: {
+                    players: l.game.players.map(p => p.data())
+                }
+            })
+        })
+
         this.emitter.emit('update', data)
     }
 
@@ -69,6 +84,14 @@ export class User {
         this.lobbies.forEach(l => l.leave(this))
 
         this.lobbies = []
+    }
+
+    get hasLobbies() {
+        return this.lobbies.length > 0
+    }
+
+    get lobby() {
+        return this.lobbies[0]
     }
 
     data() {

@@ -5,13 +5,14 @@ import { AppContext } from 'client/context/AppContext'
 import { Route } from 'client/context/list/router'
 import { deleteCookie } from 'cookies-next'
 import logger from 'logger'
-import { UserData } from 'state'
+import { LobbyData, UserData } from 'state'
 import { NextApiResponseUWS } from 'util/t'
 import { initializeSocketServer } from 'uWebSockets/createSocketServer'
 
 type Props = {
     defaultRoute: Route
     user?: UserData
+    lobby?: LobbyData
 }
 
 const Home: NextPage<Props> = props => {
@@ -44,6 +45,13 @@ export const getServerSideProps: GetServerSideProps = async context => {
             } else {
                 props.defaultRoute = 'Home'
                 props.user = user.data()
+
+                console.log(user.hasLobbies)
+
+                if (user.hasLobbies) {
+                    props.defaultRoute = 'Lobby'
+                    props.lobby = user.lobby.data()
+                }
             }
         } catch (e) {
             logger.error(e)

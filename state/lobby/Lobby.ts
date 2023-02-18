@@ -51,6 +51,8 @@ export class Lobby<G extends GameName = GameName> {
 
         this.members.push(member)
 
+        user.linkLobby(this)
+
         this.publish('Lobby-Join', {
             success: true,
             lobbyId: this.id,
