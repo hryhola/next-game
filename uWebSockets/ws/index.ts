@@ -75,6 +75,14 @@ export const WSHandlerRegister = (app: uws.TemplatedApp, state: State) => {
 
                 const request: AbstractSocketMessage<HandlerName, never> = JSON.parse(decodedMsg)
 
+                if (request.token) {
+                    const user = state.users.getByToken(request.token)
+
+                    if (user && user.ws !== ws) {
+                        user.ws = ws
+                    }
+                }
+
                 if (!request.ctx) {
                     logger.warn({ decodedMsg }, 'Request context is missing')
 
@@ -132,9 +140,11 @@ export const WSHandlerRegister = (app: uws.TemplatedApp, state: State) => {
 
             user?.update({ isOnline: false })
 
+            const decodedMsg = new util.TextDecoder().decode(message)
+
             logger.info(
                 {
-                    message,
+                    message: decodedMsg,
                     code,
                     user: user?.data()
                 },

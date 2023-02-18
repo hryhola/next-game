@@ -1,4 +1,4 @@
-import { Box, Skeleton, Typography } from '@mui/material'
+import { Box, Skeleton, SxProps, Typography } from '@mui/material'
 import { UserContext } from 'client/context/list/user'
 import { useContext } from 'react'
 import { AbstractPlayerData } from 'state'
@@ -13,8 +13,16 @@ type Props =
 export const Player: React.FC<Props> = props => {
     const user = useContext(UserContext)
 
+    const sx: SxProps = {}
+
+    if (!('isLoading' in props) && props.isOnline === false) {
+        Object.assign(sx, {
+            filter: 'grayscale(100%) brightness(0.5)'
+        } as SxProps)
+    }
+
     return (
-        <Box textAlign="center" width={200} maxWidth="30vw">
+        <Box sx={sx} textAlign="center" width={200} maxWidth="30vw">
             {'isLoading' in props ? (
                 <>
                     <Skeleton variant="rectangular" sx={{ width: 200, maxWidth: '30vw', maxHeight: '30vw', height: 190 }} />

@@ -28,6 +28,10 @@ export const Clicker = () => {
         setPlayers(ps => [...ps, data.player])
     }
 
+    const handleUpdate = (data: WSEvents['Clicker-Update']) => {
+        setPlayers(data.updated.players)
+    }
+
     useEffect(() => {
         ;(async () => {
             const [response, postError] = await api.post<Success | Failure>(URL.LobbyJoin, {
@@ -39,12 +43,16 @@ export const Clicker = () => {
             }
 
             lobby.setMembers(response.lobby.members)
-            setPlayers(response.game.players)
 
-            ws.on('Clicker-Join', handleJoin)
+            setPlayers(response.game.players)
 
             setIsLoading(false)
         })()
+    }, [])
+
+    useEffect(() => {
+        ws.on('Clicker-Join', handleJoin)
+        ws.on('Clicker-Update', handleUpdate)
     }, [])
 
     return (

@@ -1,9 +1,9 @@
-import { CircularProgress } from '@mui/material'
 import { LobbyContext } from 'client/context/list/lobby'
 import { WSContext } from 'client/context/list/ws'
-import { ChatBox, LoadingOverlay } from 'client/ui'
+import { LoadingOverlay } from 'client/ui'
 import dynamic from 'next/dynamic'
 import { useContext, useEffect, useRef, useState } from 'react'
+import { WSEvents } from 'uWebSockets/globalSocketEvents'
 
 export const LobbyRoute: React.FC = () => {
     const lobby = useContext(LobbyContext)
@@ -19,7 +19,17 @@ export const LobbyRoute: React.FC = () => {
         setIsLoaded(true)
     }, [])
 
+    const handleUpdate = (data: WSEvents['Lobby-Update']) => {
+        if (data.lobbyId === lobby.lobbyId) {
+            if (data.updated.members) {
+                lobby.setMembers(data.updated.members)
+            }
+        }
+    }
+
     const sendSubscribeRequest = () => {
+        ws.on('Lobby-Update', handleUpdate)
+
         ws.send('Universal-Subscription', {
             mode: 'subscribe',
             lobbyId: lobby.lobbyId,
