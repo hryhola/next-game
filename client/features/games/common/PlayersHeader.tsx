@@ -1,4 +1,4 @@
-import { Grid } from '@mui/material'
+import { Box, Grid } from '@mui/material'
 import { AbstractPlayerData } from 'state'
 import { Player } from './Player'
 
@@ -9,19 +9,21 @@ interface HeaderProps {
 
 const PlayersHeader: React.FC<HeaderProps> = props => {
     return (
-        <Grid container justifyContent="center" gap={2}>
-            {props.isLoading ? (
-                <Grid item>
-                    <Player isLoading />
-                </Grid>
-            ) : (
-                props.members.map(p => (
-                    <Grid key={p.nickname} item>
-                        <Player {...p} />
+        <Box width="100vw" display="flex" justifyContent="center">
+            <Grid container width="auto" wrap="nowrap" overflow="auto">
+                {props.isLoading ? (
+                    <Grid item>
+                        <Player isLoading />
                     </Grid>
-                ))
-            )}
-        </Grid>
+                ) : (
+                    props.members.map(p => (
+                        <Grid key={p.nickname} item>
+                            <Player {...p} />
+                        </Grid>
+                    ))
+                )}
+            </Grid>
+        </Box>
     )
 }
 

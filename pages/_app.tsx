@@ -9,6 +9,23 @@ import { useEffect } from 'react'
 const darkTheme = createTheme({
     palette: {
         mode: 'dark'
+    },
+    components: {
+        MuiCssBaseline: {
+            styleOverrides: {
+                body: {
+                    scrollbarColor: '#6b6b6b rgba(0,0,0,0)',
+                    '&::-webkit-scrollbar, & *::-webkit-scrollbar': {
+                        backgroundColor: 'rgba(0,0,0,0)',
+                        height: '5px'
+                    },
+                    '&::-webkit-scrollbar-thumb, & *::-webkit-scrollbar-thumb': {
+                        borderRadius: 8,
+                        backgroundColor: '#6b6b6b'
+                    }
+                }
+            }
+        }
     }
 })
 
