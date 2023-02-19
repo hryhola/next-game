@@ -57,9 +57,7 @@ export const Clicker = () => {
 
     return (
         <>
-            <Container>
-                <PlayersHeader members={players} isLoading={isLoading} />
-            </Container>
+            <PlayersHeader members={players} isLoading={isLoading} />
             <OverlayedTabs
                 label="tic-tac-toe"
                 views={[

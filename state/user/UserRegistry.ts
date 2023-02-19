@@ -27,8 +27,6 @@ export class UserRegistry {
             }
         })
 
-        user.onUpdate(data => console.log('UserRegistry: user update', data))
-
         this.list.push(user)
 
         this.publishOnlineUpdate()
