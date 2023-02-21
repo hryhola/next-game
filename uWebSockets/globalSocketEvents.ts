@@ -14,6 +14,11 @@ export type WSEvents = {
         lobbyId: string
         updated: Partial<LobbyData>
     }
+    'Lobby-Tipped': {
+        lobbyId: string
+        from: string
+        to: string
+    }
     'Clicker-Join': {
         success: true
         lobbyId: string

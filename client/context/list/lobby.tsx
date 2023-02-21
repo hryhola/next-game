@@ -10,7 +10,9 @@ export const LobbyContext = createContext({
     gameName: null as null | GameName,
     setGameName: (_value: GameName) => {},
     chatMessages: [] as TChatMessage[],
-    setChatMessages: (_val: TChatMessage[]) => {}
+    setChatMessages: (_val: TChatMessage[]) => {},
+    tips: [] as string[],
+    setTips: (_val: string[]) => {}
 })
 
 interface Props {
@@ -23,6 +25,7 @@ export const LobbyProvider: React.FC<Props> = ({ children, lobby }) => {
     const [members, setMembers] = useState<LobbyMemberData[]>(lobby?.members || [])
     const [gameName, setGameName] = useState<GameName | null>(lobby?.gameName || null)
     const [chatMessages, setChatMessages] = useState<TChatMessage[]>([])
+    const [tips, setTips] = useState<string[]>([])
 
     return (
         <LobbyContext.Provider
@@ -34,7 +37,9 @@ export const LobbyProvider: React.FC<Props> = ({ children, lobby }) => {
                 gameName,
                 setGameName,
                 chatMessages,
-                setChatMessages
+                setChatMessages,
+                tips,
+                setTips
             }}
         >
             {children}

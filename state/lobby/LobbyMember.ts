@@ -13,7 +13,7 @@ export class LobbyMember {
         this.user = user
         this.lobby = lobby
         this.state = {
-            isCreator: false,
+            isCreator: lobby.creator === user,
             isPlayer: false
         }
     }

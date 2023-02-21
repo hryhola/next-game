@@ -52,12 +52,25 @@ export abstract class AbstractPlayer {
     member: LobbyMember
 
     state = {
-        score: 0
+        score: 0,
+        isMaster: false
     }
 
     constructor(member: LobbyMember) {
         this.member = member
+
+        if (member.state.isCreator) {
+            this.state.isMaster = true
+        }
+
         member.update({ isPlayer: true })
+    }
+
+    update(newState: Partial<typeof this.state>) {
+        this.state = {
+            ...this.state,
+            ...newState
+        }
     }
 
     data() {
@@ -133,6 +146,7 @@ export abstract class AbstractGame {
 
     data() {
         return {
+            name: (this.constructor as typeof AbstractGame).gameName,
             players: this.players.map(p => p.data()),
             state: this.currentSession?.state
         }

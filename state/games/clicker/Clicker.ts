@@ -10,6 +10,10 @@ export class Clicker extends AbstractGame {
     join(member: LobbyMember) {
         const player = new ClickerPlayer(member)
 
+        if (member.state.isCreator) {
+            player.update({ isMaster: true })
+        }
+
         this.players.push(player)
 
         this.publish('Clicker-Join', {

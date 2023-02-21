@@ -18,7 +18,7 @@ const PlayersHeader: React.FC<HeaderProps> = props => {
                 ) : (
                     props.members.map(p => (
                         <Grid key={p.nickname} item>
-                            <Player {...p} />
+                            <Player player={p} />
                         </Grid>
                     ))
                 )}

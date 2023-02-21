@@ -13,6 +13,7 @@ import { handler as ChatGet } from './Chat-Get'
 import { handler as ChatSend } from './Chat-Send'
 import { handler as LobbyGetList } from './Lobby-GetList'
 import { handler as LobbyGetPublicInfo } from './Lobby-GetPublicInfo'
+import { handler as LobbyTip } from './Lobby-Tip'
 import { handler as UniversalSubscription } from './Universal-Subscription'
 import { handler as UsersGet } from './Users-Get'
 import { handler as UsersGetCount } from './Users-GetCount'
@@ -27,6 +28,7 @@ export const handlers = {
     'Chat-Send': ChatSend,
     'Lobby-GetList': LobbyGetList,
     'Lobby-GetPublicInfo': LobbyGetPublicInfo,
+    'Lobby-Tip': LobbyTip,
     'Universal-Subscription': UniversalSubscription,
     'Users-Get': UsersGet,
     'Users-GetCount': UsersGetCount

@@ -14,6 +14,14 @@ import { Failure, Success } from 'pages/api/lobby-join'
 import { WSContext } from 'client/context/list/ws'
 import { WSEvents } from 'uWebSockets/globalSocketEvents'
 
+export const ClickerContext = React.createContext<{
+    players: ClickerPlayerData[]
+    setPlayers: React.Dispatch<React.SetStateAction<ClickerPlayerData[]>>
+}>({
+    players: [],
+    setPlayers: () => {}
+})
+
 export const Clicker = () => {
     const lobby = useContext(LobbyContext)
     const user = useContext(UserContext)
@@ -43,6 +51,7 @@ export const Clicker = () => {
             }
 
             lobby.setMembers(response.lobby.members)
+            lobby.setGameName(response.game.name as 'Clicker')
 
             setPlayers(response.game.players)
 
@@ -56,7 +65,7 @@ export const Clicker = () => {
     }, [])
 
     return (
-        <>
+        <ClickerContext.Provider value={{ players, setPlayers }}>
             <PlayersHeader members={players} isLoading={isLoading} />
             <OverlayedTabs
                 label="tic-tac-toe"
@@ -77,6 +86,6 @@ export const Clicker = () => {
                     }
                 ]}
             />
-        </>
+        </ClickerContext.Provider>
     )
 }

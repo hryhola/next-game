@@ -13,10 +13,13 @@ export class State {
     }
 
     data() {
-        return {
+        const data = {
             globalChat: this.globalChat.data(),
             lobbies: this.lobbies.data(),
-            users: this.users.data()
+            users: this.users.data(),
+            games: Object.values(this.lobbies.container).map(lobby => lobby.game.data())
         }
+
+        return data
     }
 }
