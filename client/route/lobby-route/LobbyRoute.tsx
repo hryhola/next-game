@@ -1,3 +1,4 @@
+import { Snackbar } from '@mui/material'
 import { LobbyContext } from 'client/context/list/lobby'
 import { WSContext } from 'client/context/list/ws'
 import { LoadingOverlay } from 'client/ui'
@@ -27,8 +28,17 @@ export const LobbyRoute: React.FC = () => {
         }
     }
 
+    const handleTipped = (data: WSEvents['Lobby-Tipped']) => {
+        if (data.lobbyId === lobby.lobbyId) {
+            const message = `${data.from} tipped ${data.to}!`
+
+            lobby.setTips([...lobby.tips, message])
+        }
+    }
+
     const sendSubscribeRequest = () => {
         ws.on('Lobby-Update', handleUpdate)
+        ws.on('Lobby-Tipped', handleTipped)
 
         ws.send('Universal-Subscription', {
             mode: 'subscribe',
@@ -43,5 +53,18 @@ export const LobbyRoute: React.FC = () => {
         }
     }, [ws.isConnected])
 
-    return <>{isLoaded && game.current ? <game.current /> : null}</>
+    return (
+        <>
+            {isLoaded && game.current ? <game.current /> : null}
+            {lobby.tips.map(tip => (
+                <Snackbar
+                    key={tip}
+                    anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+                    open={true}
+                    onClose={() => lobby.setTips(lobby.tips.filter(t => t !== tip))}
+                    message={tip}
+                />
+            ))}
+        </>
+    )
 }

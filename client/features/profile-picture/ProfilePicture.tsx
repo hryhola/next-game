@@ -7,6 +7,8 @@ interface Props {
     local?: boolean
     size?: number
     editable?: boolean
+    clickable?: boolean
+    onClick?: (event: React.MouseEvent<HTMLElement>) => void
     onChange?: (image: File) => void
     maxSize?: string
     editBorder?: boolean
@@ -29,7 +31,7 @@ export const ProfilePicture: React.FC<Props> = props => {
         sizeProps.maxWidth = props.maxSize
     }
 
-    if (!props.editable) {
+    if (!props.editable && !props.clickable) {
         if (!props.url) {
             return (
                 <Box sx={sizeProps}>
@@ -69,8 +71,10 @@ export const ProfilePicture: React.FC<Props> = props => {
     }
 
     return (
-        <Button component="label" variant="outlined" sx={buttonSx}>
-            <input type="file" name="image" accept="image/*" {...(props.onChange ? { onChange: e => props.onChange!(e.target.files![0]) } : {})} hidden />
+        <Button component="label" variant="outlined" sx={buttonSx} {...(props.clickable ? { onClick: props.onClick } : {})}>
+            {props.editable && (
+                <input type="file" name="image" accept="image/*" {...(props.onChange ? { onChange: e => props.onChange!(e.target.files![0]) } : {})} hidden />
+            )}
             {props.url ? (
                 <img alt="user avatar" src={props.url} />
             ) : (
