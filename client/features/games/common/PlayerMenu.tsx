@@ -1,10 +1,10 @@
-import { PersonAdd, Settings, Logout } from '@mui/icons-material'
-import { Menu, MenuItem, Avatar, Divider, ListItemIcon } from '@mui/material'
+import { Menu, MenuItem } from '@mui/material'
 import { LobbyContext } from 'client/context/list/lobby'
 import { UserContext } from 'client/context/list/user'
 import { WSContext } from 'client/context/list/ws'
 import { useContext } from 'react'
 import { AbstractPlayerData } from 'state'
+import { v4 } from 'uuid'
 import { ClickerContext } from '../clicker/ClickerGame'
 
 type Props = {
@@ -25,6 +25,7 @@ export const PlayerMenu: React.FC<Props> = props => {
 
         if (option === 'tip') {
             ws.send('Lobby-Tip', {
+                id: v4(),
                 lobbyId: lobby.lobbyId,
                 from: user.nickname,
                 to: props.player.nickname

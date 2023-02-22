@@ -3,6 +3,7 @@ import { Handler } from 'uWebSockets/uws.types'
 
 interface Request {
     lobbyId: string
+    id: string
     from: string
     to: string
 }
@@ -31,9 +32,5 @@ export const handler: Handler<Request, GeneralSuccess | GeneralFailure> = (actio
         })
     }
 
-    lobby.publish('Lobby-Tipped', {
-        lobbyId: lobby.id,
-        from: data.from,
-        to: data.to
-    })
+    lobby.publish('Lobby-Tipped', data)
 }

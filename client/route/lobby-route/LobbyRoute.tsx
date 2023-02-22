@@ -3,6 +3,7 @@ import { LobbyContext } from 'client/context/list/lobby'
 import { WSContext } from 'client/context/list/ws'
 import { LoadingOverlay } from 'client/ui'
 import dynamic from 'next/dynamic'
+import { useSnackbar } from 'notistack'
 import { useContext, useEffect, useRef, useState } from 'react'
 import { WSEvents } from 'uWebSockets/globalSocketEvents'
 
@@ -11,6 +12,8 @@ export const LobbyRoute: React.FC = () => {
     const ws = useContext(WSContext)
     const game = useRef<ReturnType<typeof dynamic<any>> | null>(null)
     const [isLoaded, setIsLoaded] = useState(false)
+
+    const { enqueueSnackbar } = useSnackbar()
 
     useEffect(() => {
         game.current = dynamic(() => import('client/features/games/clicker/ClickerGame').then(mod => mod.Clicker), {
@@ -30,9 +33,21 @@ export const LobbyRoute: React.FC = () => {
 
     const handleTipped = (data: WSEvents['Lobby-Tipped']) => {
         if (data.lobbyId === lobby.lobbyId) {
-            const message = `${data.from} tipped ${data.to}!`
+            const from = lobby.members.find(member => member.nickname === data.from)
+            const to = lobby.members.find(member => member.nickname === data.to)
 
-            lobby.setTips([...lobby.tips, message])
+            enqueueSnackbar(
+                <>
+                    <span style={{ color: to?.nicknameColor }}>{data.to}</span> tipped by <span style={{ color: from?.nicknameColor }}>{data.from}</span>
+                </>,
+                {
+                    content: (key, message) => (
+                        <div style={{ position: 'relative', bottom: '52px' }} key={key}>
+                            {message}
+                        </div>
+                    )
+                }
+            )
         }
     }
 
@@ -53,18 +68,5 @@ export const LobbyRoute: React.FC = () => {
         }
     }, [ws.isConnected])
 
-    return (
-        <>
-            {isLoaded && game.current ? <game.current /> : null}
-            {lobby.tips.map(tip => (
-                <Snackbar
-                    key={tip}
-                    anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-                    open={true}
-                    onClose={() => lobby.setTips(lobby.tips.filter(t => t !== tip))}
-                    message={tip}
-                />
-            ))}
-        </>
-    )
+    return <>{isLoaded && game.current ? <game.current /> : null}</>
 }

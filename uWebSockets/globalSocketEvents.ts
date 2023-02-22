@@ -1,4 +1,4 @@
-import { ClickerPlayerData, LobbyData, TChatMessage } from 'state'
+import { ClickerPlayerData, LobbyData, TChatMessage, Tip } from 'state'
 
 export type WSEvents = {
     'Chat-NewMessage': {
@@ -14,11 +14,7 @@ export type WSEvents = {
         lobbyId: string
         updated: Partial<LobbyData>
     }
-    'Lobby-Tipped': {
-        lobbyId: string
-        from: string
-        to: string
-    }
+    'Lobby-Tipped': Tip
     'Clicker-Join': {
         success: true
         lobbyId: string
