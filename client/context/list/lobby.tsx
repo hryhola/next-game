@@ -1,5 +1,6 @@
+import { SnackbarContent, SnackbarProvider } from 'notistack'
 import React, { useState, createContext } from 'react'
-import { TChatMessage, LobbyMemberData, LobbyData } from 'state'
+import { TChatMessage, LobbyMemberData, LobbyData, Tip } from 'state'
 import { GameName } from 'state/games'
 
 export const LobbyContext = createContext({
@@ -10,9 +11,7 @@ export const LobbyContext = createContext({
     gameName: null as null | GameName,
     setGameName: (_value: GameName) => {},
     chatMessages: [] as TChatMessage[],
-    setChatMessages: (_val: TChatMessage[]) => {},
-    tips: [] as string[],
-    setTips: (_val: string[]) => {}
+    setChatMessages: (_val: TChatMessage[]) => {}
 })
 
 interface Props {
@@ -25,7 +24,6 @@ export const LobbyProvider: React.FC<Props> = ({ children, lobby }) => {
     const [members, setMembers] = useState<LobbyMemberData[]>(lobby?.members || [])
     const [gameName, setGameName] = useState<GameName | null>(lobby?.gameName || null)
     const [chatMessages, setChatMessages] = useState<TChatMessage[]>([])
-    const [tips, setTips] = useState<string[]>([])
 
     return (
         <LobbyContext.Provider
@@ -37,12 +35,12 @@ export const LobbyProvider: React.FC<Props> = ({ children, lobby }) => {
                 gameName,
                 setGameName,
                 chatMessages,
-                setChatMessages,
-                tips,
-                setTips
+                setChatMessages
             }}
         >
-            {children}
+            <SnackbarProvider maxSnack={5} dense>
+                {children}
+            </SnackbarProvider>
         </LobbyContext.Provider>
     )
 }
