@@ -1,6 +1,7 @@
 import { Snackbar } from '@mui/material'
 import { LobbyContext } from 'client/context/list/lobby'
 import { WSContext } from 'client/context/list/ws'
+import { AudioContext } from 'client/context/list/audio'
 import { LoadingOverlay } from 'client/ui'
 import dynamic from 'next/dynamic'
 import { useSnackbar } from 'notistack'
@@ -10,6 +11,8 @@ import { WSEvents } from 'uWebSockets/globalSocketEvents'
 export const LobbyRoute: React.FC = () => {
     const lobby = useContext(LobbyContext)
     const ws = useContext(WSContext)
+    const audio = useContext(AudioContext)
+
     const game = useRef<ReturnType<typeof dynamic<any>> | null>(null)
     const [isLoaded, setIsLoaded] = useState(false)
 
@@ -35,6 +38,8 @@ export const LobbyRoute: React.FC = () => {
         if (data.lobbyId === lobby.lobbyId) {
             const from = lobby.members.find(member => member.nickname === data.from)
             const to = lobby.members.find(member => member.nickname === data.to)
+
+            audio.play(Math.random() > 0.1 ? 'comp_coin.wav' : 'coins.wav')
 
             enqueueSnackbar(
                 <>
