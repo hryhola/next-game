@@ -10,6 +10,7 @@ import { WSEvents } from 'uWebSockets/globalSocketEvents'
 
 export const LobbyRoute: React.FC = () => {
     const lobby = useContext(LobbyContext)
+    const lobbyRef = useRef(lobby)
     const ws = useContext(WSContext)
     const audio = useContext(AudioContext)
 
@@ -18,26 +19,20 @@ export const LobbyRoute: React.FC = () => {
 
     const { enqueueSnackbar } = useSnackbar()
 
-    useEffect(() => {
-        game.current = dynamic(() => import('client/features/games/clicker/ClickerGame').then(mod => mod.Clicker), {
-            loading: () => <LoadingOverlay isLoading={true} />
-        })
-
-        setIsLoaded(true)
-    }, [])
-
     const handleUpdate = (data: WSEvents['Lobby-Update']) => {
-        if (data.lobbyId === lobby.lobbyId) {
+        if (data.lobbyId === lobbyRef.current.lobbyId) {
             if (data.updated.members) {
-                lobby.setMembers(data.updated.members)
+                lobbyRef.current.setMembers(data.updated.members)
             }
         }
     }
 
     const handleTipped = (data: WSEvents['Lobby-Tipped']) => {
-        if (data.lobbyId === lobby.lobbyId) {
-            const from = lobby.members.find(member => member.nickname === data.from)
-            const to = lobby.members.find(member => member.nickname === data.to)
+        if (data.lobbyId === lobbyRef.current.lobbyId) {
+            console.log(lobbyRef.current.members)
+
+            const from = lobbyRef.current.members.find(member => member.nickname === data.from)
+            const to = lobbyRef.current.members.find(member => member.nickname === data.to)
 
             audio.play(Math.random() > 0.1 ? 'comp_coin.wav' : 'coins.wav')
 
@@ -56,10 +51,22 @@ export const LobbyRoute: React.FC = () => {
         }
     }
 
-    const sendSubscribeRequest = () => {
+    useEffect(() => {
         ws.on('Lobby-Update', handleUpdate)
         ws.on('Lobby-Tipped', handleTipped)
 
+        game.current = dynamic(() => import('client/features/games/clicker/ClickerGame').then(mod => mod.Clicker), {
+            loading: () => <LoadingOverlay isLoading={true} />
+        })
+
+        setIsLoaded(true)
+    }, [])
+
+    useEffect(() => {
+        lobbyRef.current = lobby
+    }, [lobby])
+
+    const sendSubscribeRequest = () => {
         ws.send('Universal-Subscription', {
             mode: 'subscribe',
             lobbyId: lobby.lobbyId,
