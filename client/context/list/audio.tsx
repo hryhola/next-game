@@ -1,6 +1,6 @@
-import React, { useState, createContext, useRef } from 'react'
+import React, { createContext, useRef, useEffect } from 'react'
 
-export const AudioContext = createContext({
+export const AudioCtx = createContext({
     play: async (_route: string) => {}
 })
 
@@ -9,21 +9,34 @@ interface Props {
 }
 
 export const AudioProvider: React.FC<Props> = props => {
+    const context = useRef<AudioContext | null>(null)
     const soundsMap = useRef(new Map<string, AudioBuffer>())
 
+    useEffect(() => {
+        context.current = new window.AudioContext()
+
+        return () => {
+            context.current?.close()
+        }
+    }, [])
+
     const play = async (fileName: string) => {
-        const context = new window.AudioContext()
+        if (!context.current) {
+            context.current = new window.AudioContext()
+        }
 
         if (!soundsMap.current.has(fileName)) {
             const audioBuffer = await fetch(`/sounds/${fileName}`)
                 .then(response => response.arrayBuffer())
-                .then(arrayBuffer => context.decodeAudioData(arrayBuffer))
+                .then(arrayBuffer => context.current!.decodeAudioData(arrayBuffer))
                 .catch(error => {
                     console.error(error)
                 })
 
             if (audioBuffer) {
                 soundsMap.current.set(fileName, audioBuffer)
+            } else {
+                return
             }
         }
 
@@ -31,11 +44,11 @@ export const AudioProvider: React.FC<Props> = props => {
 
         if (!audio) return
 
-        const source = context.createBufferSource()
+        const source = context.current.createBufferSource()
         source.buffer = audio
-        source.connect(context.destination)
+        source.connect(context.current.destination)
         source.start()
     }
 
-    return <AudioContext.Provider value={{ play }}>{props.children}</AudioContext.Provider>
+    return <AudioCtx.Provider value={{ play }}>{props.children}</AudioCtx.Provider>
 }

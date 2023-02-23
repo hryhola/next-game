@@ -2,7 +2,6 @@ import React, { useState, createContext, useContext, useEffect, useRef, MutableR
 import type { HandlerName } from 'uWebSockets/ws'
 import type { AbstractSocketMessage, RequestData } from 'uWebSockets/uws.types'
 import type { WSEventName } from 'uWebSockets/globalSocketEvents'
-import { UserContext } from './user'
 import { getCookie } from 'cookies-next'
 
 type HandlerOn = <C extends WSEventName | HandlerName>(context: C, handler: Function) => void
@@ -24,24 +23,15 @@ interface Props {
 }
 
 export const WSProvider: React.FC<Props> = props => {
-    const user = useContext(UserContext)
-
     const wsRef = useRef<WebSocket | null>(null)
+    const listeners = useRef({} as Record<string, Set<Function>>)
 
     const [isConnected, setIsConnected] = useState<boolean | null>(null)
-    const [listeners, setListeners] = useState<Record<string, Array<Function>>>({})
 
     const on: HandlerOn = (context: string, handler: Function) => {
-        setListeners(curr => {
-            if (curr[context] && curr[context].includes(handler)) {
-                return curr
-            }
+        listeners.current[context] = listeners.current[context] || new Set()
 
-            return {
-                ...curr,
-                [context]: [...(context in curr ? curr[context] : []), handler]
-            }
-        })
+        listeners.current[context].add(handler)
     }
 
     const send: HandlerSend = (context, data) => {
@@ -73,8 +63,8 @@ export const WSProvider: React.FC<Props> = props => {
 
         const message = JSON.parse(event.data)
 
-        if (message.ctx in listeners) {
-            listeners[message.ctx].forEach(listener => listener(message.data))
+        if (message.ctx in listeners.current) {
+            listeners.current[message.ctx].forEach(listener => listener(message.data))
         }
     }
 

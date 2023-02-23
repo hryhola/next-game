@@ -1,7 +1,6 @@
-import { Snackbar } from '@mui/material'
 import { LobbyContext } from 'client/context/list/lobby'
 import { WSContext } from 'client/context/list/ws'
-import { AudioContext } from 'client/context/list/audio'
+import { AudioCtx } from 'client/context/list/audio'
 import { LoadingOverlay } from 'client/ui'
 import dynamic from 'next/dynamic'
 import { useSnackbar } from 'notistack'
@@ -12,7 +11,7 @@ export const LobbyRoute: React.FC = () => {
     const lobby = useContext(LobbyContext)
     const lobbyRef = useRef(lobby)
     const ws = useContext(WSContext)
-    const audio = useContext(AudioContext)
+    const audio = useContext(AudioCtx)
 
     const game = useRef<ReturnType<typeof dynamic<any>> | null>(null)
     const [isLoaded, setIsLoaded] = useState(false)
