@@ -23,3 +23,23 @@ img {
 * {
     box-sizing: border-box;
 }
+
+.SnackbarProvider {
+    &-root {
+        pointer-events: none !important;
+
+        * {
+            pointer-events: none !important;
+        }
+    }
+
+    &-containerRoot {
+        pointer-events: none !important;
+
+        bottom: 60px !important;
+
+        * {
+            pointer-events: none !important;
+        }
+    }
+}
