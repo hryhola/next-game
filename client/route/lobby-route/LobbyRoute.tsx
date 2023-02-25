@@ -41,7 +41,7 @@ export const LobbyRoute: React.FC = () => {
                 </>,
                 {
                     content: (key, message) => (
-                        <div style={{ position: 'relative', bottom: '52px' }} key={key}>
+                        <div style={{ pointerEvents: 'none' }} key={key}>
                             {message}
                         </div>
                     )

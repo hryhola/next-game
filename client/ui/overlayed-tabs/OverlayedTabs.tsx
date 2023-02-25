@@ -84,7 +84,7 @@ const PopoverView: React.FC<PopoverProps> = props => {
                       })
             }}
         >
-            <Box>{props.header}</Box>
+            <Box onClick={() => setIsOpen(v => !v)}>{props.header}</Box>
             <Box
                 sx={{
                     width: '46px',

@@ -38,7 +38,14 @@ export const LobbyProvider: React.FC<Props> = ({ children, lobby }) => {
                 setChatMessages
             }}
         >
-            <SnackbarProvider maxSnack={5} dense>
+            <SnackbarProvider
+                maxSnack={5}
+                classes={{
+                    root: 'SnackbarProvider-root',
+                    containerRoot: 'SnackbarProvider-containerRoot'
+                }}
+                dense
+            >
                 {children}
             </SnackbarProvider>
         </LobbyContext.Provider>

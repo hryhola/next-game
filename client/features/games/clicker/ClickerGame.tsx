@@ -71,8 +71,6 @@ export const Clicker = () => {
         ws.on('Clicker-Update', handleUpdate)
     }, [])
 
-    console.log(audio.volume)
-
     return (
         <ClickerContext.Provider value={{ players, setPlayers }}>
             <PlayersHeader members={players} isLoading={isLoading} />
