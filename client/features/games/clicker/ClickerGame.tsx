@@ -1,4 +1,4 @@
-import { Container } from '@mui/material'
+import { Container, Menu, Popover, Slider, Typography } from '@mui/material'
 import React, { useState, useContext, useRef, useEffect } from 'react'
 import { chatInputHeight } from 'client/ui'
 import { LobbyContext } from 'client/context/list/lobby'
@@ -13,6 +13,10 @@ import PlayersHeader from '../common/PlayersHeader'
 import { Failure, Success } from 'pages/api/lobby-join'
 import { WSContext } from 'client/context/list/ws'
 import { WSEvents } from 'uWebSockets/globalSocketEvents'
+import VolumeUpIcon from '@mui/icons-material/VolumeUp'
+import { BrowserView, MobileView, isBrowser, isMobile } from 'react-device-detect'
+import { AudioCtx } from 'client/context/list/audio'
+import VolumeOffIcon from '@mui/icons-material/VolumeOff'
 
 export const ClickerContext = React.createContext<{
     players: ClickerPlayerData[]
@@ -26,6 +30,9 @@ export const Clicker = () => {
     const lobby = useContext(LobbyContext)
     const user = useContext(UserContext)
     const ws = useContext(WSContext)
+    const audio = useContext(AudioCtx)
+
+    const [isVolumeVisible, setIsVolumeVisible] = useState(false)
 
     const [players, setPlayers] = useState<ClickerPlayerData[]>([])
     const [isLoading, setIsLoading] = useState(true)
@@ -33,7 +40,7 @@ export const Clicker = () => {
     const chatInputRef = useRef<HTMLInputElement | null>(null)
 
     const handleJoin = (data: WSEvents['Clicker-Join']) => {
-        setPlayers(ps => [...ps, data.player])
+        setPlayers(ps => [...ps.filter(p => p.nickname !== data.player.nickname), data.player])
     }
 
     const handleUpdate = (data: WSEvents['Clicker-Update']) => {
@@ -64,6 +71,8 @@ export const Clicker = () => {
         ws.on('Clicker-Update', handleUpdate)
     }, [])
 
+    console.log(audio.volume)
+
     return (
         <ClickerContext.Provider value={{ players, setPlayers }}>
             <PlayersHeader members={players} isLoading={isLoading} />
@@ -81,6 +90,29 @@ export const Clicker = () => {
                                 scope="lobby"
                                 lobbyId={lobby.lobbyId}
                                 inputRef={chatInputRef}
+                            />
+                        )
+                    },
+                    {
+                        type: 'popover',
+                        header: audio.volume === 0 ? <VolumeOffIcon /> : <VolumeUpIcon />,
+                        view: () => (
+                            <Slider
+                                onMouseLeave={() => setIsVolumeVisible(false)}
+                                sx={{
+                                    '& input[type="range"]': {
+                                        WebkitAppearance: 'slider-vertical'
+                                    },
+                                    height: 200,
+                                    marginTop: 2,
+                                    marginBottom: 2
+                                }}
+                                orientation="vertical"
+                                min={0}
+                                max={100}
+                                defaultValue={50}
+                                onChangeCommitted={(event, value) => audio.setVolume(value as number)}
+                                aria-label="Volume"
                             />
                         )
                     }
