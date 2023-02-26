@@ -1,4 +1,4 @@
-import { ClickerPlayerData, LobbyData, TChatMessage, Tip } from 'state'
+import { ClickerPlayerData, LobbyData, LobbyMemberData, TChatMessage, Tip } from 'state'
 
 export type WSEvents = {
     'Chat-NewMessage': {
@@ -9,6 +9,10 @@ export type WSEvents = {
     'UserRegistry-OnlineUpdate': {
         scope: 'global'
         list: { nickname: string }[]
+    }
+    'Lobby-Join': {
+        lobbyId: string
+        member: LobbyMemberData
     }
     'Lobby-Update': {
         lobbyId: string

@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic'
 import { useSnackbar } from 'notistack'
 import { useContext, useEffect, useRef, useState } from 'react'
 import { WSEvents } from 'uWebSockets/globalSocketEvents'
+import { Handler } from 'uWebSockets/uws.types'
 
 export const LobbyRoute: React.FC = () => {
     const lobby = useContext(LobbyContext)
@@ -18,6 +19,12 @@ export const LobbyRoute: React.FC = () => {
 
     const { enqueueSnackbar } = useSnackbar()
 
+    const handleLobbyJoin = (data: WSEvents['Lobby-Join']) => {
+        if (data.lobbyId === lobbyRef.current.lobbyId) {
+            lobby.setMembers(ms => [...ms.filter(m => m.nickname !== data.member.nickname), data.member])
+        }
+    }
+
     const handleUpdate = (data: WSEvents['Lobby-Update']) => {
         if (data.lobbyId === lobbyRef.current.lobbyId) {
             if (data.updated.members) {
@@ -28,8 +35,6 @@ export const LobbyRoute: React.FC = () => {
 
     const handleTipped = (data: WSEvents['Lobby-Tipped']) => {
         if (data.lobbyId === lobbyRef.current.lobbyId) {
-            console.log(lobbyRef.current.members)
-
             const from = lobbyRef.current.members.find(member => member.nickname === data.from)
             const to = lobbyRef.current.members.find(member => member.nickname === data.to)
 
@@ -51,6 +56,7 @@ export const LobbyRoute: React.FC = () => {
     }
 
     useEffect(() => {
+        ws.on('Lobby-Join', handleLobbyJoin)
         ws.on('Lobby-Update', handleUpdate)
         ws.on('Lobby-Tipped', handleTipped)
 
