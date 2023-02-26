@@ -76,7 +76,7 @@ const PopoverView: React.FC<PopoverProps> = props => {
                 ...(isOpen
                     ? {
                           position: 'relative',
-                          bottom: '240px'
+                          bottom: '270px'
                       }
                     : {
                           position: 'relative',
@@ -87,15 +87,9 @@ const PopoverView: React.FC<PopoverProps> = props => {
             <Box onClick={() => setIsOpen(v => !v)}>{props.header}</Box>
             <Box
                 sx={{
-                    width: '46px',
-                    backgroundColor: '#272727',
                     position: 'absolute',
                     top: 45,
-                    visibility: isOpen ? 'visible' : 'hidden',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center'
+                    visibility: isOpen ? 'visible' : 'hidden'
                 }}
             >
                 {props.view(props.fullscreen)}

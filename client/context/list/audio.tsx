@@ -3,6 +3,7 @@ import React, { createContext, useRef, useEffect, useState } from 'react'
 export const AudioCtx = createContext({
     play: async (_route: string) => {},
     setVolume: (_value: number) => {},
+    toggleMute: () => {},
     volume: NaN
 })
 
@@ -16,6 +17,7 @@ export const AudioProvider: React.FC<Props> = props => {
     const soundsMap = useRef(new Map<string, AudioBuffer>())
 
     const [volume, setVolumeState] = useState(50)
+    const prevVolume = useRef(volume)
 
     useEffect(() => {
         context.current = new window.AudioContext()
@@ -73,11 +75,25 @@ export const AudioProvider: React.FC<Props> = props => {
         setVolumeState(value)
     }
 
+    const toggleMute = () => {
+        if (!gain.current) return
+
+        if (gain.current.gain.value === 0) {
+            gain.current.gain.value = prevVolume.current / 100
+            setVolumeState(prevVolume.current)
+        } else {
+            prevVolume.current = volume
+            gain.current.gain.value = 0
+            setVolumeState(0)
+        }
+    }
+
     return (
         <AudioCtx.Provider
             value={{
                 play,
                 setVolume,
+                toggleMute,
                 volume
             }}
         >
