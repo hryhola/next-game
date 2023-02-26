@@ -75,7 +75,7 @@ const PopoverView: React.FC<PopoverProps> = props => {
                       })
             }}
         >
-            <Box>{props.header}</Box>
+            <Box sx={{ display: 'flex' }}>{props.header}</Box>
             <Box
                 sx={{
                     position: 'absolute',

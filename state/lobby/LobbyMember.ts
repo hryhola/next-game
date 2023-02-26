@@ -7,6 +7,7 @@ export class LobbyMember {
     readonly state: {
         isCreator: boolean
         isPlayer: boolean
+        position: number
     }
 
     constructor(lobby: Lobby, user: User) {
@@ -14,7 +15,8 @@ export class LobbyMember {
         this.lobby = lobby
         this.state = {
             isCreator: lobby.creator === user,
-            isPlayer: false
+            isPlayer: false,
+            position: lobby.members.length
         }
     }
 
