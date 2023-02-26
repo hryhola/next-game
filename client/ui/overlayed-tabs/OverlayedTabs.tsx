@@ -8,7 +8,7 @@ import ArrowDropUpIcon from '@mui/icons-material/ArrowDropUp'
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown'
 import CloseIcon from '@mui/icons-material/Close'
 import { IconButton, Toolbar } from '@mui/material'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 interface TabPanelProps {
     children?: React.ReactNode
@@ -33,16 +33,6 @@ function a11yProps(index: number) {
         id: `home-tab-${index}`,
         'aria-controls': `home-tabpanel-${index}`
     }
-}
-
-type Props = {
-    views: {
-        type?: 'default' | 'popover'
-        view: (opts: { fullscreen: boolean; isOpen: boolean; direction?: 'up' | 'down' }) => JSX.Element
-        header: React.ReactNode
-        onFullscreen?: (value: boolean) => void
-    }[]
-    label: string
 }
 
 export const overlayedTabsToolbarHeight = '48px'
@@ -104,6 +94,18 @@ const PopoverView: React.FC<PopoverProps> = props => {
     )
 }
 
+type Props = {
+    views: {
+        type?: 'default' | 'popover'
+        view: (opts: { fullscreen: boolean; isOpen: boolean; direction?: 'up' | 'down' }) => JSX.Element
+        header: React.ReactNode
+        onFullscreen?: (value: boolean) => void
+    }[]
+    onViewOpen?: () => void
+    onViewClose?: () => void
+    label: string
+}
+
 const OverlayedTabs: React.FC<Props> = props => {
     const theme = useTheme()
     const [value, setValue] = useState<number | false>(false)
@@ -122,6 +124,14 @@ const OverlayedTabs: React.FC<Props> = props => {
 
         setFullscreen(!fullscreen)
     }
+
+    useEffect(() => {
+        if (value === false) {
+            props.onViewClose && props.onViewClose()
+        } else {
+            props.onViewOpen && props.onViewOpen()
+        }
+    }, [value])
 
     const barMargin = value === false ? '0' : fullscreen ? `calc(var(--fullHeight) - ${overlayedTabsToolbarHeight})` : '50vh'
 
