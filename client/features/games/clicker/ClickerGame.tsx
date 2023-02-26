@@ -1,4 +1,4 @@
-import { Container, Menu, Popover, Slider, Typography } from '@mui/material'
+import { Box, Button, Container, Menu, Popover, Slider, Typography } from '@mui/material'
 import React, { useState, useContext, useRef, useEffect } from 'react'
 import { chatInputHeight } from 'client/ui'
 import { LobbyContext } from 'client/context/list/lobby'
@@ -95,23 +95,39 @@ export const Clicker = () => {
                         type: 'popover',
                         header: audio.volume === 0 ? <VolumeOffIcon /> : <VolumeUpIcon />,
                         view: () => (
-                            <Slider
-                                onMouseLeave={() => setIsVolumeVisible(false)}
+                            <Box
                                 sx={{
-                                    '& input[type="range"]': {
-                                        WebkitAppearance: 'slider-vertical'
-                                    },
-                                    height: 200,
-                                    marginTop: 2,
-                                    marginBottom: 2
+                                    width: '46px',
+                                    backgroundColor: '#272727',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    pb: 99
                                 }}
-                                orientation="vertical"
-                                min={0}
-                                max={100}
-                                defaultValue={50}
-                                onChangeCommitted={(event, value) => audio.setVolume(value as number)}
-                                aria-label="Volume"
-                            />
+                            >
+                                <Slider
+                                    sx={{
+                                        '& input[type="range"]': {
+                                            WebkitAppearance: 'slider-vertical'
+                                        },
+                                        height: 200,
+                                        marginTop: 2,
+                                        marginBottom: 2
+                                    }}
+                                    orientation="vertical"
+                                    min={0}
+                                    max={100}
+                                    step={1}
+                                    defaultValue={50}
+                                    value={audio.volume}
+                                    onChange={(event, value) => audio.setVolume(value as number)}
+                                    aria-label="Volume"
+                                />
+                                <Button size="small" onClick={() => audio.toggleMute()}>
+                                    {audio.volume === 0 ? 'Unmute' : 'Mute'}
+                                </Button>
+                            </Box>
                         )
                     }
                 ]}
