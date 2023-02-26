@@ -31,8 +31,6 @@ export const AudioProvider: React.FC<Props> = props => {
     }, [])
 
     const play = async (fileName: string) => {
-        console.log(context.current, gain.current)
-
         if (!context.current) {
             context.current = new window.AudioContext()
             gain.current = context.current.createGain()

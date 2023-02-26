@@ -5,7 +5,7 @@ import { GameName } from 'state/games'
 
 export const LobbyContext = createContext({
     members: [] as LobbyMemberData[],
-    setMembers: (_value: LobbyMemberData[]) => {},
+    setMembers: (_value: LobbyMemberData[] | ((curr: LobbyMemberData[]) => LobbyMemberData[])) => {},
     lobbyId: '',
     setLobbyId: (_value: string) => {},
     gameName: null as null | GameName,
