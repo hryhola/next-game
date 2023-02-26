@@ -11,7 +11,8 @@ export const LobbyContext = createContext({
     gameName: null as null | GameName,
     setGameName: (_value: GameName) => {},
     chatMessages: [] as TChatMessage[],
-    setChatMessages: (_val: TChatMessage[]) => {}
+    setChatMessages: (_val: TChatMessage[]) => {},
+    setIsTipsVisible: (_val: boolean) => {}
 })
 
 interface Props {
@@ -24,6 +25,7 @@ export const LobbyProvider: React.FC<Props> = ({ children, lobby }) => {
     const [members, setMembers] = useState<LobbyMemberData[]>(lobby?.members || [])
     const [gameName, setGameName] = useState<GameName | null>(lobby?.gameName || null)
     const [chatMessages, setChatMessages] = useState<TChatMessage[]>([])
+    const [isTipsVisible, setIsTipsVisible] = useState(true)
 
     return (
         <LobbyContext.Provider
@@ -35,7 +37,8 @@ export const LobbyProvider: React.FC<Props> = ({ children, lobby }) => {
                 gameName,
                 setGameName,
                 chatMessages,
-                setChatMessages
+                setChatMessages,
+                setIsTipsVisible
             }}
         >
             <SnackbarProvider
@@ -44,6 +47,7 @@ export const LobbyProvider: React.FC<Props> = ({ children, lobby }) => {
                     root: 'SnackbarProvider-root',
                     containerRoot: 'SnackbarProvider-containerRoot'
                 }}
+                hidden={!isTipsVisible}
                 dense
             >
                 {children}

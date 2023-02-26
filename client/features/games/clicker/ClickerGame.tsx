@@ -135,6 +135,8 @@ export const Clicker = () => {
                         )
                     }
                 ]}
+                onViewOpen={() => lobby.setIsTipsVisible(false)}
+                onViewClose={() => lobby.setIsTipsVisible(true)}
             />
         </ClickerContext.Provider>
     )
