@@ -17,7 +17,6 @@ export class Clicker extends AbstractGame {
         this.players.push(player)
 
         this.publish('Clicker-Join', {
-            success: true,
             lobbyId: this.lobby.id,
             player: player.data()
         })
@@ -31,7 +30,6 @@ export class Clicker extends AbstractGame {
         this.players = this.players.filter(p => p !== player)
 
         this.publish('Clicker-Leave', {
-            success: true,
             lobbyId: this.lobby.id,
             player: player.data()
         })

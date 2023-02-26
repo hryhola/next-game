@@ -1,7 +1,11 @@
+import { api } from 'client/network-utils/api'
 import { SnackbarContent, SnackbarProvider } from 'notistack'
-import React, { useState, createContext } from 'react'
+import React, { useState, createContext, useContext, useEffect } from 'react'
 import { TChatMessage, LobbyMemberData, LobbyData, Tip } from 'state'
 import { GameName } from 'state/games'
+import { WSContext } from './ws'
+import { URL as ApiUrl } from 'client/network-utils/const'
+import { GeneralFailure, GeneralSuccess } from 'util/t'
 
 export const LobbyContext = createContext({
     members: [] as LobbyMemberData[],
@@ -12,7 +16,10 @@ export const LobbyContext = createContext({
     setGameName: (_value: GameName) => {},
     chatMessages: [] as TChatMessage[],
     setChatMessages: (_val: TChatMessage[]) => {},
-    setIsTipsVisible: (_val: boolean) => {}
+    setIsTipsVisible: (_val: boolean) => {},
+    exit: () => {},
+    destroy: () => {},
+    reset: () => {}
 })
 
 interface Props {
@@ -27,6 +34,31 @@ export const LobbyProvider: React.FC<Props> = ({ children, lobby }) => {
     const [chatMessages, setChatMessages] = useState<TChatMessage[]>([])
     const [isTipsVisible, setIsTipsVisible] = useState(true)
 
+    const reset = () => {
+        setMembers([])
+        setLobbyId('')
+        setGameName(null)
+        setChatMessages([])
+    }
+
+    const exit = () => {
+        api.post<GeneralSuccess | GeneralFailure>(ApiUrl.LobbyLeave, { lobbyId })
+
+        reset()
+    }
+
+    const destroy = () => {
+        api.post<GeneralSuccess | GeneralFailure>(ApiUrl.LobbyDestroy, { lobbyId })
+
+        reset()
+    }
+
+    useEffect(() => {
+        if (!lobbyId) {
+            setIsTipsVisible(false)
+        }
+    }, [lobbyId])
+
     return (
         <LobbyContext.Provider
             value={{
@@ -38,7 +70,10 @@ export const LobbyProvider: React.FC<Props> = ({ children, lobby }) => {
                 setGameName,
                 chatMessages,
                 setChatMessages,
-                setIsTipsVisible
+                setIsTipsVisible,
+                exit,
+                destroy,
+                reset
             }}
         >
             <SnackbarProvider

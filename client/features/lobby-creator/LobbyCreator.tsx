@@ -10,8 +10,10 @@ import { api } from 'client/network-utils/api'
 import { URL as ApiUrl } from 'client/network-utils/const'
 import { GeneralFailure, GeneralSuccess } from 'util/t'
 import { GameName } from 'state/games'
+import { HomeContext } from 'client/context/list/home'
 
 export const LobbyCreator: React.FC = () => {
+    const home = useContext(HomeContext)
     const router = useContext(RouterContext)
     const user = useContext(UserContext)
     const lobby = useContext(LobbyContext)
@@ -45,6 +47,8 @@ export const LobbyCreator: React.FC = () => {
 
         lobby.setLobbyId(lobbyId)
         lobby.setGameName(gameName)
+
+        home.setIsCreateLobbyOpen(false)
 
         router.setCurrentRoute('Lobby')
     }
@@ -89,7 +93,14 @@ export const LobbyCreator: React.FC = () => {
                 </Grid> */}
 
                 <Grid item>
-                    <TextField label="Password" name="password" value={password} onChange={e => setPassword(e.target.value.split('\\').pop()!)} fullWidth />
+                    <TextField
+                        sx={{ visibility: 'hidden' }}
+                        label="Password"
+                        name="password"
+                        value={password}
+                        onChange={e => setPassword(e.target.value.split('\\').pop()!)}
+                        fullWidth
+                    />
                 </Grid>
                 <Grid item sx={{ mt: 'auto', mb: 2 }}>
                     <Button color="primary" variant="contained" type="submit" size="large" fullWidth>

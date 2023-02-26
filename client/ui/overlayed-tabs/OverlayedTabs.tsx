@@ -37,16 +37,24 @@ function a11yProps(index: number) {
 
 export const overlayedTabsToolbarHeight = '48px'
 
+type View = (opts: { fullscreen: boolean; isOpen: boolean; direction?: 'up' | 'down' }) => JSX.Element
+
 type PopoverProps = {
     sx: SxProps<Theme>
     header: React.ReactNode
-    view: (opts: { fullscreen: boolean; isOpen: boolean; direction?: 'up' | 'down' }) => JSX.Element
+    view: View
     fullscreen: boolean
     direction: 'up' | 'down'
+    height: string
+    hideIconOnOpen?: boolean
 }
 
 const PopoverView: React.FC<PopoverProps> = props => {
     const [isOpen, setIsOpen] = useState(false)
+
+    const icon = <Box sx={{ display: 'flex' }}>{props.header}</Box>
+
+    const hiddenIcon = isOpen && props.hideIconOnOpen
 
     return (
         <Box
@@ -67,7 +75,7 @@ const PopoverView: React.FC<PopoverProps> = props => {
                 ...(isOpen
                     ? {
                           position: 'relative',
-                          bottom: props.direction === 'up' ? '270px' : '0'
+                          bottom: props.direction === 'up' ? props.height : '0'
                       }
                     : {
                           position: 'relative',
@@ -75,13 +83,19 @@ const PopoverView: React.FC<PopoverProps> = props => {
                       })
             }}
         >
-            <Box sx={{ display: 'flex' }}>{props.header}</Box>
+            {hiddenIcon ? null : icon}
             <Box
                 sx={{
                     position: 'absolute',
-                    top: 45,
+                    top: hiddenIcon ? 0 : 45,
                     visibility: isOpen ? 'visible' : 'hidden',
-                    overflow: 'hidden'
+                    overflow: 'hidden',
+                    ...(hiddenIcon
+                        ? {
+                              borderTopLeftRadius: '30px',
+                              borderTopRightRadius: '30px'
+                          }
+                        : {})
                 }}
             >
                 {props.view({
@@ -97,9 +111,11 @@ const PopoverView: React.FC<PopoverProps> = props => {
 type Props = {
     views: {
         type?: 'default' | 'popover'
-        view: (opts: { fullscreen: boolean; isOpen: boolean; direction?: 'up' | 'down' }) => JSX.Element
+        view: View
+        hideIconOnOpen?: boolean
         header: React.ReactNode
         onFullscreen?: (value: boolean) => void
+        height?: string
     }[]
     onViewOpen?: () => void
     onViewClose?: () => void
@@ -155,6 +171,8 @@ const OverlayedTabs: React.FC<Props> = props => {
                             {...p}
                             fullscreen={fullscreen}
                             direction={value === false ? 'up' : 'down'}
+                            height={p.height!}
+                            hideIconOnOpen={p.hideIconOnOpen}
                         />
                     ))}
                     {value !== false && (

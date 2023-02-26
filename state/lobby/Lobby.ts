@@ -83,11 +83,32 @@ export class Lobby<G extends GameName = GameName> {
 
         this.members = this.members.filter(m => m !== member)
 
+        user.unlinkLobby(this)
+
+        user.ws.unsubscribe(`Lobby-${this.id}`)
+
         this.publish('Lobby-Leave', {
-            success: true,
             lobbyId: this.id,
             member: member.data()
         })
+
+        return {
+            success: true
+        }
+    }
+
+    destroy() {
+        this.publish('Lobby-Destroy', {
+            lobbyId: this.id
+        })
+
+        this.members.forEach(m => {
+            m.user.unlinkLobby(this)
+        })
+
+        return {
+            success: true
+        }
     }
 
     data() {
