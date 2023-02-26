@@ -80,7 +80,7 @@ export const Clicker = () => {
                     {
                         onFullscreen: () => chatInputRef.current?.focus(),
                         header: <ChatIcon />,
-                        view: fullscreen => (
+                        view: ({ fullscreen }) => (
                             <Chat
                                 messagesWrapperBoxSx={{
                                     height: `calc(${fullscreen ? `var(--fullHeight) - ${overlayedTabsToolbarHeight}` : '50vh'} - ${chatInputHeight})`
@@ -94,16 +94,18 @@ export const Clicker = () => {
                     {
                         type: 'popover',
                         header: audio.volume === 0 ? <VolumeOffIcon /> : <VolumeUpIcon />,
-                        view: () => (
+                        view: opts => (
                             <Box
                                 sx={{
                                     width: '46px',
                                     backgroundColor: '#272727',
                                     display: 'flex',
-                                    flexDirection: 'column',
+                                    flexDirection: opts.direction === 'up' ? 'column' : 'column-reverse',
                                     alignItems: 'center',
                                     justifyContent: 'center',
-                                    pb: 99
+                                    borderBottomLeftRadius: '30px',
+                                    borderBottomRightRadius: '30px',
+                                    pb: opts.direction === 'up' ? 4 : 0
                                 }}
                             >
                                 <Slider
@@ -121,10 +123,12 @@ export const Clicker = () => {
                                     step={1}
                                     defaultValue={50}
                                     value={audio.volume}
-                                    onChange={(event, value) => audio.setVolume(value as number)}
+                                    onChange={(event, value) => {
+                                        audio.setVolume(value as number)
+                                    }}
                                     aria-label="Volume"
                                 />
-                                <Button size="small" onClick={() => audio.toggleMute()}>
+                                <Button size="small" sx={{ fontSize: 10, textTransform: 'none' }} onClick={() => audio.toggleMute()}>
                                     {audio.volume === 0 ? 'Unmute' : 'Mute'}
                                 </Button>
                             </Box>

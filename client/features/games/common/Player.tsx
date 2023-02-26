@@ -76,6 +76,7 @@ export const Player: React.FC<Props> = props => {
                         display="block"
                         variant="h6"
                         noWrap
+                        textOverflow="unset"
                         {...(props.player.isMaster
                             ? {
                                   color: 'blueviolet'

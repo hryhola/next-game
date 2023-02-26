@@ -38,8 +38,8 @@ function a11yProps(index: number) {
 type Props = {
     views: {
         type?: 'default' | 'popover'
-        view: (fullscreen: boolean) => JSX.Element
-        header: string | JSX.Element
+        view: (opts: { fullscreen: boolean; isOpen: boolean; direction?: 'up' | 'down' }) => JSX.Element
+        header: React.ReactNode
         onFullscreen?: (value: boolean) => void
     }[]
     label: string
@@ -49,9 +49,10 @@ export const overlayedTabsToolbarHeight = '48px'
 
 type PopoverProps = {
     sx: SxProps<Theme>
-    header: string | JSX.Element
-    view: (fullscreen: boolean) => JSX.Element
+    header: React.ReactNode
+    view: (opts: { fullscreen: boolean; isOpen: boolean; direction?: 'up' | 'down' }) => JSX.Element
     fullscreen: boolean
+    direction: 'up' | 'down'
 }
 
 const PopoverView: React.FC<PopoverProps> = props => {
@@ -76,7 +77,7 @@ const PopoverView: React.FC<PopoverProps> = props => {
                 ...(isOpen
                     ? {
                           position: 'relative',
-                          bottom: '270px'
+                          bottom: props.direction === 'up' ? '270px' : '0'
                       }
                     : {
                           position: 'relative',
@@ -84,15 +85,20 @@ const PopoverView: React.FC<PopoverProps> = props => {
                       })
             }}
         >
-            <Box onClick={() => setIsOpen(v => !v)}>{props.header}</Box>
+            <Box>{props.header}</Box>
             <Box
                 sx={{
                     position: 'absolute',
                     top: 45,
-                    visibility: isOpen ? 'visible' : 'hidden'
+                    visibility: isOpen ? 'visible' : 'hidden',
+                    overflow: 'hidden'
                 }}
             >
-                {props.view(props.fullscreen)}
+                {props.view({
+                    fullscreen: props.fullscreen,
+                    isOpen,
+                    direction: props.direction
+                })}
             </Box>
         </Box>
     )
@@ -133,7 +139,13 @@ const OverlayedTabs: React.FC<Props> = props => {
                         ))}
                     </Tabs>
                     {popoverViews.map((p, key) => (
-                        <PopoverView sx={{ ml: key === 0 ? 'auto' : '' }} key={key} {...p} fullscreen={fullscreen} />
+                        <PopoverView
+                            sx={{ ml: key === 0 ? 'auto' : '' }}
+                            key={key}
+                            {...p}
+                            fullscreen={fullscreen}
+                            direction={value === false ? 'up' : 'down'}
+                        />
                     ))}
                     {value !== false && (
                         <IconButton
@@ -149,9 +161,12 @@ const OverlayedTabs: React.FC<Props> = props => {
             </AppBar>
             {value !== false && (
                 <Box sx={{ position: 'fixed', bottom: 0, height: barMargin, width: '100%', background: theme.palette.background.default }}>
-                    {props.views.map(({ view }, key) => (
+                    {props.views.map((vs, key) => (
                         <TabPanel key={key} value={value} index={key} dir={theme.direction}>
-                            {view(fullscreen)}
+                            {vs.view({
+                                fullscreen,
+                                isOpen: true
+                            })}
                         </TabPanel>
                     ))}
                 </Box>
