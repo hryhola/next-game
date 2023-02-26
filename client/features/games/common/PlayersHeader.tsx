@@ -16,11 +16,13 @@ const PlayersHeader: React.FC<HeaderProps> = props => {
                         <Player isLoading />
                     </Grid>
                 ) : (
-                    props.members.map(p => (
-                        <Grid key={p.nickname} item>
-                            <Player player={p} />
-                        </Grid>
-                    ))
+                    props.members
+                        .sort((a, b) => a.position - b.position)
+                        .map(p => (
+                            <Grid key={p.nickname} item>
+                                <Player player={p} />
+                            </Grid>
+                        ))
                 )}
             </Grid>
         </Box>
