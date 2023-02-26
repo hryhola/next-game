@@ -7,12 +7,14 @@ import { useSnackbar } from 'notistack'
 import { useContext, useEffect, useRef, useState } from 'react'
 import { WSEvents } from 'uWebSockets/globalSocketEvents'
 import { Handler } from 'uWebSockets/uws.types'
+import { RouterContext } from 'client/context/list/router'
 
 export const LobbyRoute: React.FC = () => {
     const lobby = useContext(LobbyContext)
     const lobbyRef = useRef(lobby)
     const ws = useContext(WSContext)
     const audio = useContext(AudioCtx)
+    const router = useContext(RouterContext)
 
     const game = useRef<ReturnType<typeof dynamic<any>> | null>(null)
     const [isLoaded, setIsLoaded] = useState(false)
@@ -55,7 +57,23 @@ export const LobbyRoute: React.FC = () => {
         }
     }
 
+    const handleDestroy = (data: WSEvents['Lobby-Destroy']) => {
+        if (data.lobbyId === lobbyRef.current.lobbyId) {
+            alert('Lobby has been destroyed')
+
+            ws.send('Universal-Subscription', {
+                mode: 'unsubscribe',
+                lobbyId: lobby.lobbyId,
+                topic: 'all'
+            })
+
+            lobby.reset()
+            router.setCurrentRoute('Home')
+        }
+    }
+
     useEffect(() => {
+        ws.on('Lobby-Destroy', handleDestroy)
         ws.on('Lobby-Join', handleLobbyJoin)
         ws.on('Lobby-Update', handleUpdate)
         ws.on('Lobby-Tipped', handleTipped)

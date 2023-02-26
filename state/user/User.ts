@@ -80,6 +80,11 @@ export class User {
         this.lobbies.push(lobby)
     }
 
+    unlinkLobby(lobby: Lobby) {
+        this.lobbies = []
+        // this.lobbies = this.lobbies.filter(l => l !== lobby)
+    }
+
     leaveAllLobbies() {
         this.lobbies.forEach(l => l.leave(this))
 

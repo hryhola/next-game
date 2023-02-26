@@ -17,5 +17,11 @@ export const URL = {
     },
     get LobbyJoin() {
         return `${location.origin}/api/lobby-join`
+    },
+    get LobbyLeave() {
+        return `${location.origin}/api/lobby-leave`
+    },
+    get LobbyDestroy() {
+        return `${location.origin}/api/lobby-destroy`
     }
 }

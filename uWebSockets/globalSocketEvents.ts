@@ -14,13 +14,23 @@ export type WSEvents = {
         lobbyId: string
         member: LobbyMemberData
     }
+    'Lobby-Leave': {
+        lobbyId: string
+        member: LobbyMemberData
+    }
     'Lobby-Update': {
         lobbyId: string
         updated: Partial<LobbyData>
     }
+    'Lobby-Destroy': {
+        lobbyId: string
+    }
     'Lobby-Tipped': Tip
     'Clicker-Join': {
-        success: true
+        lobbyId: string
+        player: ClickerPlayerData
+    }
+    'Clicker-Leave': {
         lobbyId: string
         player: ClickerPlayerData
     }

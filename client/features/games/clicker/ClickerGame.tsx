@@ -1,4 +1,4 @@
-import { Box, Button, Container, Menu, Popover, Slider, Typography } from '@mui/material'
+import { Box, Button, Container, IconButton, Menu, Popover, Slider, Typography } from '@mui/material'
 import React, { useState, useContext, useRef, useEffect } from 'react'
 import { chatInputHeight } from 'client/ui'
 import { LobbyContext } from 'client/context/list/lobby'
@@ -17,6 +17,11 @@ import VolumeUpIcon from '@mui/icons-material/VolumeUp'
 import { BrowserView, MobileView, isBrowser, isMobile } from 'react-device-detect'
 import { AudioCtx } from 'client/context/list/audio'
 import VolumeOffIcon from '@mui/icons-material/VolumeOff'
+import MoreVertIcon from '@mui/icons-material/MoreVert'
+import LogoutIcon from '@mui/icons-material/Logout'
+import FlagIcon from '@mui/icons-material/Flag'
+import { RouterContext } from 'client/context/list/router'
+import HighlightOffIcon from '@mui/icons-material/HighlightOff'
 
 export const ClickerContext = React.createContext<{
     players: ClickerPlayerData[]
@@ -31,6 +36,7 @@ export const Clicker = () => {
     const user = useContext(UserContext)
     const ws = useContext(WSContext)
     const audio = useContext(AudioCtx)
+    const router = useContext(RouterContext)
 
     const [isVolumeVisible, setIsVolumeVisible] = useState(false)
 
@@ -41,6 +47,10 @@ export const Clicker = () => {
 
     const handleJoin = (data: WSEvents['Clicker-Join']) => {
         setPlayers(ps => [...ps.filter(p => p.nickname !== data.player.nickname), data.player])
+    }
+
+    const handleLeave = (data: WSEvents['Clicker-Leave']) => {
+        setPlayers(ps => [...ps.filter(p => p.nickname !== data.player.nickname)])
     }
 
     const handleUpdate = (data: WSEvents['Clicker-Update']) => {
@@ -68,8 +78,11 @@ export const Clicker = () => {
 
     useEffect(() => {
         ws.on('Clicker-Join', handleJoin)
+        ws.on('Clicker-Leave', handleLeave)
         ws.on('Clicker-Update', handleUpdate)
     }, [])
+
+    const isCreatorView = user.nickname === lobby.members.find(m => m.isCreator)?.nickname
 
     return (
         <ClickerContext.Provider value={{ players, setPlayers }}>
@@ -94,6 +107,8 @@ export const Clicker = () => {
                     {
                         type: 'popover',
                         header: audio.volume === 0 ? <VolumeOffIcon /> : <VolumeUpIcon />,
+                        height: '270px',
+                        hideIconOnOpen: false,
                         view: opts => (
                             <Box
                                 sx={{
@@ -131,6 +146,57 @@ export const Clicker = () => {
                                 <Button size="small" sx={{ fontSize: 10, textTransform: 'none' }} onClick={() => audio.toggleMute()}>
                                     {audio.volume === 0 ? 'Unmute' : 'Mute'}
                                 </Button>
+                            </Box>
+                        )
+                    },
+                    {
+                        type: 'popover',
+                        header: <MoreVertIcon />,
+                        height: isCreatorView ? '78px' : '36px',
+                        hideIconOnOpen: true,
+                        view: opts => (
+                            <Box
+                                sx={{
+                                    width: '46px',
+                                    backgroundColor: '#272727',
+                                    display: 'flex',
+                                    flexDirection: opts.direction === 'up' ? 'column' : 'column-reverse',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    borderBottomLeftRadius: '30px',
+                                    borderBottomRightRadius: '30px',
+                                    pb: opts.direction === 'up' ? 4 : 0
+                                }}
+                            >
+                                {isCreatorView && (
+                                    <IconButton
+                                        onClick={() => {
+                                            const destroy = confirm('Are you sure you want to destroy this lobby?')
+
+                                            if (destroy) {
+                                                lobby.destroy()
+                                                router.setCurrentRoute('Home')
+                                            }
+                                        }}
+                                    >
+                                        <HighlightOffIcon />
+                                    </IconButton>
+                                )}
+                                <IconButton onClick={() => alert('nibba u gay')}>
+                                    <FlagIcon />
+                                </IconButton>
+                                <IconButton
+                                    onClick={() => {
+                                        const exit = confirm('Are you sure you want to leave?')
+
+                                        if (exit) {
+                                            lobby.exit()
+                                            router.setCurrentRoute('Home')
+                                        }
+                                    }}
+                                >
+                                    <LogoutIcon />
+                                </IconButton>
                             </Box>
                         )
                     }

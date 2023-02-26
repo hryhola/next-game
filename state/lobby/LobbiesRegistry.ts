@@ -13,6 +13,23 @@ export class LobbiesRegistry {
         this.container[data.id] = lobby
     }
 
+    destroyLobby(lobby: Lobby) {
+        if (!(lobby.id in this.container)) {
+            return {
+                success: false,
+                message: `Lobby with id ${lobby.id} not found`
+            }
+        }
+
+        lobby.destroy()
+
+        delete this.container[lobby.id]
+
+        return {
+            success: true
+        }
+    }
+
     get(id: string) {
         return this.container[id] || null
     }

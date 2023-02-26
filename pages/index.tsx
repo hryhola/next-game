@@ -46,8 +46,6 @@ export const getServerSideProps: GetServerSideProps = async context => {
                 props.defaultRoute = 'Home'
                 props.user = user.data()
 
-                console.log(user.hasLobbies)
-
                 if (user.hasLobbies) {
                     props.defaultRoute = 'Lobby'
                     props.lobby = user.lobby.data()
