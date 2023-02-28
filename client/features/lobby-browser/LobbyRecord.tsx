@@ -5,7 +5,7 @@ import { LobbyPreview } from './LobbyPreview'
 import { MouseEventHandler, useEffect, useState } from 'react'
 import { LobbyData } from 'state'
 import { RequestHandler } from 'uWebSockets/uws.types'
-import { useWS } from 'client/context/list'
+import { useWS, useWSHandler } from 'client/context/list'
 import ArrowDropUpIcon from '@mui/icons-material/ArrowDropUp'
 
 export const LobbyRecord: React.FC<LobbyBaseInfo> = props => {
@@ -37,9 +37,7 @@ export const LobbyRecord: React.FC<LobbyBaseInfo> = props => {
         }
     }
 
-    useEffect(() => {
-        ws.on('Lobby-GetPublicInfo', handleLoadInfo)
-    }, [])
+    useWSHandler('Lobby-GetPublicInfo', handleLoadInfo)
 
     return (
         <ListItem disablePadding>

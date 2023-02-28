@@ -1,5 +1,5 @@
 import { useState, useEffect, FormEventHandler } from 'react'
-import { useWS, useUser, useRouter } from 'client/context/list'
+import { useWS, useUser, useRouter, useWSHandler } from 'client/context/list'
 import { Button, Grid, TextField } from '@mui/material'
 import { RequestHandler } from 'uWebSockets/uws.types'
 import { setCookie } from 'cookies-next'
@@ -27,9 +27,7 @@ export const Login: React.FC = () => {
         }
     }
 
-    useEffect(() => {
-        ws.on('Auth-Register', handleRegister)
-    }, [])
+    useWSHandler('Auth-Register', handleRegister)
 
     const handleSubmit: FormEventHandler<HTMLFormElement> = e => {
         e.preventDefault()

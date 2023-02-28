@@ -1,4 +1,4 @@
-import { useWS } from 'client/context/list'
+import { useWS, useWSHandler } from 'client/context/list'
 import React, { useEffect, useState } from 'react'
 import { WSEvents } from 'uWebSockets/globalSocketEvents'
 import { RequestHandler } from 'uWebSockets/uws.types'
@@ -32,10 +32,10 @@ export const GlobalUsersListTitle: React.FC = () => {
         })
     }
 
-    useEffect(() => {
-        ws.on('Users-GetCount', handleCountGot)
-        ws.on('UserRegistry-OnlineUpdate', handleOnlineUpdate)
+    useWSHandler('Users-GetCount', handleCountGot)
+    useWSHandler('UserRegistry-OnlineUpdate', handleOnlineUpdate)
 
+    useEffect(() => {
         ws.isConnected && onIsConnected()
 
         return () => {

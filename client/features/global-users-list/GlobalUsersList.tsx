@@ -1,4 +1,4 @@
-import { useWS } from 'client/context/list'
+import { useWS, useWSHandler } from 'client/context/list'
 import { UsersListBox } from 'client/ui'
 import React, { useEffect, useState } from 'react'
 import { WSEvents } from 'uWebSockets/globalSocketEvents'
@@ -32,10 +32,10 @@ export const GlobalUsersList: React.FC = () => {
         })
     }
 
-    useEffect(() => {
-        ws.on('Users-Get', handleUsersGot)
-        ws.on('UserRegistry-OnlineUpdate', handleOnlineUpdate)
+    useWSHandler('Users-Get', handleUsersGot)
+    useWSHandler('UserRegistry-OnlineUpdate', handleOnlineUpdate)
 
+    useEffect(() => {
         return () => {
             ws.send('Universal-Subscription', {
                 mode: 'unsubscribe',

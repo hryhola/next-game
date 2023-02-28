@@ -1,4 +1,4 @@
-import React, { useState, createContext, useContext, useRef, MutableRefObject } from 'react'
+import React, { useState, createContext, useContext, useRef, MutableRefObject, useEffect } from 'react'
 import type { HandlerName } from 'uWebSockets/ws'
 import type { AbstractSocketMessage, RequestData } from 'uWebSockets/uws.types'
 import type { WSEventName } from 'uWebSockets/globalSocketEvents'
@@ -13,6 +13,7 @@ export interface WSData {
     setIsConnected: (value: boolean) => void
     on: HandlerOn
     send: HandlerSend
+    unsubscribe: HandlerOn
 }
 
 // @ts-ignore
@@ -32,6 +33,12 @@ export const WSProvider: React.FC<Props> = props => {
         listeners.current[context] = listeners.current[context] || new Set()
 
         listeners.current[context].add(handler)
+    }
+
+    const unsubscribe: HandlerOn = (context: string, handler: Function) => {
+        if (listeners.current[context]) {
+            listeners.current[context].delete(handler)
+        }
     }
 
     const send: HandlerSend = (context, data) => {
@@ -70,9 +77,21 @@ export const WSProvider: React.FC<Props> = props => {
 
     if (wsRef.current) wsRef.current.onmessage = messageHandler
 
-    return <WSContext.Provider value={{ wsRef, isConnected, setIsConnected, on, send }}>{props.children}</WSContext.Provider>
+    return <WSContext.Provider value={{ wsRef, isConnected, setIsConnected, on, send, unsubscribe }}>{props.children}</WSContext.Provider>
 }
 
 export const useWS = () => {
     return useContext(WSContext)
+}
+
+export const useWSHandler: HandlerOn = (context, handler) => {
+    const { on, unsubscribe } = useWS()
+
+    useEffect(() => {
+        on(context, handler)
+
+        return () => {
+            unsubscribe(context, handler)
+        }
+    }, [])
 }

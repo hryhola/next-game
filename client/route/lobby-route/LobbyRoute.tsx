@@ -1,4 +1,4 @@
-import { useAudio, useLobby, useRouter, useWS } from 'client/context/list/'
+import { useAudio, useLobby, useRouter, useWS, useWSHandler } from 'client/context/list/'
 import { LoadingOverlay } from 'client/ui'
 import dynamic from 'next/dynamic'
 import { useSnackbar } from 'notistack'
@@ -74,12 +74,12 @@ export const LobbyRoute: React.FC = () => {
         }
     }
 
-    useEffect(() => {
-        ws.on('Lobby-Destroy', handleDestroy)
-        ws.on('Lobby-Join', handleLobbyJoin)
-        ws.on('Lobby-Update', handleUpdate)
-        ws.on('Lobby-Tipped', handleTipped)
+    useWSHandler('Lobby-Destroy', handleDestroy)
+    useWSHandler('Lobby-Join', handleLobbyJoin)
+    useWSHandler('Lobby-Update', handleUpdate)
+    useWSHandler('Lobby-Tipped', handleTipped)
 
+    useEffect(() => {
         game.current = dynamic(() => import('client/features/games/clicker/ClickerGame').then(mod => mod.Clicker), {
             loading: () => <LoadingOverlay isLoading={true} />
         })
