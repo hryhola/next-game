@@ -1,6 +1,4 @@
 import React, { useState, createContext, useEffect } from 'react'
-import dynamic from 'next/dynamic'
-import { GetServerSideProps } from 'next'
 
 export type Route = 'Login' | 'Home' | 'Lobby' | 'PackEditor'
 

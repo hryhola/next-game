@@ -23,6 +23,7 @@ import FlagIcon from '@mui/icons-material/Flag'
 import { RouterContext } from 'client/context/list/router'
 import HighlightOffIcon from '@mui/icons-material/HighlightOff'
 import CheckIcon from '@mui/icons-material/Check'
+import { useGlobalModal } from 'client/features/global-modal/GlobalModal'
 
 export const ClickerContext = React.createContext<{
     players: ClickerPlayerData[]
@@ -33,6 +34,8 @@ export const ClickerContext = React.createContext<{
 })
 
 export const Clicker = () => {
+    const globalModal = useGlobalModal()
+
     const lobby = useContext(LobbyContext)
     const user = useContext(UserContext)
     const ws = useContext(WSContext)
@@ -171,14 +174,15 @@ export const Clicker = () => {
                             >
                                 {isCreatorView && (
                                     <IconButton
-                                        onClick={() => {
-                                            const destroy = confirm('Are you sure you want to destroy this lobby?')
-
-                                            if (destroy) {
-                                                lobby.destroy()
-                                                router.setCurrentRoute('Home')
-                                            }
-                                        }}
+                                        onClick={() =>
+                                            globalModal.confirm({
+                                                content: 'Destroy this lobby?',
+                                                onConfirm: () => {
+                                                    lobby.destroy()
+                                                    router.setCurrentRoute('Home')
+                                                }
+                                            })
+                                        }
                                     >
                                         <HighlightOffIcon />
                                     </IconButton>
@@ -189,14 +193,15 @@ export const Clicker = () => {
                                     </IconButton>
                                 )}
                                 <IconButton
-                                    onClick={() => {
-                                        const exit = confirm('Are you sure you want to leave?')
-
-                                        if (exit) {
-                                            lobby.exit()
-                                            router.setCurrentRoute('Home')
-                                        }
-                                    }}
+                                    onClick={() =>
+                                        globalModal.confirm({
+                                            content: 'Want to leave?',
+                                            onConfirm: () => {
+                                                lobby.exit()
+                                                router.setCurrentRoute('Home')
+                                            }
+                                        })
+                                    }
                                 >
                                     <LogoutIcon />
                                 </IconButton>
