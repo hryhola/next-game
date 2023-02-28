@@ -26,7 +26,8 @@ export type Handler<RequestData extends Object | null = null, ResponseType = any
 ) => void
 
 export type RequestData<R extends HandlerName> = Parameters<typeof import('uWebSockets/ws')['handlers'][R]>[2]
-export type RequestHandler<R extends HandlerName> = (data: Parameters<Parameters<typeof import('uWebSockets/ws')['handlers'][R]>[0]['res']>[0]) => void
+export type RequestHandlerData<R extends HandlerName> = Parameters<Parameters<typeof import('uWebSockets/ws')['handlers'][R]>[0]['res']>[0]
+export type RequestHandler<R extends HandlerName> = (data: RequestHandlerData<R>) => void
 export type GlobalEventHandler<E extends WSEventName> = (data: WSEvents[E]) => void
 
 export type HTTPMethod = 'get' | 'connect' | 'post' | 'options' | 'del' | 'patch' | 'put' | 'head' | 'trace'
