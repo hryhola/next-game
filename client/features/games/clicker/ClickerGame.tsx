@@ -22,6 +22,7 @@ import LogoutIcon from '@mui/icons-material/Logout'
 import FlagIcon from '@mui/icons-material/Flag'
 import { RouterContext } from 'client/context/list/router'
 import HighlightOffIcon from '@mui/icons-material/HighlightOff'
+import CheckIcon from '@mui/icons-material/Check'
 
 export const ClickerContext = React.createContext<{
     players: ClickerPlayerData[]
@@ -182,9 +183,11 @@ export const Clicker = () => {
                                         <HighlightOffIcon />
                                     </IconButton>
                                 )}
-                                <IconButton onClick={() => alert('nibba u gay')}>
-                                    <FlagIcon />
-                                </IconButton>
+                                {true && (
+                                    <IconButton onClick={() => ws.send('Lobby-StartReadyCheck', { lobbyId: lobby.lobbyId })}>
+                                        <CheckIcon />
+                                    </IconButton>
+                                )}
                                 <IconButton
                                     onClick={() => {
                                         const exit = confirm('Are you sure you want to leave?')

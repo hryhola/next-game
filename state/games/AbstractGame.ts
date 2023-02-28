@@ -1,6 +1,5 @@
 import { LobbyMember } from 'state/lobby/LobbyMember'
 import logger from 'logger'
-import { User } from 'state/user/User'
 import { Lobby } from 'state'
 
 type AbstractSessionStartData = Record<string, string>
@@ -83,28 +82,6 @@ export abstract class AbstractPlayer {
 
 export type AbstractPlayerData = ReturnType<AbstractPlayer['data']>
 
-class ReadyCheck {
-    playersForCheck: AbstractPlayer[]
-    readyPlayers: AbstractPlayer[] = []
-    game: AbstractGame
-    isReady: boolean = false
-
-    constructor(game: AbstractGame) {
-        this.game = game
-        this.playersForCheck = game.players
-    }
-
-    playerReady(player: AbstractPlayer) {
-        if (this.playersForCheck.includes(player) && !this.readyPlayers.includes(player)) {
-            this.readyPlayers.push(player)
-        }
-
-        if (this.playersForCheck.length === this.readyPlayers.length) {
-            this.isReady = true
-        }
-    }
-}
-
 export abstract class AbstractGame {
     static gameName: string
 
@@ -127,8 +104,6 @@ export abstract class AbstractGame {
 
     abstract startSession(data?: AbstractSessionStartData): void
 
-    readyCheck?: ReadyCheck
-
     endSession() {
         if (!this.currentSession) {
             logger.warn('Cannot end session that is not started')
@@ -138,10 +113,6 @@ export abstract class AbstractGame {
         this.prevSessions.push(this.currentSession)
 
         delete this.currentSession
-    }
-
-    startReadyCheck() {
-        this.readyCheck = new ReadyCheck(this)
     }
 
     data() {

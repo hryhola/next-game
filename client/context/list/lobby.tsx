@@ -7,6 +7,11 @@ import { WSContext } from './ws'
 import { URL as ApiUrl } from 'client/network-utils/const'
 import { GeneralFailure, GeneralSuccess } from 'util/t'
 
+type ReadyCheck = {
+    members: string[]
+    ready: string[]
+}
+
 export const LobbyContext = createContext({
     members: [] as LobbyMemberData[],
     setMembers: (_value: LobbyMemberData[] | ((curr: LobbyMemberData[]) => LobbyMemberData[])) => {},
@@ -17,6 +22,8 @@ export const LobbyContext = createContext({
     chatMessages: [] as TChatMessage[],
     setChatMessages: (_val: TChatMessage[]) => {},
     setIsTipsVisible: (_val: boolean) => {},
+    readyCheck: null as null | ReadyCheck,
+    setReadyCheck: (_val: ReadyCheck) => {},
     exit: () => {},
     destroy: () => {},
     reset: () => {}
@@ -31,6 +38,7 @@ export const LobbyProvider: React.FC<Props> = ({ children, lobby }) => {
     const [lobbyId, setLobbyId] = useState(lobby?.id || '')
     const [members, setMembers] = useState<LobbyMemberData[]>(lobby?.members || [])
     const [gameName, setGameName] = useState<GameName | null>(lobby?.gameName || null)
+    const [readyCheck, setReadyCheck] = useState<ReadyCheck | null>(null)
     const [chatMessages, setChatMessages] = useState<TChatMessage[]>([])
     const [isTipsVisible, setIsTipsVisible] = useState(true)
 
@@ -73,7 +81,9 @@ export const LobbyProvider: React.FC<Props> = ({ children, lobby }) => {
                 setIsTipsVisible,
                 exit,
                 destroy,
-                reset
+                reset,
+                setReadyCheck,
+                readyCheck
             }}
         >
             <SnackbarProvider

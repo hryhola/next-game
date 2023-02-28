@@ -47,11 +47,7 @@ export const LobbyRoute: React.FC = () => {
                     <span style={{ color: to?.nicknameColor }}>{data.to}</span> tipped by <span style={{ color: from?.nicknameColor }}>{data.from}</span>
                 </>,
                 {
-                    content: (key, message) => (
-                        <div style={{ pointerEvents: 'none' }} key={key}>
-                            {message}
-                        </div>
-                    )
+                    content: (key, message) => <div key={key}>{message}</div>
                 }
             )
         }
