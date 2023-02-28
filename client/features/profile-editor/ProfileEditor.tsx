@@ -1,19 +1,4 @@
-import {
-    Alert,
-    Box,
-    Button,
-    Dialog,
-    DialogActions,
-    DialogContent,
-    DialogContentText,
-    DialogTitle,
-    FormGroup,
-    FormLabel,
-    Grid,
-    IconButton,
-    InputAdornment,
-    OutlinedInput
-} from '@mui/material'
+import { Alert, Box, Button, Grid, IconButton } from '@mui/material'
 import TextField from '@mui/material/TextField'
 import { UserContext } from 'client/context/list/user'
 import React, { useState, useContext, useRef } from 'react'
@@ -26,18 +11,19 @@ import { ProfilePicture } from '../profile-picture/ProfilePicture'
 import randomColor from 'randomcolor'
 import { WSContext } from 'client/context/list/ws'
 import { deleteCookie } from 'cookies-next'
+import { useGlobalModal } from '../global-modal/GlobalModal'
 
 interface Props {
     onUpdated?: () => void
 }
 
 export const ProfileEditor: React.FC<Props> = props => {
+    const globalModel = useGlobalModal()
+
     const formRef = useRef<HTMLFormElement | null>(null)
 
     const user = useContext(UserContext)
     const ws = useContext(WSContext)
-
-    const [isLogoutVisible, setIsLogoutVisible] = useState(false)
 
     const [nickname, setNickname] = useState(user.nickname)
     const [nicknameColor, setNicknameColor] = useState(user.nicknameColor)
@@ -121,7 +107,19 @@ export const ProfileEditor: React.FC<Props> = props => {
                     </Box>
                 </Grid>
                 <Grid item sx={{ mt: 'auto', mb: 1 }}>
-                    <Button fullWidth size="large" variant="outlined" color="error" onClick={() => setIsLogoutVisible(true)}>
+                    <Button
+                        fullWidth
+                        size="large"
+                        variant="outlined"
+                        color="error"
+                        onClick={() =>
+                            globalModel.confirm({
+                                content: "You won't be able to login into this profile again",
+                                header: 'Are you sure want to logout?',
+                                onConfirm: handleLogout
+                            })
+                        }
+                    >
                         log out
                     </Button>
                 </Grid>
@@ -131,18 +129,6 @@ export const ProfileEditor: React.FC<Props> = props => {
                     </Button>
                 </Grid>
             </Grid>
-            <Dialog open={isLogoutVisible} onClose={() => setIsLogoutVisible(true)}>
-                <DialogTitle>Are you sure want to logout?</DialogTitle>
-                <DialogContent>
-                    <DialogContentText>You won&apos;t be able to login into this profile again</DialogContentText>
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setIsLogoutVisible(false)}>don&apos;t logout</Button>
-                    <Button onClick={handleLogout} color="error" variant="outlined" autoFocus>
-                        logout
-                    </Button>
-                </DialogActions>
-            </Dialog>
             <LoadingOverlay isLoading={isLoading} />
         </>
     )
