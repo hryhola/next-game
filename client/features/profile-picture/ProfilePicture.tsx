@@ -14,6 +14,7 @@ interface Props {
     editBorder?: boolean
     editIcon?: OverridableComponent<SvgIconTypeMap<{}, 'svg'>>
     editLabel?: string
+    color?: string
 }
 
 export const ProfilePicture: React.FC<Props> = props => {
@@ -35,7 +36,7 @@ export const ProfilePicture: React.FC<Props> = props => {
         if (!props.url) {
             return (
                 <Box sx={sizeProps}>
-                    <PersonIcon sx={sizeProps} />
+                    <PersonIcon sx={{ ...sizeProps, color: props.color }} />
                 </Box>
             )
         }
@@ -79,7 +80,16 @@ export const ProfilePicture: React.FC<Props> = props => {
                 <img alt="user avatar" src={props.url} />
             ) : (
                 <>
-                    {props.editIcon ? props.editIcon : <PersonIcon sx={sizeProps} />}
+                    {props.editIcon ? (
+                        props.editIcon
+                    ) : (
+                        <PersonIcon
+                            sx={{
+                                ...sizeProps,
+                                color: props.color
+                            }}
+                        />
+                    )}
                     {props.editLabel && <FormLabel sx={{ fontSize: '0.8rem', mt: 1 }}>{props.editLabel}</FormLabel>}
                 </>
             )}

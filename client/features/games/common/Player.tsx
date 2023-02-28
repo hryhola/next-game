@@ -75,6 +75,7 @@ export const Player: React.FC<Props> = props => {
                 maxSize={sizes.maxWidth}
                 local={false}
                 url={props.player.avatarUrl}
+                color={props.player.nicknameColor}
             />
             <Typography overflow="auto" display="block" variant="h6" noWrap textOverflow="unset" color={props.player.nicknameColor}>
                 {props.player.nickname}
