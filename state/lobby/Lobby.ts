@@ -1,4 +1,4 @@
-import { AbstractGame, Chat, State, GameCtors, GameName, LobbyMember, User } from 'state'
+import { AbstractGame, Chat, State, GameCtors, GameName, LobbyMember, User, ReadyCheck } from 'state'
 import { AbstractSocketMessage } from 'uWebSockets/uws.types'
 
 export type LobbyCreateOptions<G extends GameName> = {
@@ -17,6 +17,7 @@ export class Lobby<G extends GameName = GameName> {
     chat: Chat
     game!: AbstractGame
     sessionStartData: any
+    readyCheck?: ReadyCheck
 
     constructor(data: LobbyCreateOptions<G>) {
         this.id = data.id
@@ -109,6 +110,10 @@ export class Lobby<G extends GameName = GameName> {
         return {
             success: true
         }
+    }
+
+    startReadyCheck() {
+        this.readyCheck = new ReadyCheck(this)
     }
 
     data() {
