@@ -1,20 +1,16 @@
-import { Box, FormControl, IconButton, InputAdornment, List, ListItem, ListItemButton, ListItemIcon, ListItemText, TextField, Toolbar } from '@mui/material'
-import { WSContext } from 'client/context/list/ws'
-import { useContext, useEffect, useState } from 'react'
+import { FormControl, IconButton, InputAdornment, List, Toolbar } from '@mui/material'
+import { useHome, useWS } from 'client/context/list'
+import { useEffect, useState } from 'react'
 import { LobbyBaseInfo } from 'uWebSockets/ws/Lobby-GetList'
-import { RequestData, RequestHandler } from 'uWebSockets/uws.types'
+import { RequestHandler } from 'uWebSockets/uws.types'
 import AddIcon from '@mui/icons-material/Add'
-import { styled, alpha } from '@mui/material/styles'
-import { Input, OutlinedInput } from '@mui/material'
-import InputBase from '@mui/material/InputBase'
+import { OutlinedInput } from '@mui/material'
 import SearchIcon from '@mui/icons-material/Search'
-import LockIcon from '@mui/icons-material/Lock'
-import { HomeContext } from 'client/context/list/home'
 import { LobbyRecord } from './LobbyRecord'
 
 export const LobbyBrowser: React.FC = () => {
-    const ws = useContext(WSContext)
-    const home = useContext(HomeContext)
+    const ws = useWS()
+    const home = useHome()
 
     const [lobbiesList, setLobbiesList] = useState<LobbyBaseInfo[]>([])
 

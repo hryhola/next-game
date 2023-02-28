@@ -30,3 +30,7 @@ export const HomeProvider: React.FC<Props> = props => {
 
     return <HomeContext.Provider value={context}>{props.children}</HomeContext.Provider>
 }
+
+export const useHome = () => {
+    return React.useContext(HomeContext)
+}

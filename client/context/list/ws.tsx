@@ -1,4 +1,4 @@
-import React, { useState, createContext, useContext, useEffect, useRef, MutableRefObject } from 'react'
+import React, { useState, createContext, useContext, useRef, MutableRefObject } from 'react'
 import type { HandlerName } from 'uWebSockets/ws'
 import type { AbstractSocketMessage, RequestData } from 'uWebSockets/uws.types'
 import type { WSEventName } from 'uWebSockets/globalSocketEvents'
@@ -71,4 +71,8 @@ export const WSProvider: React.FC<Props> = props => {
     if (wsRef.current) wsRef.current.onmessage = messageHandler
 
     return <WSContext.Provider value={{ wsRef, isConnected, setIsConnected, on, send }}>{props.children}</WSContext.Provider>
+}
+
+export const useWS = () => {
+    return useContext(WSContext)
 }

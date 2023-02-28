@@ -1,15 +1,15 @@
-import { Alert, Button, ListItem, ListItemButton, ListItemText, Theme } from '@mui/material'
+import { Button, ListItem, ListItemButton, ListItemText, Theme } from '@mui/material'
 import { LobbyBaseInfo } from 'uWebSockets/ws/Lobby-GetList'
 import LockIcon from '@mui/icons-material/Lock'
 import { LobbyPreview } from './LobbyPreview'
-import { MouseEventHandler, useContext, useEffect, useState } from 'react'
+import { MouseEventHandler, useEffect, useState } from 'react'
 import { LobbyData } from 'state'
 import { RequestHandler } from 'uWebSockets/uws.types'
-import { WSContext } from 'client/context/list/ws'
+import { useWS } from 'client/context/list'
 import ArrowDropUpIcon from '@mui/icons-material/ArrowDropUp'
 
 export const LobbyRecord: React.FC<LobbyBaseInfo> = props => {
-    const ws = useContext(WSContext)
+    const ws = useWS()
 
     const [lobbyInfo, setLobbyInfo] = useState<LobbyData | null>(null)
 

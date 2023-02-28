@@ -1,11 +1,8 @@
-import { useContext, useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { LoadingOverlay } from 'client/ui/loading-overlay/LoadingOverlay'
 import { connectToWebSocket } from 'client/network-utils/socket'
-import { WSContext } from 'client/context/list/ws'
-import { sleep } from 'util/time'
+import { useWS } from 'client/context/list'
 import { DevToolsOverlay } from 'client/features/dev/DevToolsOverlay'
-import { UserContext } from 'client/context/list/user'
-import { RouterContext } from 'client/context/list/router'
 import { Backdrop, Box, Button } from '@mui/material'
 
 type Props = {
@@ -13,7 +10,7 @@ type Props = {
 }
 
 export const WsApp: React.FC<Props> = props => {
-    const ws = useContext(WSContext)
+    const ws = useWS()
 
     const isFirstConnection = useRef(true)
     const [isHandlingConnection, setIsHandlingConnection] = useState(false)

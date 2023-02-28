@@ -1,7 +1,5 @@
 import { Menu, MenuItem } from '@mui/material'
-import { LobbyContext } from 'client/context/list/lobby'
-import { UserContext } from 'client/context/list/user'
-import { WSContext } from 'client/context/list/ws'
+import { useUser, useLobby, useWS } from 'client/context/list'
 import { useContext } from 'react'
 import { AbstractPlayerData } from 'state'
 import { v4 } from 'uuid'
@@ -15,10 +13,11 @@ type Props = {
 }
 
 export const PlayerMenu: React.FC<Props> = props => {
-    const user = useContext(UserContext)
-    const lobby = useContext(LobbyContext)
+    const user = useUser()
+    const lobby = useLobby()
+    const ws = useWS()
+
     const game = useContext(ClickerContext)
-    const ws = useContext(WSContext)
 
     const handleOptionClick = (event: React.MouseEvent<HTMLElement>) => {
         const option = event.currentTarget.id

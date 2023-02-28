@@ -6,6 +6,7 @@ import { ErrorRoute } from 'client/route/error-route/ErrorRoute'
 import { LobbyRoute } from 'client/route/lobby-route/LobbyRoute'
 import { PackEditor } from 'client/route/pack-editor/PackEditor'
 import { WsApp } from 'client/features/ws-app/WsApp'
+import { useRouter } from 'client/context/list'
 
 const pageMap: Record<Route, JSX.Element> = {
     Login: <LoginRoute />,
@@ -15,7 +16,7 @@ const pageMap: Record<Route, JSX.Element> = {
 }
 
 export const Router = () => {
-    const { currentRoute } = useContext(RouterContext)
+    const { currentRoute } = useRouter()
 
     const page = pageMap[currentRoute]
 

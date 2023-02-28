@@ -1,13 +1,10 @@
-import { Box, Button, FormLabel, List, ListItem, ListItemButton } from '@mui/material'
-import TextField from '@mui/material/TextField'
-import { UserContext } from 'client/context/list/user'
-import React, { useContext } from 'react'
-import FileUploadIcon from '@mui/icons-material/FileUpload'
+import { List, ListItem, ListItemButton } from '@mui/material'
+import React from 'react'
 import ListItemText from '@mui/material/ListItemText'
-import { RouterContext } from 'client/context/list/router'
+import { useRouter } from 'client/context/list'
 
 export const Navigation = () => {
-    const router = useContext(RouterContext)
+    const router = useRouter() // todo
 
     return (
         <List>

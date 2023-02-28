@@ -4,14 +4,11 @@ import { SxProps, Theme, useTheme } from '@mui/material/styles'
 import AppBar from '@mui/material/AppBar'
 import Tabs from '@mui/material/Tabs'
 import Tab from '@mui/material/Tab'
-import Typography from '@mui/material/Typography'
 import Box, { BoxProps } from '@mui/material/Box'
 import { LobbyBrowser } from '../lobby-browser/LobbyBrowser'
 import { Chat } from '../chat/Chat'
 import { headerHeight } from '../header/Header'
 import { chatInputHeight } from 'client/ui'
-import ListItemText from '@mui/material/ListItemText'
-import { CircularProgress, List, ListItem } from '@mui/material'
 import { GlobalUsersList } from '../global-users-list/GlobalUsersList'
 import { GlobalUsersListTitle } from '../global-users-list/GlobalUsersListTitle'
 
@@ -44,6 +41,7 @@ export const tabsHeaderHeight = '48px'
 
 export const HomeTabs: React.FC<BoxProps> = props => {
     const theme = useTheme()
+
     const [value, setValue] = React.useState(0)
 
     const handleChange = (event: React.SyntheticEvent, newValue: number) => {

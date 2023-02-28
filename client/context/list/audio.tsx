@@ -99,3 +99,7 @@ export const AudioProvider: React.FC<Props> = props => {
         </AudioCtx.Provider>
     )
 }
+
+export const useAudio = () => {
+    return React.useContext(AudioCtx)
+}

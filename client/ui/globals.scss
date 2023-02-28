@@ -25,21 +25,26 @@ img {
 }
 
 .SnackbarProvider {
-    &-root {
-        pointer-events: none !important;
-
-        * {
-            pointer-events: none !important;
-        }
-    }
+    // &-root {}
 
     &-containerRoot {
-        pointer-events: none !important;
-
         bottom: 60px !important;
-
-        * {
-            pointer-events: none !important;
-        }
     }
+}
+
+body[data-hide-tips='true'] {
+    .lobby-tip {
+        display: none;
+    }
+}
+
+.lobby-tip {
+    pointer-events: none !important;
+    display: block;
+}
+
+.noselect {
+    pointer-events: none !important;
+    -webkit-touch-callout: none; /* iOS Safari */
+    user-select: none;
 }

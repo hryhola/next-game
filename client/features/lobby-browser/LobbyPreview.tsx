@@ -1,26 +1,6 @@
-import { UserContext } from 'client/context/list/user'
-import { LobbyContext } from 'client/context/list/lobby'
-import { RouterContext } from 'client/context/list/router'
-import { WSContext } from 'client/context/list/ws'
-import { FormEventHandler, useContext, useEffect, useState, useRef } from 'react'
-import {
-    TextField,
-    Button,
-    Box,
-    FormControl,
-    InputLabel,
-    MenuItem,
-    Select,
-    Input,
-    CircularProgress,
-    Backdrop,
-    Alert,
-    Grid,
-    Typography,
-    ListItemText,
-    SxProps,
-    Theme
-} from '@mui/material'
+import { useLobby, useRouter } from 'client/context/list'
+import { FormEventHandler, useState } from 'react'
+import { TextField, Button, Alert, Grid, Typography, SxProps, Theme } from '@mui/material'
 import { LoadingOverlay } from 'client/ui'
 import { LobbyData } from 'state'
 import { api } from 'client/network-utils/api'
@@ -32,9 +12,8 @@ interface Props {
 }
 
 export const LobbyPreview: React.FC<Props> = props => {
-    const router = useContext(RouterContext)
-    const user = useContext(UserContext)
-    const lobby = useContext(LobbyContext)
+    const router = useRouter()
+    const lobby = useLobby()
 
     const [password, setPassword] = useState('')
     const [error, setError] = useState('')

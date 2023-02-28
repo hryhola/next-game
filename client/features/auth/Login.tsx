@@ -1,7 +1,5 @@
-import { useState, useEffect, useContext, FormEventHandler, useRef } from 'react'
-import { UserContext } from 'client/context/list/user'
-import { RouterContext } from 'client/context/list/router'
-import { WSContext } from 'client/context/list/ws'
+import { useState, useEffect, FormEventHandler } from 'react'
+import { useWS, useUser, useRouter } from 'client/context/list'
 import { Button, Grid, TextField } from '@mui/material'
 import { RequestHandler } from 'uWebSockets/uws.types'
 import { setCookie } from 'cookies-next'
@@ -9,9 +7,9 @@ import { setCookie } from 'cookies-next'
 const inSeconds90Days = 7776000
 
 export const Login: React.FC = () => {
-    const ws = useContext(WSContext)
-    const user = useContext(UserContext)
-    const router = useContext(RouterContext)
+    const ws = useWS()
+    const user = useUser()
+    const router = useRouter()
 
     const [nickname, setNickname] = useState('')
     const [error, setError] = useState('')
