@@ -1,5 +1,5 @@
-import { useContext, useEffect, useState } from 'react'
-import { WSContext } from 'client/context/list/ws'
+import { useEffect, useState } from 'react'
+import { useWS } from 'client/context/list'
 import { Box, Button, IconButton } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
 import ArrowBackIosIcon from '@mui/icons-material/ArrowBackIos'
@@ -8,7 +8,7 @@ export const DevToolsOverlay: React.FC = () => {
     const [isEnabled, setIsEnabled] = useState(false)
     const [isVisible, setIsVisible] = useState(false)
 
-    const ws = useContext(WSContext)
+    const ws = useWS()
 
     useEffect(() => {
         window.hiddenSecrets = window.hiddenSecrets || {}

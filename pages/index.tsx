@@ -8,6 +8,7 @@ import logger from 'logger'
 import { LobbyData, UserData } from 'state'
 import { NextApiResponseUWS } from 'util/t'
 import { initializeSocketServer } from 'uWebSockets/createSocketServer'
+import { SnackbarProvider } from 'notistack'
 
 type Props = {
     defaultRoute: Route
@@ -17,12 +18,21 @@ type Props = {
 
 const Home: NextPage<Props> = props => {
     return (
-        <AppContext {...props}>
-            <Head>
-                <title>Game Club</title>
-            </Head>
-            <Router />
-        </AppContext>
+        <SnackbarProvider
+            maxSnack={5}
+            classes={{
+                root: 'SnackbarProvider-root',
+                containerRoot: 'SnackbarProvider-containerRoot'
+            }}
+            dense
+        >
+            <AppContext {...props}>
+                <Head>
+                    <title>Game Club</title>
+                </Head>
+                <Router />
+            </AppContext>
+        </SnackbarProvider>
     )
 }
 

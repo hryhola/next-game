@@ -1,16 +1,15 @@
-import { useContext } from 'react'
 import AppBar, { AppBarProps } from '@mui/material/AppBar'
 import Toolbar from '@mui/material/Toolbar'
 import Typography from '@mui/material/Typography'
 import IconButton from '@mui/material/IconButton'
 import MenuIcon from '@mui/icons-material/Menu'
 import { ProfilePreview } from './ProfilePreview'
-import { HomeContext } from 'client/context/list/home'
+import { useHome } from 'client/context/list'
 
 export const headerHeight = '84px'
 
 export const Header: React.FC<AppBarProps> = props => {
-    const home = useContext(HomeContext)
+    const home = useHome()
 
     return (
         <AppBar position="static" sx={{ height: headerHeight }} {...props}>

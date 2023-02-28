@@ -1,11 +1,11 @@
-import { WSContext } from 'client/context/list/ws'
+import { useWS } from 'client/context/list'
 import { UsersListBox } from 'client/ui'
-import React, { useContext, useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { WSEvents } from 'uWebSockets/globalSocketEvents'
 import { RequestHandler } from 'uWebSockets/uws.types'
 
 export const GlobalUsersList: React.FC = () => {
-    const ws = useContext(WSContext)
+    const ws = useWS()
 
     const [users, setUsers] = useState<{ nickname: string }[]>([])
 

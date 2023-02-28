@@ -1,10 +1,6 @@
-import { UserContext } from 'client/context/list/user'
-import { LobbyContext } from 'client/context/list/lobby'
-import { RouterContext } from 'client/context/list/router'
-import { WSContext } from 'client/context/list/ws'
-import { FormEventHandler, useContext, useEffect, useState, useRef } from 'react'
-import { TextField, Button, Box, FormControl, InputLabel, MenuItem, Select, Input, CircularProgress, Backdrop, Alert, Grid } from '@mui/material'
-import FileUploadIcon from '@mui/icons-material/FileUpload'
+import { useLobby, useRouter } from 'client/context/list'
+import { FormEventHandler, useContext, useState, useRef } from 'react'
+import { TextField, Button, FormControl, InputLabel, MenuItem, Select, Alert, Grid } from '@mui/material'
 import { LoadingOverlay } from 'client/ui'
 import { api } from 'client/network-utils/api'
 import { URL as ApiUrl } from 'client/network-utils/const'
@@ -14,9 +10,8 @@ import { HomeContext } from 'client/context/list/home'
 
 export const LobbyCreator: React.FC = () => {
     const home = useContext(HomeContext)
-    const router = useContext(RouterContext)
-    const user = useContext(UserContext)
-    const lobby = useContext(LobbyContext)
+    const router = useRouter()
+    const lobby = useLobby()
 
     const formRef = useRef<HTMLFormElement | null>(null)
 

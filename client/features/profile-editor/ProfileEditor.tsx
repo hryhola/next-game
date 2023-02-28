@@ -1,7 +1,7 @@
 import { Alert, Box, Button, Grid, IconButton } from '@mui/material'
 import TextField from '@mui/material/TextField'
-import { UserContext } from 'client/context/list/user'
-import React, { useState, useContext, useRef } from 'react'
+import { useWS, useUser } from 'client/context/list'
+import React, { useState, useRef } from 'react'
 import { LoadingOverlay } from 'client/ui'
 import { URL as ApiUrl } from 'client/network-utils/const'
 import { api } from 'client/network-utils/api'
@@ -9,7 +9,6 @@ import CircleIcon from '@mui/icons-material/Circle'
 import type { Failure, Success } from 'pages/api/profile'
 import { ProfilePicture } from '../profile-picture/ProfilePicture'
 import randomColor from 'randomcolor'
-import { WSContext } from 'client/context/list/ws'
 import { deleteCookie } from 'cookies-next'
 import { useGlobalModal } from '../global-modal/GlobalModal'
 
@@ -22,8 +21,8 @@ export const ProfileEditor: React.FC<Props> = props => {
 
     const formRef = useRef<HTMLFormElement | null>(null)
 
-    const user = useContext(UserContext)
-    const ws = useContext(WSContext)
+    const user = useUser()
+    const ws = useWS()
 
     const [nickname, setNickname] = useState(user.nickname)
     const [nicknameColor, setNicknameColor] = useState(user.nicknameColor)

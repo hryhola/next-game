@@ -1,12 +1,12 @@
 import { Box, Skeleton, SxProps, Theme, Typography } from '@mui/material'
-import { UserContext } from 'client/context/list/user'
+import { useUser } from 'client/context/list'
 import { useContext } from 'react'
 import { AbstractPlayerData } from 'state'
 import { ProfilePicture } from '../../profile-picture/ProfilePicture'
 import * as React from 'react'
 import { PlayerMenu } from './PlayerMenu'
 import { ClickerContext } from '../clicker/ClickerGame'
-import { LobbyContext } from 'client/context/list/lobby'
+import { LobbyContext, useLobby } from 'client/context/list/lobby'
 
 type Props = {
     size?: 'medium' | 'small'
@@ -23,9 +23,7 @@ type LoadingData = {
 }
 
 export const Player: React.FC<Props> = props => {
-    const user = useContext(UserContext)
-    const lobby = useContext(LobbyContext)
-    const gameContext = useContext(ClickerContext)
+    const user = useUser()
 
     const [playerMenuAnchor, setPlayerMenuAnchor] = React.useState<null | HTMLElement>(null)
     const size = props.size || 'small'

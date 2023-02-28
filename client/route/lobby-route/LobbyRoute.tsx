@@ -1,20 +1,16 @@
-import { LobbyContext } from 'client/context/list/lobby'
-import { WSContext } from 'client/context/list/ws'
-import { AudioCtx } from 'client/context/list/audio'
+import { useAudio, useLobby, useRouter, useWS } from 'client/context/list/'
 import { LoadingOverlay } from 'client/ui'
 import dynamic from 'next/dynamic'
 import { useSnackbar } from 'notistack'
-import { useContext, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { WSEvents } from 'uWebSockets/globalSocketEvents'
-import { Handler } from 'uWebSockets/uws.types'
-import { RouterContext } from 'client/context/list/router'
 
 export const LobbyRoute: React.FC = () => {
-    const lobby = useContext(LobbyContext)
+    const lobby = useLobby()
     const lobbyRef = useRef(lobby)
-    const ws = useContext(WSContext)
-    const audio = useContext(AudioCtx)
-    const router = useContext(RouterContext)
+    const ws = useWS()
+    const audio = useAudio()
+    const router = useRouter()
 
     const game = useRef<ReturnType<typeof dynamic<any>> | null>(null)
     const [isLoaded, setIsLoaded] = useState(false)
@@ -47,7 +43,11 @@ export const LobbyRoute: React.FC = () => {
                     <span style={{ color: to?.nicknameColor }}>{data.to}</span> tipped by <span style={{ color: from?.nicknameColor }}>{data.from}</span>
                 </>,
                 {
-                    content: (key, message) => <div key={key}>{message}</div>
+                    content: (key, message) => (
+                        <div className="lobby-tip noselect" key={key}>
+                            {message}
+                        </div>
+                    )
                 }
             )
         }
@@ -55,7 +55,13 @@ export const LobbyRoute: React.FC = () => {
 
     const handleDestroy = (data: WSEvents['Lobby-Destroy']) => {
         if (data.lobbyId === lobbyRef.current.lobbyId) {
-            alert('Lobby has been destroyed')
+            enqueueSnackbar('Lobby has been destroyed', {
+                anchorOrigin: {
+                    horizontal: 'center',
+                    vertical: 'top'
+                },
+                autoHideDuration: 3000
+            })
 
             ws.send('Universal-Subscription', {
                 mode: 'unsubscribe',

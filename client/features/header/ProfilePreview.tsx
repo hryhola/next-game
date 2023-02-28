@@ -1,11 +1,10 @@
 import Button, { ButtonProps } from '@mui/material/Button'
-import { UserContext } from 'client/context/list/user'
+import { useUser } from 'client/context/list'
 import PersonIcon from '@mui/icons-material/Person'
-import { useContext } from 'react'
 import { Typography } from '@mui/material'
 
 function ProfilePicture() {
-    const user = useContext(UserContext)
+    const user = useUser()
 
     if (user.avatarUrl) {
         return (
@@ -27,7 +26,7 @@ function ProfilePicture() {
 }
 
 export const ProfilePreview: React.FC<ButtonProps> = props => {
-    const user = useContext(UserContext)
+    const user = useUser()
 
     return (
         <Button {...props}>

@@ -1,7 +1,7 @@
 import { UserData } from 'state'
 import React, { useState, createContext } from 'react'
 
-export type Route = 'Login'
+export type RouteType = 'Login'
 
 export const UserContext = createContext({
     nickname: '',
@@ -40,4 +40,8 @@ export const UserProvider: React.FC<Props> = props => {
             {props.children}
         </UserContext.Provider>
     )
+}
+
+export const useUser = () => {
+    return React.useContext(UserContext)
 }

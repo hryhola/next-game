@@ -1,9 +1,7 @@
 import { useEffect, useState } from 'react'
 import { v4 as uuid } from 'uuid'
 import { ChatBox, ChatSXProps } from 'client/ui'
-import { UserContext } from 'client/context/list/user'
-import { useContext } from 'react'
-import { WSContext } from 'client/context/list/ws'
+import { useWS, useUser } from 'client/context/list'
 import { TChatMessage } from 'state'
 import { WSEvents } from 'uWebSockets/globalSocketEvents'
 import { RequestData, RequestHandler } from 'uWebSockets/uws.types'
@@ -22,8 +20,8 @@ function isCurrentChatMessage(data: { scope?: string; lobbyId?: string }, scope:
 }
 
 export const Chat: React.FC<Props> = props => {
-    const user = useContext(UserContext)
-    const ws = useContext(WSContext)
+    const user = useUser()
+    const ws = useWS()
 
     const [messages, setMessages] = useState<TChatMessage[]>([])
 

@@ -1,26 +1,20 @@
-import { Box, Button, Container, IconButton, Menu, Popover, Slider, Typography } from '@mui/material'
-import React, { useState, useContext, useRef, useEffect } from 'react'
+import { Box, Button, IconButton, Slider } from '@mui/material'
+import React, { useState, useRef, useEffect } from 'react'
 import { chatInputHeight } from 'client/ui'
-import { LobbyContext } from 'client/context/list/lobby'
+import { useLobby, useUser, useWS, useAudio, useRouter } from 'client/context/list'
 import OverlayedTabs, { overlayedTabsToolbarHeight } from 'client/ui/overlayed-tabs/OverlayedTabs'
 import ChatIcon from '@mui/icons-material/Chat'
-import { UserContext } from 'client/context/list/user'
 import { api } from 'client/network-utils/api'
 import { URL } from 'client/network-utils/const'
 import { ClickerPlayerData } from 'state'
 import { Chat } from 'client/features/chat/Chat'
 import PlayersHeader from '../common/PlayersHeader'
 import { Failure, Success } from 'pages/api/lobby-join'
-import { WSContext } from 'client/context/list/ws'
 import { WSEvents } from 'uWebSockets/globalSocketEvents'
 import VolumeUpIcon from '@mui/icons-material/VolumeUp'
-import { BrowserView, MobileView, isBrowser, isMobile } from 'react-device-detect'
-import { AudioCtx } from 'client/context/list/audio'
 import VolumeOffIcon from '@mui/icons-material/VolumeOff'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
 import LogoutIcon from '@mui/icons-material/Logout'
-import FlagIcon from '@mui/icons-material/Flag'
-import { RouterContext } from 'client/context/list/router'
 import HighlightOffIcon from '@mui/icons-material/HighlightOff'
 import CheckIcon from '@mui/icons-material/Check'
 import { useGlobalModal } from 'client/features/global-modal/GlobalModal'
@@ -36,13 +30,11 @@ export const ClickerContext = React.createContext<{
 export const Clicker = () => {
     const globalModal = useGlobalModal()
 
-    const lobby = useContext(LobbyContext)
-    const user = useContext(UserContext)
-    const ws = useContext(WSContext)
-    const audio = useContext(AudioCtx)
-    const router = useContext(RouterContext)
-
-    const [isVolumeVisible, setIsVolumeVisible] = useState(false)
+    const lobby = useLobby()
+    const user = useUser()
+    const ws = useWS()
+    const audio = useAudio()
+    const router = useRouter()
 
     const [players, setPlayers] = useState<ClickerPlayerData[]>([])
     const [isLoading, setIsLoading] = useState(true)
@@ -209,8 +201,8 @@ export const Clicker = () => {
                         )
                     }
                 ]}
-                onViewOpen={() => lobby.setIsTipsVisible(false)}
-                onViewClose={() => lobby.setIsTipsVisible(true)}
+                onViewOpen={() => (document.body.dataset.hideTips = 'true')}
+                onViewClose={() => (document.body.dataset.hideTips = 'false')}
             />
         </ClickerContext.Provider>
     )

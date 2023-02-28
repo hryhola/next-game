@@ -13,8 +13,8 @@
 // import { URL } from 'client/network-utils/const'
 
 // const TicTacToe = () => {
-//     const lobby = useContext(LobbyContext)
-//     const user = useContext(UserContext)
+//     const lobby = useLobby()
+//     const user = useUser()
 
 //     const [players, setPlayers] = useState<TTicTacToePlayer[]>([])
 //     const [isLoading, setIsLoading] = useState(true)

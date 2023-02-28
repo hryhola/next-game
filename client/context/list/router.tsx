@@ -26,3 +26,7 @@ export const RouterProvider: React.FC<Props> = props => {
 
     return <RouterContext.Provider value={{ currentRoute, setCurrentRoute }}>{props.children}</RouterContext.Provider>
 }
+
+export const useRouter = () => {
+    return React.useContext(RouterContext)
+}
