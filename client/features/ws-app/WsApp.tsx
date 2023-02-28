@@ -40,7 +40,7 @@ export const WsApp: React.FC<Props> = props => {
 
     return (
         <>
-            {props.children}
+            {!isFirstConnection.current && props.children}
             <DevToolsOverlay />
             <LoadingOverlay transitionDuration={0} text="connecting..." isLoading={isHandlingConnection} />
             <Backdrop
