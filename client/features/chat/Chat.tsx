@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { v4 as uuid } from 'uuid'
 import { ChatBox, ChatSXProps } from 'client/ui'
-import { useWS, useUser } from 'client/context/list'
+import { useWS, useUser, useWSHandler } from 'client/context/list'
 import { TChatMessage } from 'state'
 import { WSEvents } from 'uWebSockets/globalSocketEvents'
 import { RequestData, RequestHandler } from 'uWebSockets/uws.types'
@@ -71,11 +71,10 @@ export const Chat: React.FC<Props> = props => {
         })
     }
 
+    useWSHandler('Chat-NewMessage', handleNewMessage)
+    useWSHandler('Chat-Get', handleGotRecentMessages)
+
     useEffect(() => {
-        ws.on('Chat-NewMessage', handleNewMessage)
-
-        ws.on('Chat-Get', handleGotRecentMessages)
-
         ws.send('Chat-Get', {
             lobbyId: props.lobbyId!,
             scope: props.scope

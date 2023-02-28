@@ -1,5 +1,5 @@
 import { FormControl, IconButton, InputAdornment, List, Toolbar } from '@mui/material'
-import { useHome, useWS } from 'client/context/list'
+import { useHome, useWS, useWSHandler } from 'client/context/list'
 import { useEffect, useState } from 'react'
 import { LobbyBaseInfo } from 'uWebSockets/ws/Lobby-GetList'
 import { RequestHandler } from 'uWebSockets/uws.types'
@@ -20,9 +20,7 @@ export const LobbyBrowser: React.FC = () => {
         setLobbiesList(data.lobbies)
     }
 
-    useEffect(() => {
-        ws.on('Lobby-GetList', getListHandler)
-    }, [])
+    useWSHandler('Lobby-GetList', getListHandler)
 
     useEffect(() => {
         if (ws.isConnected) {

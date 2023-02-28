@@ -1,7 +1,7 @@
 import { Box, Button, IconButton, Slider } from '@mui/material'
 import React, { useState, useRef, useEffect } from 'react'
 import { chatInputHeight } from 'client/ui'
-import { useLobby, useUser, useWS, useAudio, useRouter } from 'client/context/list'
+import { useLobby, useUser, useWS, useAudio, useRouter, useWSHandler } from 'client/context/list'
 import OverlayedTabs, { overlayedTabsToolbarHeight } from 'client/ui/overlayed-tabs/OverlayedTabs'
 import ChatIcon from '@mui/icons-material/Chat'
 import { api } from 'client/network-utils/api'
@@ -72,11 +72,9 @@ export const Clicker = () => {
         })()
     }, [])
 
-    useEffect(() => {
-        ws.on('Clicker-Join', handleJoin)
-        ws.on('Clicker-Leave', handleLeave)
-        ws.on('Clicker-Update', handleUpdate)
-    }, [])
+    useWSHandler('Clicker-Join', handleJoin)
+    useWSHandler('Clicker-Leave', handleLeave)
+    useWSHandler('Clicker-Update', handleUpdate)
 
     const isCreatorView = user.nickname === lobby.members.find(m => m.isCreator)?.nickname
 
