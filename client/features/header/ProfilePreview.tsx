@@ -22,7 +22,7 @@ function ProfilePicture() {
         )
     }
 
-    return <PersonIcon sx={{ fontSize: 40 }} />
+    return <PersonIcon sx={{ fontSize: 40, color: user.nicknameColor }} />
 }
 
 export const ProfilePreview: React.FC<ButtonProps> = props => {

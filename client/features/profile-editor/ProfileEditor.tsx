@@ -97,7 +97,7 @@ export const ProfileEditor: React.FC<Props> = props => {
                     </Grid>
                 )}
                 <Grid item alignSelf="center">
-                    <ProfilePicture editable {...displayedImage} onChange={file => setImageFile(file)} />
+                    <ProfilePicture editable {...displayedImage} color={nicknameColor} onChange={file => setImageFile(file)} />
                 </Grid>
                 <Grid item>
                     <Box sx={{ display: 'flex', alignItems: 'flex-end' }}>
