@@ -1,5 +1,5 @@
-import { useState, useEffect, FormEventHandler } from 'react'
-import { useWS, useUser, useRouter, useWSHandler } from 'client/context/list'
+import { useState, FormEventHandler } from 'react'
+import { useWS, useUser, useRouter, useRequestHandler } from 'client/context/list'
 import { Button, Grid, TextField } from '@mui/material'
 import { RequestHandler } from 'uWebSockets/uws.types'
 import { setCookie } from 'cookies-next'
@@ -14,7 +14,7 @@ export const Login: React.FC = () => {
     const [nickname, setNickname] = useState('')
     const [error, setError] = useState('')
 
-    const handleRegister: RequestHandler<'Auth-Register'> = data => {
+    useRequestHandler('Auth-Register', data => {
         if (data.success) {
             user.setNickname(data.user.nickname)
             user.setNicknameColor(data.user.nicknameColor)
@@ -25,9 +25,7 @@ export const Login: React.FC = () => {
         } else {
             setError(data.message)
         }
-    }
-
-    useWSHandler('Auth-Register', handleRegister)
+    })
 
     const handleSubmit: FormEventHandler<HTMLFormElement> = e => {
         e.preventDefault()

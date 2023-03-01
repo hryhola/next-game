@@ -1,25 +1,23 @@
-import { useWS, useWSHandler } from 'client/context/list'
+import { useEventHandler, useRequestHandler, useWS } from 'client/context/list'
 import { UsersListBox } from 'client/ui'
 import React, { useEffect, useState } from 'react'
-import { WSEvents } from 'uWebSockets/globalSocketEvents'
-import { RequestHandler } from 'uWebSockets/uws.types'
 
 export const GlobalUsersList: React.FC = () => {
     const ws = useWS()
 
     const [users, setUsers] = useState<{ nickname: string }[]>([])
 
-    const handleUsersGot: RequestHandler<'Users-Get'> = data => {
+    useRequestHandler('Users-Get', data => {
         if ('data' in data) {
             setUsers(data.data)
         } else {
             console.error(data)
         }
-    }
+    })
 
-    const handleOnlineUpdate = (data: WSEvents['UserRegistry-OnlineUpdate']) => {
+    useEventHandler('UserRegistry-OnlineUpdate', data => {
         setUsers(data.list)
-    }
+    })
 
     const onIsConnected = () => {
         ws.send('Universal-Subscription', {
@@ -31,9 +29,6 @@ export const GlobalUsersList: React.FC = () => {
             scope: 'global'
         })
     }
-
-    useWSHandler('Users-Get', handleUsersGot)
-    useWSHandler('UserRegistry-OnlineUpdate', handleOnlineUpdate)
 
     useEffect(() => {
         return () => {

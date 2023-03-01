@@ -1,7 +1,7 @@
 import { Box, Button, IconButton, Slider } from '@mui/material'
 import React, { useState, useRef, useEffect } from 'react'
 import { chatInputHeight } from 'client/ui'
-import { useLobby, useUser, useWS, useAudio, useRouter, useWSHandler } from 'client/context/list'
+import { useLobby, useUser, useWS, useAudio, useRouter, useEventHandler } from 'client/context/list'
 import OverlayedTabs, { overlayedTabsToolbarHeight } from 'client/ui/overlayed-tabs/OverlayedTabs'
 import ChatIcon from '@mui/icons-material/Chat'
 import { api } from 'client/network-utils/api'
@@ -10,7 +10,6 @@ import { ClickerPlayerData } from 'state'
 import { Chat } from 'client/features/chat/Chat'
 import PlayersHeader from '../common/PlayersHeader'
 import { Failure, Success } from 'pages/api/lobby-join'
-import { WSEvents } from 'uWebSockets/globalSocketEvents'
 import VolumeUpIcon from '@mui/icons-material/VolumeUp'
 import VolumeOffIcon from '@mui/icons-material/VolumeOff'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
@@ -41,17 +40,17 @@ export const Clicker = () => {
 
     const chatInputRef = useRef<HTMLInputElement | null>(null)
 
-    const handleJoin = (data: WSEvents['Clicker-Join']) => {
+    useEventHandler('Clicker-Join', data => {
         setPlayers(ps => [...ps.filter(p => p.nickname !== data.player.nickname), data.player])
-    }
+    })
 
-    const handleLeave = (data: WSEvents['Clicker-Leave']) => {
+    useEventHandler('Clicker-Leave', data => {
         setPlayers(ps => [...ps.filter(p => p.nickname !== data.player.nickname)])
-    }
+    })
 
-    const handleUpdate = (data: WSEvents['Clicker-Update']) => {
+    useEventHandler('Clicker-Update', data => {
         setPlayers(data.updated.players)
-    }
+    })
 
     useEffect(() => {
         ;(async () => {
@@ -71,10 +70,6 @@ export const Clicker = () => {
             setIsLoading(false)
         })()
     }, [])
-
-    useWSHandler('Clicker-Join', handleJoin)
-    useWSHandler('Clicker-Leave', handleLeave)
-    useWSHandler('Clicker-Update', handleUpdate)
 
     const isCreatorView = user.nickname === lobby.members.find(m => m.isCreator)?.nickname
 

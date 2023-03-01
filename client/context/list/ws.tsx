@@ -1,11 +1,13 @@
 import React, { useState, createContext, useContext, useRef, MutableRefObject, useEffect } from 'react'
 import type { HandlerName } from 'uWebSockets/ws'
-import type { AbstractSocketMessage, RequestData } from 'uWebSockets/uws.types'
+import type { AbstractSocketMessage, GlobalEventHandler, RequestData, RequestHandler } from 'uWebSockets/uws.types'
 import type { WSEventName } from 'uWebSockets/globalSocketEvents'
 import { getCookie } from 'cookies-next'
 
 type HandlerOn = <C extends WSEventName | HandlerName>(context: C, handler: Function) => void
 type HandlerSend = <H extends HandlerName>(context: H, data?: RequestData<H>) => void
+type RequestHandlerRegistrar = <C extends HandlerName>(context: C, handler: RequestHandler<C>) => void
+type EventHandlerRegistrar = <C extends WSEventName>(context: C, handler: GlobalEventHandler<C>) => void
 
 export interface WSData {
     wsRef: MutableRefObject<WebSocket | null>
@@ -84,7 +86,19 @@ export const useWS = () => {
     return useContext(WSContext)
 }
 
-export const useWSHandler: HandlerOn = (context, handler) => {
+export const useRequestHandler: RequestHandlerRegistrar = (context, handler) => {
+    const { on, unsubscribe } = useWS()
+
+    useEffect(() => {
+        on(context, handler)
+
+        return () => {
+            unsubscribe(context, handler)
+        }
+    }, [])
+}
+
+export const useEventHandler: EventHandlerRegistrar = (context, handler) => {
     const { on, unsubscribe } = useWS()
 
     useEffect(() => {
