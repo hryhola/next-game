@@ -32,7 +32,7 @@ export class Chat {
         }
 
         if (this.isGlobal) {
-            State.res.publishGlobal('Chat-NewMessage', {
+            State.res.publishTopicEvent('Chat-NewMessage', {
                 scope: 'global',
                 message: message
             })

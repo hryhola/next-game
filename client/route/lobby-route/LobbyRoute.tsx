@@ -3,7 +3,7 @@ import { LoadingOverlay } from 'client/ui'
 import dynamic from 'next/dynamic'
 import { useSnackbar } from 'notistack'
 import { useEffect, useRef, useState } from 'react'
-import { WSEvents } from 'uWebSockets/globalSocketEvents'
+import { TopicEvents } from 'uWebSockets/topicEvents'
 
 export const LobbyRoute: React.FC = () => {
     const lobby = useLobby()

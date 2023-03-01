@@ -1,6 +1,6 @@
 import { WebSocket, HttpResponse, HttpRequest } from 'uWebSockets.js'
 import type { HandlerName } from 'uWebSockets/ws'
-import type { WSEvents, WSEventName } from 'uWebSockets/globalSocketEvents'
+import type { TopicEvents, TopicEventName } from 'uWebSockets/topicEvents'
 import queryString from 'query-string'
 import { State } from 'state'
 
@@ -12,7 +12,7 @@ export interface AbstractSocketMessage<Ctx extends string = string, Data extends
 
 export type ResponseActions<ResponseType = unknown> = {
     publish(channel: string, message: AbstractSocketMessage): void
-    publishGlobal<C extends WSEventName>(channel: C, message: WSEvents[C]): void
+    publishTopicEvent<C extends TopicEventName>(channel: C, message: TopicEvents[C]): void
     res(data: ResponseType): void
     send(ctx: string, data: any): void
     ws: WebSocket<unknown>
@@ -26,9 +26,9 @@ export type Handler<RequestData extends Object | null = null, ResponseType = any
 ) => void
 
 export type RequestData<R extends HandlerName> = Parameters<typeof import('uWebSockets/ws')['handlers'][R]>[2]
-export type RequestHandlerData<R extends HandlerName> = Parameters<Parameters<typeof import('uWebSockets/ws')['handlers'][R]>[0]['res']>[0]
-export type RequestHandler<R extends HandlerName> = (data: RequestHandlerData<R>) => void
-export type GlobalEventHandler<E extends WSEventName> = (data: WSEvents[E]) => void
+export type ResponseData<R extends HandlerName> = Parameters<Parameters<typeof import('uWebSockets/ws')['handlers'][R]>[0]['res']>[0]
+export type RequestHandler<R extends HandlerName> = (data: ResponseData<R>) => void
+export type TopicEventHandler<E extends TopicEventName> = (data: TopicEvents[E]) => void
 
 export type HTTPMethod = 'get' | 'connect' | 'post' | 'options' | 'del' | 'patch' | 'put' | 'head' | 'trace'
 

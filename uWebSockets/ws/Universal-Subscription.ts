@@ -1,4 +1,4 @@
-import { WSEventName } from 'uWebSockets/globalSocketEvents'
+import { TopicEventName } from 'uWebSockets/topicEvents'
 import { Handler } from '../uws.types'
 import logger from 'logger'
 
@@ -6,7 +6,7 @@ export type Request = {
     mode: 'subscribe' | 'unsubscribe'
 } & (
     | {
-          topic: WSEventName
+          topic: TopicEventName
           scope: 'global'
       }
     | {
