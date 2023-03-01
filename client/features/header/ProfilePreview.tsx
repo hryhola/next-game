@@ -30,7 +30,7 @@ export const ProfilePreview: React.FC<ButtonProps> = props => {
 
     return (
         <Button {...props}>
-            <Typography variant="body1" textTransform="none">
+            <Typography variant="body1" color={user.nicknameColor} textTransform="none">
                 {user.nickname}
             </Typography>
             <ProfilePicture />

@@ -50,6 +50,8 @@ export const ProfileEditor: React.FC<Props> = props => {
             data.delete('image')
         }
 
+        data.set('nicknameColor', nicknameColor)
+
         setIsLoading(true)
 
         const [response, postError] = await api.post<Failure | Success>(ApiUrl.Profile, data).finally(() => setIsLoading(false))
