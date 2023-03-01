@@ -10,7 +10,7 @@ export class UserRegistry {
     }
 
     private publishOnlineUpdate() {
-        State.res.publishGlobal('UserRegistry-OnlineUpdate', {
+        State.res.publishTopicEvent('UserRegistry-OnlineUpdate', {
             scope: 'global',
             list: this.onlineUsers.map(u => ({
                 nickname: u.state.nickname

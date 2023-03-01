@@ -1,7 +1,7 @@
 import { ClickerPlayerData, LobbyData, LobbyMemberData, TChatMessage, Tip } from 'state'
 import { LobbyBaseInfo } from './ws/Lobby-GetList'
 
-export type WSEvents = {
+export type TopicEvents = {
     'Chat-NewMessage': {
         scope: 'global' | 'lobby'
         lobbyId?: string
@@ -45,4 +45,4 @@ export type WSEvents = {
     }
 }
 
-export type WSEventName = keyof WSEvents
+export type TopicEventName = keyof TopicEvents
