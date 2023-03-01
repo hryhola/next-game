@@ -1,4 +1,5 @@
 import { ClickerPlayerData, LobbyData, LobbyMemberData, TChatMessage, Tip } from 'state'
+import { LobbyBaseInfo } from './ws/Lobby-GetList'
 
 export type WSEvents = {
     'Chat-NewMessage': {
@@ -24,6 +25,9 @@ export type WSEvents = {
     }
     'Lobby-Destroy': {
         lobbyId: string
+    }
+    'Lobby-ListUpdated': {
+        lobbies: LobbyBaseInfo[]
     }
     'Lobby-Tipped': Tip
     'Clicker-Join': {

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { v4 as uuid } from 'uuid'
 import { ChatBox, ChatSXProps } from 'client/ui'
-import { useWS, useUser, useWSHandler } from 'client/context/list'
+import { useWS, useUser, useEventHandler, useRequestHandler } from 'client/context/list'
 import { TChatMessage } from 'state'
 import { WSEvents } from 'uWebSockets/globalSocketEvents'
 import { RequestData, RequestHandler } from 'uWebSockets/uws.types'
@@ -25,11 +25,19 @@ export const Chat: React.FC<Props> = props => {
 
     const [messages, setMessages] = useState<TChatMessage[]>([])
 
-    const handleNewMessage = (data: WSEvents['Chat-NewMessage']) => {
+    useEventHandler('Chat-NewMessage', data => {
         if (isCurrentChatMessage(data, props.scope, props.lobbyId)) {
             setMessages(curr => [data.message, ...curr])
         }
-    }
+    })
+
+    useRequestHandler('Chat-Get', data => {
+        if (data.success && isCurrentChatMessage(data, props.scope, props.lobbyId)) {
+            setMessages(data.messages)
+        } else {
+            console.error(data)
+        }
+    })
 
     const handlerSend = (text: string) => {
         const message: TChatMessage = {
@@ -54,14 +62,6 @@ export const Chat: React.FC<Props> = props => {
         ws.send('Chat-Send', data)
     }
 
-    const handleGotRecentMessages: RequestHandler<'Chat-Get'> = data => {
-        if (data.success && isCurrentChatMessage(data, props.scope, props.lobbyId)) {
-            setMessages(data.messages)
-        } else {
-            console.error(data)
-        }
-    }
-
     // TODO For lobby chat
     const sendSubscribeRequestForGlobalScope = () => {
         ws.send('Universal-Subscription', {
@@ -70,9 +70,6 @@ export const Chat: React.FC<Props> = props => {
             topic: 'Chat-NewMessage'
         })
     }
-
-    useWSHandler('Chat-NewMessage', handleNewMessage)
-    useWSHandler('Chat-Get', handleGotRecentMessages)
 
     useEffect(() => {
         ws.send('Chat-Get', {

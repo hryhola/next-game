@@ -1,8 +1,7 @@
 import { FormControl, IconButton, InputAdornment, List, Toolbar } from '@mui/material'
-import { useHome, useWS, useWSHandler } from 'client/context/list'
+import { useEventHandler, useHome, useRequestHandler, useWS } from 'client/context/list'
 import { useEffect, useState } from 'react'
 import { LobbyBaseInfo } from 'uWebSockets/ws/Lobby-GetList'
-import { RequestHandler } from 'uWebSockets/uws.types'
 import AddIcon from '@mui/icons-material/Add'
 import { OutlinedInput } from '@mui/material'
 import SearchIcon from '@mui/icons-material/Search'
@@ -16,17 +15,34 @@ export const LobbyBrowser: React.FC = () => {
 
     const [searchString, setSearchString] = useState('')
 
-    const getListHandler: RequestHandler<'Lobby-GetList'> = data => {
+    useRequestHandler('Lobby-GetList', data => {
         setLobbiesList(data.lobbies)
-    }
+    })
 
-    useWSHandler('Lobby-GetList', getListHandler)
+    useEventHandler('Lobby-ListUpdated', data => {
+        setLobbiesList(data.lobbies)
+    })
 
     useEffect(() => {
         if (ws.isConnected) {
             ws.send('Lobby-GetList')
+            ws.send('Universal-Subscription', {
+                mode: 'subscribe',
+                scope: 'global',
+                topic: 'Lobby-ListUpdated'
+            })
         }
     }, [ws.isConnected])
+
+    useEffect(() => {
+        return () => {
+            ws.send('Universal-Subscription', {
+                mode: 'unsubscribe',
+                scope: 'global',
+                topic: 'Lobby-ListUpdated'
+            })
+        }
+    }, [])
 
     const renderedLobbies = searchString.length ? lobbiesList.filter(lobby => lobby.id.toLowerCase().includes(searchString.toLowerCase())) : lobbiesList
 

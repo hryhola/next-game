@@ -2,10 +2,9 @@ import { Button, ListItem, ListItemButton, ListItemText, Theme } from '@mui/mate
 import { LobbyBaseInfo } from 'uWebSockets/ws/Lobby-GetList'
 import LockIcon from '@mui/icons-material/Lock'
 import { LobbyPreview } from './LobbyPreview'
-import { MouseEventHandler, useEffect, useState } from 'react'
+import { MouseEventHandler, useState } from 'react'
 import { LobbyData } from 'state'
-import { RequestHandler } from 'uWebSockets/uws.types'
-import { useWS, useWSHandler } from 'client/context/list'
+import { useRequestHandler, useWS } from 'client/context/list'
 import ArrowDropUpIcon from '@mui/icons-material/ArrowDropUp'
 
 export const LobbyRecord: React.FC<LobbyBaseInfo> = props => {
@@ -13,7 +12,7 @@ export const LobbyRecord: React.FC<LobbyBaseInfo> = props => {
 
     const [lobbyInfo, setLobbyInfo] = useState<LobbyData | null>(null)
 
-    const handleLoadInfo: RequestHandler<'Lobby-GetPublicInfo'> = data => {
+    useRequestHandler('Lobby-GetPublicInfo', data => {
         if (!data.success) {
             return console.log(data.message)
         }
@@ -21,23 +20,17 @@ export const LobbyRecord: React.FC<LobbyBaseInfo> = props => {
         if (props.id === data.lobbyData.id) {
             setLobbyInfo(data.lobbyData)
         }
-    }
-
-    const sendGetRequest = () => {
-        ws.send('Lobby-GetPublicInfo', {
-            id: props.id
-        })
-    }
+    })
 
     const handleClick: MouseEventHandler<HTMLDivElement> = e => {
         if (lobbyInfo) {
             e.preventDefault()
         } else {
-            sendGetRequest()
+            ws.send('Lobby-GetPublicInfo', {
+                id: props.id
+            })
         }
     }
-
-    useWSHandler('Lobby-GetPublicInfo', handleLoadInfo)
 
     return (
         <ListItem disablePadding>

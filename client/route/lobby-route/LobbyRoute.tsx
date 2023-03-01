@@ -1,4 +1,4 @@
-import { useAudio, useLobby, useRouter, useWS, useWSHandler } from 'client/context/list/'
+import { useAudio, useEventHandler, useLobby, useRouter, useWS } from 'client/context/list/'
 import { LoadingOverlay } from 'client/ui'
 import dynamic from 'next/dynamic'
 import { useSnackbar } from 'notistack'
@@ -17,21 +17,21 @@ export const LobbyRoute: React.FC = () => {
 
     const { enqueueSnackbar } = useSnackbar()
 
-    const handleLobbyJoin = (data: WSEvents['Lobby-Join']) => {
+    useEventHandler('Lobby-Join', data => {
         if (data.lobbyId === lobbyRef.current.lobbyId) {
             lobby.setMembers(ms => [...ms.filter(m => m.nickname !== data.member.nickname), data.member])
         }
-    }
+    })
 
-    const handleUpdate = (data: WSEvents['Lobby-Update']) => {
+    useEventHandler('Lobby-Update', data => {
         if (data.lobbyId === lobbyRef.current.lobbyId) {
             if (data.updated.members) {
                 lobbyRef.current.setMembers(data.updated.members)
             }
         }
-    }
+    })
 
-    const handleTipped = (data: WSEvents['Lobby-Tipped']) => {
+    useEventHandler('Lobby-Tipped', data => {
         if (data.lobbyId === lobbyRef.current.lobbyId) {
             const from = lobbyRef.current.members.find(member => member.nickname === data.from)
             const to = lobbyRef.current.members.find(member => member.nickname === data.to)
@@ -51,9 +51,9 @@ export const LobbyRoute: React.FC = () => {
                 }
             )
         }
-    }
+    })
 
-    const handleDestroy = (data: WSEvents['Lobby-Destroy']) => {
+    useEventHandler('Lobby-Destroy', data => {
         if (data.lobbyId === lobbyRef.current.lobbyId) {
             enqueueSnackbar('Lobby has been destroyed', {
                 anchorOrigin: {
@@ -72,12 +72,7 @@ export const LobbyRoute: React.FC = () => {
             lobby.reset()
             router.setCurrentRoute('Home')
         }
-    }
-
-    useWSHandler('Lobby-Destroy', handleDestroy)
-    useWSHandler('Lobby-Join', handleLobbyJoin)
-    useWSHandler('Lobby-Update', handleUpdate)
-    useWSHandler('Lobby-Tipped', handleTipped)
+    })
 
     useEffect(() => {
         game.current = dynamic(() => import('client/features/games/clicker/ClickerGame').then(mod => mod.Clicker), {
