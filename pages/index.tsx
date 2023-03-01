@@ -48,7 +48,7 @@ export const getServerSideProps: GetServerSideProps = async context => {
     if (token) {
         try {
             const { appState } = (context.res as NextApiResponseUWS).socket?.server
-            const user = appState.users.login(token)
+            const user = appState.users.getByToken(token)
 
             if (!user) {
                 deleteCookie('token')

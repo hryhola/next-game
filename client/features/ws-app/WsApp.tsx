@@ -33,6 +33,10 @@ export const WsApp: React.FC<Props> = props => {
                 ws.wsRef.current = webSocket
                 ws.setIsConnected(true)
 
+                if (!isFirstConnection.current) {
+                    setTimeout(() => webSocket.send('ping'), 0)
+                }
+
                 setIsHandlingConnection(false)
             }
         })
