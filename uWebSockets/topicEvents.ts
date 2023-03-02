@@ -43,6 +43,16 @@ export type TopicEvents = {
             players: ClickerPlayerData[]
         }
     }
+    'ReadyCheck-Start': {
+        members: LobbyMemberData[]
+    }
+    'ReadyCheck-PlayerStatus': {
+        nickname: string
+        ready: boolean
+    }
+    'ReadyCheck-End': {
+        status: 'success' | 'failed'
+    }
 }
 
 export type TopicEventName = keyof TopicEvents
