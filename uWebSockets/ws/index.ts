@@ -15,6 +15,7 @@ import { handler as LobbyGetList } from './Lobby-GetList'
 import { handler as LobbyGetPublicInfo } from './Lobby-GetPublicInfo'
 import { handler as LobbyStartReadyCheck } from './Lobby-StartReadyCheck'
 import { handler as LobbyTip } from './Lobby-Tip'
+import { handler as ReadyCheckResponse } from './ReadyCheck-Response'
 import { handler as UniversalSubscription } from './Universal-Subscription'
 import { handler as UsersGet } from './Users-Get'
 import { handler as UsersGetCount } from './Users-GetCount'
@@ -31,6 +32,7 @@ export const handlers = {
     'Lobby-GetPublicInfo': LobbyGetPublicInfo,
     'Lobby-StartReadyCheck': LobbyStartReadyCheck,
     'Lobby-Tip': LobbyTip,
+    'ReadyCheck-Response': ReadyCheckResponse,
     'Universal-Subscription': UniversalSubscription,
     'Users-Get': UsersGet,
     'Users-GetCount': UsersGetCount

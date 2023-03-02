@@ -22,6 +22,20 @@ export const handler: Handler<Request, GeneralSuccess | GeneralFailure> = (actio
         })
     }
 
+    if (lobby.readyCheck) {
+        return actions.res({
+            success: false,
+            message: 'Ready check already started'
+        })
+    }
+
+    if (lobby.game.currentSession) {
+        return actions.res({
+            success: false,
+            message: 'Game already started'
+        })
+    }
+
     lobby.startReadyCheck()
 
     return actions.res({

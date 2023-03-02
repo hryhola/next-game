@@ -15,6 +15,7 @@ interface Props {
     editIcon?: OverridableComponent<SvgIconTypeMap<{}, 'svg'>>
     editLabel?: string
     color?: string
+    filter?: string
 }
 
 export const ProfilePicture: React.FC<Props> = props => {
@@ -36,7 +37,7 @@ export const ProfilePicture: React.FC<Props> = props => {
         if (!props.url) {
             return (
                 <Box sx={sizeProps}>
-                    <PersonIcon sx={{ ...sizeProps, color: props.color }} />
+                    <PersonIcon sx={{ ...sizeProps, color: props.color, filter: props.filter }} />
                 </Box>
             )
         }
@@ -47,7 +48,8 @@ export const ProfilePicture: React.FC<Props> = props => {
                     ...sizeProps,
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center'
+                    justifyContent: 'center',
+                    filter: props.filter
                 }}
             >
                 <img alt="user avatar" src={props.url} />
@@ -77,7 +79,7 @@ export const ProfilePicture: React.FC<Props> = props => {
                 <input type="file" name="image" accept="image/*" {...(props.onChange ? { onChange: e => props.onChange!(e.target.files![0]) } : {})} hidden />
             )}
             {props.url ? (
-                <img alt="user avatar" src={props.url} />
+                <img alt="user avatar" src={props.url} style={{ filter: props.filter }} />
             ) : (
                 <>
                     {props.editIcon ? (
@@ -86,7 +88,8 @@ export const ProfilePicture: React.FC<Props> = props => {
                         <PersonIcon
                             sx={{
                                 ...sizeProps,
-                                color: props.color
+                                color: props.color,
+                                filter: props.filter
                             }}
                         />
                     )}

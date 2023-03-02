@@ -1,10 +1,12 @@
 import type { AppProps } from 'next/app'
-import { AppContext } from 'client/context/AppContext'
+import { useEffect } from 'react'
 import { ThemeProvider, createTheme } from '@mui/material/styles'
 import CssBaseline from '@mui/material/CssBaseline'
+
+import { SvgFilters } from 'client/ui/filters/SvgFilters'
+
 import 'client/ui/globals.scss'
 import 'client/global'
-import { useEffect } from 'react'
 
 const darkTheme = createTheme({
     palette: {
@@ -45,6 +47,7 @@ function MyApp({ Component, pageProps }: AppProps) {
     return (
         <ThemeProvider theme={darkTheme}>
             <CssBaseline />
+            <SvgFilters />
             <Component {...pageProps} />
         </ThemeProvider>
     )

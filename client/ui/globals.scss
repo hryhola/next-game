@@ -11,6 +11,13 @@ img {
     max-height: 100%;
 }
 
+#svgfilters {
+    position: absolute;
+    width: 0;
+    height: 0;
+    overflow: hidden;
+}
+
 .next-img {
     width: inherit !important;
     height: inherit !important;
