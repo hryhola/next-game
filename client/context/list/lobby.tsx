@@ -1,6 +1,6 @@
 import { api } from 'client/network-utils/api'
 import React, { useState, createContext, useEffect } from 'react'
-import { TChatMessage, LobbyMemberData, LobbyData } from 'state'
+import { TChatMessage, LobbyMemberData, LobbyData, ReadyCheckMember } from 'state'
 import { GameName } from 'state/games'
 import { URL as ApiUrl } from 'client/network-utils/const'
 import { GeneralFailure, GeneralSuccess } from 'util/t'
@@ -19,8 +19,10 @@ export const LobbyContext = createContext({
     setGameName: (_value: GameName) => {},
     chatMessages: [] as TChatMessage[],
     setChatMessages: (_val: TChatMessage[]) => {},
-    readyCheck: null as null | ReadyCheck,
-    setReadyCheck: (_val: ReadyCheck) => {},
+    readyCheck: false,
+    setReadyCheck: (_val: boolean) => {},
+    readyCheckMembers: [] as ReadyCheckMember[],
+    setReadyCheckMembers: ((_val: ReadyCheckMember[]) => {}) as React.Dispatch<React.SetStateAction<ReadyCheckMember[]>>,
     exit: () => {},
     destroy: () => {},
     reset: () => {}
@@ -35,8 +37,10 @@ export const LobbyProvider: React.FC<Props> = ({ children, lobby }) => {
     const [lobbyId, setLobbyId] = useState(lobby?.id || '')
     const [members, setMembers] = useState<LobbyMemberData[]>(lobby?.members || [])
     const [gameName, setGameName] = useState<GameName | null>(lobby?.gameName || null)
-    const [readyCheck, setReadyCheck] = useState<ReadyCheck | null>(null)
     const [chatMessages, setChatMessages] = useState<TChatMessage[]>([])
+
+    const [readyCheck, setReadyCheck] = useState(Boolean(lobby?.readyCheck))
+    const [readyCheckMembers, setReadyCheckMembers] = useState<ReadyCheckMember[]>(lobby?.readyCheck?.members || [])
 
     const reset = () => {
         setMembers([])
@@ -78,7 +82,9 @@ export const LobbyProvider: React.FC<Props> = ({ children, lobby }) => {
                 destroy,
                 reset,
                 setReadyCheck,
-                readyCheck
+                readyCheck,
+                readyCheckMembers,
+                setReadyCheckMembers
             }}
         >
             {children}
