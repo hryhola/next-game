@@ -1,4 +1,5 @@
 import { AbstractGame, Chat, State, GameCtors, GameName, LobbyMember, User, ReadyCheck } from 'state'
+import { GeneralFailure, GeneralSuccess } from 'util/t'
 import { AbstractSocketMessage } from 'uWebSockets/uws.types'
 
 export type LobbyCreateOptions<G extends GameName> = {
@@ -114,6 +115,43 @@ export class Lobby<G extends GameName = GameName> {
 
     startReadyCheck() {
         this.readyCheck = new ReadyCheck(this)
+    }
+
+    kick(nickname: string): GeneralSuccess | GeneralFailure {
+        const member = this.members.find(m => m.user.state.nickname === nickname)
+
+        if (!member) {
+            return {
+                success: false,
+                message: 'Not found'
+            }
+        }
+
+        if (member.user === this.creator) {
+            return {
+                success: false,
+                message: "Creator can't be kicked"
+            }
+        }
+
+        if (member.state.isPlayer) {
+            const player = this.game.players.find(p => p.member.user === member.user)!
+
+            this.game.leave(player)
+        }
+
+        this.members = this.members.filter(m => m !== member)
+
+        member.user.unlinkLobby(this)
+
+        this.publish('Lobby-Kicked', {
+            lobbyId: this.id,
+            member: member.data()
+        })
+
+        return {
+            success: true
+        }
     }
 
     data() {

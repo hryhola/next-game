@@ -81,8 +81,7 @@ export class User {
     }
 
     unlinkLobby(lobby: Lobby) {
-        this.lobbies = []
-        // this.lobbies = this.lobbies.filter(l => l !== lobby)
+        this.lobbies = this.lobbies.filter(l => l !== lobby)
     }
 
     leaveAllLobbies() {

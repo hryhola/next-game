@@ -30,6 +30,10 @@ export type TopicEvents = {
         lobbies: LobbyBaseInfo[]
     }
     'Lobby-Tipped': Tip
+    'Lobby-Kicked': {
+        lobbyId: string
+        member: LobbyMemberData
+    }
     'Clicker-Join': {
         lobbyId: string
         player: ClickerPlayerData

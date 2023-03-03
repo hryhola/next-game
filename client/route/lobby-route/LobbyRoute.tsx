@@ -104,6 +104,29 @@ export const LobbyRoute: React.FC = () => {
         audio.play(data.status === 'success' ? 'ready_check_success.mp3.mpeg' : 'ready_check_failure.mp3.mpeg')
     })
 
+    useEventHandler('Lobby-Kicked', data => {
+        enqueueSnackbar(`${data.member.nickname}` + ' has been kicked', {
+            anchorOrigin: {
+                horizontal: 'center',
+                vertical: 'top'
+            },
+            autoHideDuration: 3000
+        })
+
+        lobby.setMembers(members => members.filter(m => m.nickname !== data.member.nickname))
+
+        if (data.member.nickname === user.nickname) {
+            ws.send('Universal-Subscription', {
+                mode: 'unsubscribe',
+                lobbyId: lobby.lobbyId,
+                topic: 'all'
+            })
+
+            lobby.reset()
+            router.setCurrentRoute('Home')
+        }
+    })
+
     useEffect(() => {
         game.current = dynamic(() => import('client/features/games/clicker/ClickerGame').then(mod => mod.Clicker), {
             loading: () => <LoadingOverlay isLoading={true} />

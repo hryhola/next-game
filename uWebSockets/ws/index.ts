@@ -13,6 +13,7 @@ import { handler as ChatGet } from './Chat-Get'
 import { handler as ChatSend } from './Chat-Send'
 import { handler as LobbyGetList } from './Lobby-GetList'
 import { handler as LobbyGetPublicInfo } from './Lobby-GetPublicInfo'
+import { handler as LobbyKick } from './Lobby-Kick'
 import { handler as LobbyStartReadyCheck } from './Lobby-StartReadyCheck'
 import { handler as LobbyTip } from './Lobby-Tip'
 import { handler as ReadyCheckResponse } from './ReadyCheck-Response'
@@ -30,6 +31,7 @@ export const handlers = {
     'Chat-Send': ChatSend,
     'Lobby-GetList': LobbyGetList,
     'Lobby-GetPublicInfo': LobbyGetPublicInfo,
+    'Lobby-Kick': LobbyKick,
     'Lobby-StartReadyCheck': LobbyStartReadyCheck,
     'Lobby-Tip': LobbyTip,
     'ReadyCheck-Response': ReadyCheckResponse,
