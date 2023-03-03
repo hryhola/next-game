@@ -30,6 +30,13 @@ export const PlayerMenu: React.FC<Props> = props => {
                 to: props.player.nickname
             })
         }
+
+        if (option === 'kick') {
+            ws.send('Lobby-Kick', {
+                lobbyId: lobby.lobbyId,
+                memberNickname: props.player.nickname
+            })
+        }
     }
 
     let options: string[][] = []
