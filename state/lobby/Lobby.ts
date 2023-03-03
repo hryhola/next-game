@@ -122,7 +122,8 @@ export class Lobby<G extends GameName = GameName> {
             private: Boolean(this.password),
             gameName: (Object.getPrototypeOf(this.game).constructor as typeof AbstractGame).gameName as GameName,
             members: this.members.map(m => m.data()),
-            creator: this.creator.data()
+            creator: this.creator.data(),
+            readyCheck: this.readyCheck ? this.readyCheck.data() : null
         }
     }
 }

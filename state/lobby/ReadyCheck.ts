@@ -1,8 +1,11 @@
-import { Lobby, LobbyMember } from 'state'
+import { Lobby, LobbyMember, LobbyMemberData } from 'state'
+
+export type ReadyCheckMember = LobbyMemberData & { ready?: boolean }
 
 export class ReadyCheck {
     membersForCheck: LobbyMember[]
     readyMembers: LobbyMember[] = []
+    notReadyMembers: LobbyMember[] = []
     lobby: Lobby
 
     constructor(lobby: Lobby) {
@@ -34,8 +37,8 @@ export class ReadyCheck {
     }
 
     status(member: LobbyMember, ready: boolean) {
-        if (this.membersForCheck.includes(member) && !this.readyMembers.includes(member)) {
-            this.readyMembers.push(member)
+        if (this.membersForCheck.includes(member) && !this.readyMembers.includes(member) && !this.notReadyMembers.includes(member)) {
+            this[ready ? 'readyMembers' : 'notReadyMembers'].push(member)
 
             this.lobby.publish('ReadyCheck-PlayerStatus', {
                 nickname: member.user.state.nickname,
@@ -59,6 +62,24 @@ export class ReadyCheck {
             })
 
             delete this.lobby.readyCheck
+        }
+    }
+
+    data() {
+        return {
+            members: this.membersForCheck.map(member => {
+                const data: ReadyCheckMember = member.data()
+
+                if (this.readyMembers.includes(member)) {
+                    data.ready = true
+                }
+
+                if (this.notReadyMembers.includes(member)) {
+                    data.ready = false
+                }
+
+                return data
+            })
         }
     }
 }

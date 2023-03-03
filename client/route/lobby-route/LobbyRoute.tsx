@@ -18,9 +18,6 @@ export const LobbyRoute: React.FC = () => {
     const game = useRef<ReturnType<typeof dynamic<any>> | null>(null)
     const [isLoaded, setIsLoaded] = useState(false)
 
-    const [readyCheck, setReadyCheck] = useState(false)
-    const [readyCheckMembers, setReadyCheckMembers] = useState<(LobbyMemberData & { ready?: boolean })[]>([])
-
     const { enqueueSnackbar } = useSnackbar()
 
     useEventHandler('Lobby-Join', data => {
@@ -81,13 +78,13 @@ export const LobbyRoute: React.FC = () => {
     })
 
     useEventHandler('ReadyCheck-Start', data => {
-        setReadyCheckMembers(data.members)
-        setReadyCheck(true)
+        lobby.setReadyCheckMembers(data.members)
+        lobby.setReadyCheck(true)
         audio.play('ready_check_start.mp3.mpeg')
     })
 
     useEventHandler('ReadyCheck-PlayerStatus', data => {
-        setReadyCheckMembers(members =>
+        lobby.setReadyCheckMembers(members =>
             members.map(m => {
                 if (m.nickname === data.nickname) {
                     return {
@@ -102,7 +99,7 @@ export const LobbyRoute: React.FC = () => {
     })
 
     useEventHandler('ReadyCheck-End', data => {
-        setTimeout(() => setReadyCheck(false), 2000)
+        setTimeout(() => lobby.setReadyCheck(false), 2000)
 
         audio.play(data.status === 'success' ? 'ready_check_success.mp3.mpeg' : 'ready_check_failure.mp3.mpeg')
     })
@@ -133,17 +130,17 @@ export const LobbyRoute: React.FC = () => {
         }
     }, [ws.isConnected])
 
-    const readyCheckVoted = typeof readyCheckMembers.find(m => m.nickname === user.nickname)?.ready === 'boolean'
+    const readyCheckVoted = typeof lobby.readyCheckMembers.find(m => m.nickname === user.nickname)?.ready === 'boolean'
 
     return (
         <>
             {isLoaded && game.current ? <game.current /> : null}
-            {readyCheck && (
+            {lobby.readyCheck && (
                 <Dialog open>
                     <DialogTitle>Ready check</DialogTitle>
                     <DialogContent>
                         <Grid container>
-                            {readyCheckMembers.map(m => (
+                            {lobby.readyCheckMembers.map(m => (
                                 <Grid item key={m.nickname}>
                                     <ProfilePicture
                                         size={90}
