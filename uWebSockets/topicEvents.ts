@@ -1,4 +1,4 @@
-import { ClickerPlayerData, LobbyData, LobbyMemberData, TChatMessage, Tip } from 'state'
+import { AbstractPlayerData, ClickerPlayerData, GameAction, LobbyData, LobbyMemberData, TChatMessage, Tip } from 'state'
 import { LobbyBaseInfo } from './ws/Lobby-GetList'
 
 export type TopicEvents = {
@@ -46,6 +46,17 @@ export type TopicEvents = {
         updated: {
             players: ClickerPlayerData[]
         }
+    }
+    'Clicker-SessionStart': {
+        lobbyId: string
+    }
+    'Game-SessionAction': GameAction & {
+        lobbyId: string
+    }
+    'Game-SessionEnd': {
+        lobbyId: string
+        state: any
+        players: AbstractPlayerData[]
     }
     'ReadyCheck-Start': {
         members: LobbyMemberData[]

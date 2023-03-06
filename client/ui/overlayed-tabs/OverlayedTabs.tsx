@@ -188,7 +188,7 @@ const OverlayedTabs: React.FC<Props> = props => {
                 </Toolbar>
             </AppBar>
             {value !== false && (
-                <Box sx={{ position: 'fixed', bottom: 0, height: barMargin, width: '100%', background: theme.palette.background.default }}>
+                <Box sx={{ position: 'fixed', bottom: 0, height: barMargin, width: '100%', background: theme.palette.background.default, zIndex: 10 }}>
                     {props.views.map((vs, key) => (
                         <TabPanel key={key} value={value} index={key} dir={theme.direction}>
                             {vs.view({

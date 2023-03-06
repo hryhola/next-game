@@ -5,7 +5,6 @@ import { WSProvider } from './list/ws'
 import { LobbyProvider } from './list/lobby'
 import { HomeProvider } from './list/home'
 import { AudioProvider } from './list/audio'
-import { GlobalModalProvider } from 'client/features/global-modal/GlobalModal'
 
 type Props = {
     children: JSX.Element[]
@@ -13,7 +12,7 @@ type Props = {
 }
 
 export const AppContext: React.FC<Props> = props => (
-    <ContextComposer components={[GlobalModalProvider, RouterProvider, UserProvider, WSProvider, LobbyProvider, HomeProvider, AudioProvider]} props={props}>
+    <ContextComposer components={[RouterProvider, UserProvider, WSProvider, LobbyProvider, HomeProvider, AudioProvider]} props={props}>
         {props.children}
     </ContextComposer>
 )

@@ -9,7 +9,7 @@ interface HeaderProps {
 
 const PlayersHeader: React.FC<HeaderProps> = props => {
     return (
-        <Box width="100vw" display="flex" justifyContent="center">
+        <Box sx={{ background: 'rgba(0,0,0, 0.25)', zIndex: 2 }} width="100vw" display="flex" justifyContent="center" position="fixed">
             <Grid container width="auto" wrap="nowrap" overflow="auto">
                 {props.isLoading ? (
                     <Grid item>

@@ -3,6 +3,7 @@ import { useEffect } from 'react'
 import { ThemeProvider, createTheme } from '@mui/material/styles'
 import CssBaseline from '@mui/material/CssBaseline'
 
+import { GlobalModalProvider } from 'client/features/global-modal/GlobalModal'
 import { SvgFilters } from 'client/ui/filters/SvgFilters'
 
 import 'client/ui/globals.scss'
@@ -48,7 +49,9 @@ function MyApp({ Component, pageProps }: AppProps) {
         <ThemeProvider theme={darkTheme}>
             <CssBaseline />
             <SvgFilters />
-            <Component {...pageProps} />
+            <GlobalModalProvider>
+                <Component {...pageProps} />
+            </GlobalModalProvider>
         </ThemeProvider>
     )
 }
