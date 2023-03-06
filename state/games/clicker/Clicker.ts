@@ -1,9 +1,16 @@
 import { AbstractGame, LobbyMember } from 'state'
+import { GeneralFailure, GeneralSuccess } from 'util/t'
 import { ClickerPlayer } from './ClickerPlayer'
 import { ClickerSession } from './ClickerSession'
 
+function randomInteger(min: number, max: number) {
+    return Math.floor(Math.random() * (max - min + 1)) + min
+}
+
 export class Clicker extends AbstractGame {
     static gameName = 'Clicker'
+
+    currentSession?: ClickerSession
 
     players: ClickerPlayer[] = []
 
@@ -35,7 +42,28 @@ export class Clicker extends AbstractGame {
         })
     }
 
-    startSession() {
+    startSession(): GeneralSuccess | GeneralFailure {
+        if (this.currentSession) {
+            return {
+                success: false,
+                message: 'Session already in progress'
+            }
+        }
+
         this.currentSession = new ClickerSession(this)
+
+        setTimeout(() => {
+            if (this.currentSession) {
+                this.currentSession._action(this, 'ClickAllowed', {})
+            }
+        }, randomInteger(500, 3000))
+
+        this.publish('Clicker-SessionStart', {
+            lobbyId: this.lobby.id
+        })
+
+        return {
+            success: true
+        }
     }
 }

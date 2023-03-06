@@ -11,6 +11,8 @@ import { handler as AuthLogout } from './Auth-Logout'
 import { handler as AuthRegister } from './Auth-Register'
 import { handler as ChatGet } from './Chat-Get'
 import { handler as ChatSend } from './Chat-Send'
+import { handler as GameSendAction } from './Game-SendAction'
+import { handler as GameStart } from './Game-Start'
 import { handler as LobbyGetList } from './Lobby-GetList'
 import { handler as LobbyGetPublicInfo } from './Lobby-GetPublicInfo'
 import { handler as LobbyKick } from './Lobby-Kick'
@@ -29,6 +31,8 @@ export const handlers = {
     'Auth-Register': AuthRegister,
     'Chat-Get': ChatGet,
     'Chat-Send': ChatSend,
+    'Game-SendAction': GameSendAction,
+    'Game-Start': GameStart,
     'Lobby-GetList': LobbyGetList,
     'Lobby-GetPublicInfo': LobbyGetPublicInfo,
     'Lobby-Kick': LobbyKick,

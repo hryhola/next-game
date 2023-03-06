@@ -1,49 +1,94 @@
 import { LobbyMember } from 'state/lobby/LobbyMember'
 import logger from 'logger'
 import { Lobby } from 'state'
+import { GeneralFailure, GeneralSuccess } from 'util/t'
 
 type AbstractSessionStartData = Record<string, string>
 
-type GameAction = {
+export type GameAction = {
     type: string
     payload: any
     result: any
+    by: string
 }
 
 export abstract class AbstractGameSession {
-    game: AbstractGame
-    log: GameAction[] = []
-    abstract state: any
+    _game: AbstractGame
+    _log: GameAction[] = []
+
+    abstract _state: any
 
     constructor(game: AbstractGame) {
-        this.game = game
+        this._game = game
     }
 
-    action(type: keyof this & string, payload: any) {
-        if (type === 'action' || !(type in this)) {
-            logger.error({ payload }, `Handler for type '${type.toString()}' is missing`)
-            return
+    _action(by: AbstractPlayer | AbstractGame, type: string, payload: any): GeneralSuccess | GeneralFailure {
+        if (!type) {
+            const message = 'Action type is missing'
+
+            logger.error({ payload }, message)
+
+            return {
+                success: false,
+                message
+            }
         }
 
-        const actionHandler = this[type]
+        if (type[0] === '_') {
+            const message = `Action type '${type.toString()}' is not allowed`
+
+            logger.error({ payload }, message)
+
+            return {
+                success: false,
+                message
+            }
+        }
+
+        if (!(type in this)) {
+            const message = `Handler for type '${type.toString()}' is missing`
+
+            logger.error({ payload }, message)
+
+            return {
+                success: false,
+                message
+            }
+        }
+
+        const actionHandler = this[type as keyof this]
 
         if (typeof actionHandler !== 'function') {
-            logger.error({ payload }, `Handler for type '${type.toString()}' is missing`)
+            const message = `Handler for type '${type.toString()}' is missing`
 
-            return
+            logger.error({ payload })
+
+            return {
+                success: false,
+                message
+            }
         }
 
-        const result = actionHandler(payload)
+        const result = actionHandler.call(this, by, payload)
 
-        this.log.push({ type, payload, result })
+        const action = { type, payload, result, by: by instanceof AbstractGame ? '#game' : by.member.user.state.nickname }
 
-        const gameClass = (this.game.constructor as typeof AbstractGame).gameName
+        this._log.push(action)
 
-        this.game.lobby.publish(gameClass + '-SessionAction', {
-            type,
-            payload,
-            result
+        this._game.lobby.publish('Game-SessionAction', {
+            ...action,
+            lobbyId: this._game.lobby.id
         })
+
+        return {
+            success: true
+        }
+    }
+
+    _data() {
+        return {
+            winner: null
+        }
     }
 }
 
@@ -70,6 +115,12 @@ export abstract class AbstractPlayer {
             ...this.state,
             ...newState
         }
+
+        this.member.lobby.publish('Clicker-Update', {
+            updated: {
+                players: this.member.lobby.game.players.map(p => p.data())
+            }
+        })
     }
 
     data() {
@@ -85,7 +136,7 @@ export type AbstractPlayerData = ReturnType<AbstractPlayer['data']>
 export abstract class AbstractGame {
     static gameName: string
 
-    currentSession?: AbstractGameSession
+    abstract currentSession?: AbstractGameSession
 
     prevSessions: AbstractGameSession[] = []
     lobby: Lobby
@@ -102,13 +153,19 @@ export abstract class AbstractGame {
 
     abstract leave(user: AbstractPlayer): void
 
-    abstract startSession(data?: AbstractSessionStartData): void
+    abstract startSession(data?: AbstractSessionStartData): GeneralSuccess | GeneralFailure
 
     endSession() {
         if (!this.currentSession) {
             logger.warn('Cannot end session that is not started')
             return
         }
+
+        this.publish('Game-SessionEnd', {
+            lobbyId: this.lobby.id,
+            state: this.currentSession._data(),
+            players: this.players.map(p => p.data())
+        })
 
         this.prevSessions.push(this.currentSession)
 
@@ -119,7 +176,7 @@ export abstract class AbstractGame {
         return {
             name: (this.constructor as typeof AbstractGame).gameName,
             players: this.players.map(p => p.data()),
-            state: this.currentSession?.state
+            state: this.currentSession?._state
         }
     }
 }

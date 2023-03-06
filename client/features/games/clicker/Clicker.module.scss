@@ -1,0 +1,19 @@
+.circle {
+    border-radius: 50%;
+    position: fixed;
+    transform: translate(-50%, -50%);
+    z-index: 1;
+    animation: slidein 3s forwards;
+}
+
+@keyframes slidein {
+    from {
+        width: 1px;
+        height: 1px;
+    }
+
+    to {
+        width: calc(max(100vw, var(--fullHeight)) * 2.5);
+        height: calc(max(100vw, var(--fullHeight)) * 2.5);
+    }
+}
