@@ -23,7 +23,7 @@ export class Clicker extends AbstractGame {
 
         this.players.push(player)
 
-        this.publish('Clicker-Join', {
+        this.publish('Game-Join', {
             lobbyId: this.lobby.id,
             player: player.data()
         })
@@ -36,7 +36,7 @@ export class Clicker extends AbstractGame {
     leave(player: ClickerPlayer) {
         this.players = this.players.filter(p => p !== player)
 
-        this.publish('Clicker-Leave', {
+        this.publish('Game-Leave', {
             lobbyId: this.lobby.id,
             player: player.data()
         })
@@ -58,7 +58,7 @@ export class Clicker extends AbstractGame {
             }
         }, randomInteger(500, 3000))
 
-        this.publish('Clicker-SessionStart', {
+        this.publish('Game-SessionStart', {
             lobbyId: this.lobby.id
         })
 

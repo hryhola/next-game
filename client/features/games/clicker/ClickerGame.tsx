@@ -23,19 +23,19 @@ export const Clicker = () => {
     const [isLoading, setIsLoading] = useState(true)
     const [isPlaying, setIsPlaying] = useState(false)
 
-    useEventHandler('Clicker-Join', data => {
+    useEventHandler('Game-Join', data => {
         setPlayers(ps => [...ps.filter(p => p.nickname !== data.player.nickname), data.player])
     })
 
-    useEventHandler('Clicker-Leave', data => {
+    useEventHandler('Game-Leave', data => {
         setPlayers(ps => [...ps.filter(p => p.nickname !== data.player.nickname)])
     })
 
-    useEventHandler('Clicker-Update', data => {
+    useEventHandler('Game-Update', data => {
         setPlayers(data.updated.players)
     })
 
-    useEventHandler('Clicker-SessionStart', ({ lobbyId }) => {
+    useEventHandler('Game-SessionStart', ({ lobbyId }) => {
         if (lobbyId === lobby.lobbyId) {
             setIsPlaying(true)
         }
