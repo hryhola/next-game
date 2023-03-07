@@ -2,7 +2,7 @@ import { EventEmitter } from 'node:events'
 import { WebSocket } from 'uWebSockets.js'
 import randomColor from 'randomcolor'
 import { v4 } from 'uuid'
-import { AbstractGame, Lobby } from 'state'
+import { Lobby } from 'state'
 
 type onUpdateCb = (user: Partial<User['state']>) => void
 
@@ -62,7 +62,7 @@ export class User {
                 }
             })
 
-            l.game.publish(`${(l.game.constructor as typeof AbstractGame).gameName}-Update`, {
+            l.game.publish(`Game-Update`, {
                 updated: {
                     players: l.game.players.map(p => p.data())
                 }

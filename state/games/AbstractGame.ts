@@ -107,7 +107,7 @@ export abstract class AbstractPlayer {
             ...newState
         }
 
-        this.member.lobby.publish('Clicker-Update', {
+        this.member.lobby.publish('Game-Update', {
             updated: {
                 players: this.member.lobby.game.players.map(p => p.data())
             }

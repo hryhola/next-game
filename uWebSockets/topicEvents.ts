@@ -34,20 +34,20 @@ export type TopicEvents = {
         lobbyId: string
         member: LobbyMemberData
     }
-    'Clicker-Join': {
+    'Game-Join': {
         lobbyId: string
         player: ClickerPlayerData
     }
-    'Clicker-Leave': {
+    'Game-Leave': {
         lobbyId: string
         player: ClickerPlayerData
     }
-    'Clicker-Update': {
+    'Game-Update': {
         updated: {
             players: ClickerPlayerData[]
         }
     }
-    'Clicker-SessionStart': {
+    'Game-SessionStart': {
         lobbyId: string
     }
     'Game-SessionAction': GameAction & {
