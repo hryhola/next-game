@@ -44,7 +44,7 @@ export const handler: Handler<Request, GeneralSuccess | GeneralFailure> = (act, 
         })
     }
 
-    var result = lobby.game.currentSession._action(player, data.actionName, data.actionPayload)
+    var result = lobby.game.currentSession.action(player, data.actionName, data.actionPayload)
 
     return act.res(result)
 }

@@ -54,7 +54,7 @@ export class Clicker extends AbstractGame {
 
         setTimeout(() => {
             if (this.currentSession) {
-                this.currentSession._action(this, 'ClickAllowed', {})
+                this.currentSession.action(this, 'ClickAllowed', {})
             }
         }, randomInteger(500, 3000))
 
