@@ -6,7 +6,7 @@ import { api } from 'client/network-utils/api'
 import { URL as ApiUrl } from 'client/network-utils/const'
 import { GeneralFailure, GeneralSuccess } from 'util/t'
 import { GameName } from 'state/games'
-import { HomeContext } from 'client/context/list/home'
+import { HomeContext } from 'client/context/list/homeCtx'
 
 export const LobbyCreator: React.FC = () => {
     const home = useContext(HomeContext)

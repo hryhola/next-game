@@ -1,9 +1,9 @@
 import React from 'react'
+import { Dialog, Button } from '@mui/material'
 import { useLobby, useWS } from 'client/context/list'
 import PlayersHeader from '../common/PlayersHeader'
 import { LobbyControls } from 'client/features/lobby-controls/LobbyControls'
 import { ClickerCanvas } from './ClickerCanvas'
-import { Dialog, Button } from '@mui/material'
 import { withGameCtx } from '../common/GameCtx'
 
 export const Clicker = withGameCtx(({ players, isLoading, isPlaying }) => {
