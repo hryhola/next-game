@@ -32,7 +32,7 @@ export abstract class AbstractGame {
 
         this.publish('Game-SessionEnd', {
             lobbyId: this.lobby.id,
-            state: this.currentSession.data(),
+            session: this.currentSession.data(),
             players: this.players.map(p => p.data())
         })
 
@@ -45,7 +45,7 @@ export abstract class AbstractGame {
         return {
             name: (this.constructor as typeof AbstractGame).gameName,
             players: this.players.map(p => p.data()),
-            state: this.currentSession?.data()
+            session: this.currentSession?.data()
         }
     }
 }
