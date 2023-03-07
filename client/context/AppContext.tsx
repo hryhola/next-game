@@ -1,10 +1,10 @@
 import { ContextComposer } from './ContextComposer'
-import { UserProvider } from './list/user'
-import { Route, RouterProvider } from './list/router'
-import { WSProvider } from './list/ws'
-import { LobbyProvider } from './list/lobby'
-import { HomeProvider } from './list/home'
-import { AudioProvider } from './list/audio'
+import { UserProvider } from './list/userCtx'
+import { Route, RouterProvider } from './list/routerCtx'
+import { WSProvider } from './list/wsCtx'
+import { LobbyProvider } from './list/lobbyCtx'
+import { HomeProvider } from './list/homeCtx'
+import { AudioProvider } from './list/audioCtx'
 
 type Props = {
     children: JSX.Element[]

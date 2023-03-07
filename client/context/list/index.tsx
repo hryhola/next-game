@@ -1,7 +1,7 @@
 // @index('./**/*.tsx', f => `export * from '${f.path}'`)
-export * from './audio'
-export * from './home'
-export * from './lobby'
-export * from './router'
-export * from './user'
-export * from './ws'
+export * from './audioCtx'
+export * from './homeCtx'
+export * from './lobbyCtx'
+export * from './routerCtx'
+export * from './userCtx'
+export * from './wsCtx'

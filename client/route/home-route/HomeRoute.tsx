@@ -1,6 +1,6 @@
 import { useContext } from 'react'
 import { Header } from 'client/features/header/Header'
-import { HomeContext } from 'client/context/list/home'
+import { HomeContext } from 'client/context/list/homeCtx'
 
 import { HomeTabs } from 'client/features/home-tabs/HomeTabs'
 import { Navigation } from 'client/features/navigation/Navigation'

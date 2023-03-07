@@ -128,7 +128,7 @@ export const LobbyRoute: React.FC = () => {
     })
 
     useEffect(() => {
-        game.current = dynamic(() => import('client/features/games/clicker/ClickerGame').then(mod => mod.Clicker), {
+        game.current = dynamic(() => import('client/features/games/clicker/ClickerView').then(mod => mod.Clicker), {
             loading: () => <LoadingOverlay isLoading={true} />
         })
 
