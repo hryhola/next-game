@@ -1,12 +1,9 @@
 import { Box, Skeleton, SxProps, Theme, Typography } from '@mui/material'
 import { useUser } from 'client/context/list'
-import { useContext } from 'react'
 import { AbstractPlayerData } from 'state'
 import { ProfilePicture } from '../../profile-picture/ProfilePicture'
 import * as React from 'react'
 import { PlayerMenu } from './PlayerMenu'
-import { ClickerContext } from '../clicker/ClickerGame'
-import { LobbyContext, useLobby } from 'client/context/list/lobby'
 
 type Props = {
     size?: 'medium' | 'small'
