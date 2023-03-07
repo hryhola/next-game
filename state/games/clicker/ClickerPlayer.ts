@@ -1,4 +1,4 @@
-import { AbstractPlayer } from 'state'
+import { AbstractPlayer } from 'state/games/common/AbstractPlayer'
 
 export class ClickerPlayer extends AbstractPlayer {}
 
