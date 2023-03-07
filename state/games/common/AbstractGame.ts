@@ -45,7 +45,7 @@ export abstract class AbstractGame {
         return {
             name: (this.constructor as typeof AbstractGame).gameName,
             players: this.players.map(p => p.data()),
-            state: this.currentSession?.state
+            state: this.currentSession?.data()
         }
     }
 }

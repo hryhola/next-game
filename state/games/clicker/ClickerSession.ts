@@ -11,6 +11,13 @@ export class ClickerSession extends AbstractGameSession {
         this.state = new ClickerSessionState()
     }
 
+    data() {
+        return {
+            winner: this.state.winner?.data(),
+            isClickAllowed: this.state.isClickAllowed
+        }
+    }
+
     $Click(player: ClickerPlayer | Clicker) {
         if (player instanceof Clicker) {
             return {
