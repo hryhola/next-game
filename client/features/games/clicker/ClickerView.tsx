@@ -6,7 +6,7 @@ import { LobbyControls } from 'client/features/lobby-controls/LobbyControls'
 import { ClickerCanvas } from './ClickerCanvas'
 import { withGameCtx } from '../common/GameCtx'
 
-export const Clicker = withGameCtx(({ players, isLoading, isPlaying }) => {
+export const Clicker = withGameCtx(({ players, isLoading, isSessionStarted }) => {
     const lobby = useLobby()
     const ws = useWS()
 
@@ -14,7 +14,7 @@ export const Clicker = withGameCtx(({ players, isLoading, isPlaying }) => {
         <>
             <PlayersHeader members={players} isLoading={isLoading} />
             <ClickerCanvas />
-            <Dialog open={!isPlaying} sx={{ zIndex: 1 }} disableEnforceFocus>
+            <Dialog open={!isSessionStarted} sx={{ zIndex: 1 }} disableEnforceFocus>
                 <Button onClick={() => ws.send('Game-Start', { lobbyId: lobby.lobbyId })}>Start game</Button>
             </Dialog>
             <LobbyControls />

@@ -60,7 +60,8 @@ export class Clicker extends AbstractGame {
         }, randomInteger(500, 3000))
 
         this.publish('Game-SessionStart', {
-            lobbyId: this.lobby.id
+            lobbyId: this.lobby.id,
+            session: this.currentSession.data()
         })
 
         return {

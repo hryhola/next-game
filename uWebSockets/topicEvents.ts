@@ -49,13 +49,14 @@ export type TopicEvents = {
     }
     'Game-SessionStart': {
         lobbyId: string
+        session: any
     }
     'Game-SessionAction': GameAction & {
         lobbyId: string
     }
     'Game-SessionEnd': {
         lobbyId: string
-        state: any
+        session: any
         players: AbstractPlayerData[]
     }
     'ReadyCheck-Start': {

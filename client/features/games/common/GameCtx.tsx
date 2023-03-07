@@ -7,11 +7,9 @@ import { Failure, Success } from 'pages/api/lobby-join'
 
 export type GameCtxValue = {
     players: AbstractPlayerData[]
-    setPlayers: React.Dispatch<React.SetStateAction<AbstractPlayerData[]>>
     isLoading: boolean
-    setIsLoading: React.Dispatch<React.SetStateAction<boolean>>
-    isPlaying: boolean
-    setIsPlaying: React.Dispatch<React.SetStateAction<boolean>>
+    isSessionStarted: boolean
+    session: any | null
 }
 
 export const GameCtx = React.createContext<GameCtxValue | null>(null)
@@ -22,7 +20,7 @@ export const withGameCtx = <P extends object>(Component: React.ComponentType<P &
 
         const [players, setPlayers] = React.useState<AbstractPlayerData[]>([])
         const [isLoading, setIsLoading] = React.useState(true)
-        const [isPlaying, setIsPlaying] = React.useState(false)
+        const [session, setSession] = React.useState<Record<string, any> | null>(null)
 
         useEventHandler('Game-Join', data => {
             setPlayers(ps => [...ps.filter(p => p.nickname !== data.player.nickname), data.player])
@@ -36,15 +34,15 @@ export const withGameCtx = <P extends object>(Component: React.ComponentType<P &
             setPlayers(data.updated.players)
         })
 
-        useEventHandler('Game-SessionStart', ({ lobbyId }) => {
+        useEventHandler('Game-SessionStart', ({ lobbyId, session }) => {
             if (lobbyId === lobby.lobbyId) {
-                setIsPlaying(true)
+                setSession(session)
             }
         })
 
         useEventHandler('Game-SessionEnd', ({ lobbyId }) => {
             if (lobbyId === lobby.lobbyId) {
-                setIsPlaying(false)
+                setSession(null)
             }
         })
 
@@ -62,18 +60,17 @@ export const withGameCtx = <P extends object>(Component: React.ComponentType<P &
                 lobby.setGameName(response.game.name as 'Clicker')
 
                 setPlayers(response.game.players)
-
                 setIsLoading(false)
+
+                if (response.game.session) setSession(response.game.session)
             })()
         }, [])
 
         const game = {
             players,
-            setPlayers,
             isLoading,
-            setIsLoading,
-            isPlaying,
-            setIsPlaying
+            isSessionStarted: session !== null,
+            session
         }
 
         return (

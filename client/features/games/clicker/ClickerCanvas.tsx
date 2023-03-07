@@ -2,13 +2,21 @@ import React, { useRef, useState } from 'react'
 import { Box } from '@mui/material'
 import styles from './Clicker.module.scss'
 import { useEventHandler, useLobby, useWS } from 'client/context/list'
+import { useGame } from '../common/GameCtx'
 
 export const ClickerCanvas: React.FC = () => {
     const ws = useWS()
+    const game = useGame()
     const { lobbyId } = useLobby()
     const canvasRef = useRef<HTMLDivElement>(null)
 
-    const [clickAllowed, setClickAllowed] = useState(false)
+    const [clickAllowed, setClickAllowed] = useState(game.session?.isClickAllowed ?? false)
+
+    React.useEffect(() => {
+        if (game.session) {
+            setClickAllowed(game.session.isClickAllowed)
+        }
+    }, [game.session?.isClickAllowed])
 
     useEventHandler('Game-SessionAction', data => {
         if (data.lobbyId !== lobbyId) {
