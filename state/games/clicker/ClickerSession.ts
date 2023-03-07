@@ -2,41 +2,41 @@ import { AbstractGameSession, Clicker } from 'state'
 import { ClickerPlayer } from './ClickerPlayer'
 import { ClickerSessionState } from './ClickerSessionState'
 export class ClickerSession extends AbstractGameSession {
-    _state: ClickerSessionState
+    state: ClickerSessionState
 
     constructor(game: Clicker) {
         super(game)
 
-        this._state = new ClickerSessionState()
+        this.state = new ClickerSessionState()
     }
 
-    Click(player: ClickerPlayer | Clicker) {
+    $Click(player: ClickerPlayer | Clicker) {
         if (player instanceof Clicker) {
             return {
                 error: 'Not allowed'
             }
         }
 
-        if (!this._state.isClickAllowed) {
+        if (!this.state.isClickAllowed) {
             return {
                 color: player.member.user.state.nicknameColor,
                 status: 'Failure'
             }
         }
 
-        if (this._state.winner) {
+        if (this.state.winner) {
             return {
                 color: player.member.user.state.nicknameColor,
                 status: 'Failure'
             }
         }
 
-        this._state.winner = player
+        this.state.winner = player
 
         setTimeout(() => {
-            if (this._game.currentSession === this) {
+            if (this.game.currentSession === this) {
                 player.update({ score: player.state.score + 1 })
-                this._game.endSession()
+                this.game.endSession()
             }
         }, 1000)
 
@@ -46,11 +46,11 @@ export class ClickerSession extends AbstractGameSession {
         }
     }
 
-    ClickAllowed() {
-        this._state.isClickAllowed = true
+    $ClickAllowed() {
+        this.state.isClickAllowed = true
 
         return {
-            isClickAllowed: this._state.isClickAllowed
+            isClickAllowed: this.state.isClickAllowed
         }
     }
 }

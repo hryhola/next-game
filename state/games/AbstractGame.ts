@@ -13,16 +13,16 @@ export type GameAction = {
 }
 
 export abstract class AbstractGameSession {
-    _game: AbstractGame
-    _log: GameAction[] = []
+    game: AbstractGame
+    log: GameAction[] = []
 
-    abstract _state: any
+    abstract state: any
 
     constructor(game: AbstractGame) {
-        this._game = game
+        this.game = game
     }
 
-    _action(by: AbstractPlayer | AbstractGame, type: string, payload: any): GeneralSuccess | GeneralFailure {
+    action(by: AbstractPlayer | AbstractGame, type: string, payload: any): GeneralSuccess | GeneralFailure {
         if (!type) {
             const message = 'Action type is missing'
 
@@ -34,18 +34,9 @@ export abstract class AbstractGameSession {
             }
         }
 
-        if (type[0] === '_') {
-            const message = `Action type '${type.toString()}' is not allowed`
+        const handlerName = '$' + type
 
-            logger.error({ payload }, message)
-
-            return {
-                success: false,
-                message
-            }
-        }
-
-        if (!(type in this)) {
+        if (!(handlerName in this)) {
             const message = `Handler for type '${type.toString()}' is missing`
 
             logger.error({ payload }, message)
@@ -56,7 +47,7 @@ export abstract class AbstractGameSession {
             }
         }
 
-        const actionHandler = this[type as keyof this]
+        const actionHandler = this[handlerName as keyof this]
 
         if (typeof actionHandler !== 'function') {
             const message = `Handler for type '${type.toString()}' is missing`
@@ -73,11 +64,11 @@ export abstract class AbstractGameSession {
 
         const action = { type, payload, result, by: by instanceof AbstractGame ? '#game' : by.member.user.state.nickname }
 
-        this._log.push(action)
+        this.log.push(action)
 
-        this._game.lobby.publish('Game-SessionAction', {
+        this.game.lobby.publish('Game-SessionAction', {
             ...action,
-            lobbyId: this._game.lobby.id
+            lobbyId: this.game.lobby.id
         })
 
         return {
@@ -85,7 +76,7 @@ export abstract class AbstractGameSession {
         }
     }
 
-    _data() {
+    data() {
         return {
             winner: null
         }
@@ -163,7 +154,7 @@ export abstract class AbstractGame {
 
         this.publish('Game-SessionEnd', {
             lobbyId: this.lobby.id,
-            state: this.currentSession._data(),
+            state: this.currentSession.data(),
             players: this.players.map(p => p.data())
         })
 
@@ -176,7 +167,7 @@ export abstract class AbstractGame {
         return {
             name: (this.constructor as typeof AbstractGame).gameName,
             players: this.players.map(p => p.data()),
-            state: this.currentSession?._state
+            state: this.currentSession?.state
         }
     }
 }
