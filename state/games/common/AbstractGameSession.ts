@@ -75,9 +75,5 @@ export abstract class AbstractGameSession {
         }
     }
 
-    data() {
-        return {
-            winner: null
-        }
-    }
+    abstract data(): object
 }
