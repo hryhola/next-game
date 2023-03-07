@@ -1,9 +1,8 @@
 import { Menu, MenuItem } from '@mui/material'
 import { useUser, useLobby, useWS } from 'client/context/list'
-import { useContext } from 'react'
 import { AbstractPlayerData } from 'state'
 import { v4 } from 'uuid'
-import { ClickerContext } from '../clicker/ClickerGame'
+import { useGame } from './GameCtx'
 
 type Props = {
     playerMenuAnchor: Element | null
@@ -16,8 +15,7 @@ export const PlayerMenu: React.FC<Props> = props => {
     const user = useUser()
     const lobby = useLobby()
     const ws = useWS()
-
-    const game = useContext(ClickerContext)
+    const game = useGame()
 
     const handleOptionClick = (event: React.MouseEvent<HTMLElement>) => {
         const option = event.currentTarget.id
