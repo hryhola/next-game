@@ -12,7 +12,8 @@ const PlayersHeader: React.FC<HeaderProps> = props => {
         <Box
             sx={{
                 background: 'linear-gradient(0deg, rgb(0 0 0 / 0%) 0%, #000024 100%)',
-                zIndex: 2
+                zIndex: 2,
+                pointerEvents: 'none'
             }}
             width="100vw"
             display="flex"

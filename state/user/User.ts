@@ -58,11 +58,10 @@ export class User {
         Object.assign(this.state, newData)
 
         this.lobbies.forEach(l => {
-            l.publish('Lobby-Update', {
+            l.publish('Lobby-MemberUpdate', {
                 lobbyId: l.id,
-                updated: {
-                    members: l.members.map(m => m.data())
-                }
+                memberId: this.id,
+                data: newData
             })
 
             const isPlayer = l.game.players.some(p => p.member.user === this)
