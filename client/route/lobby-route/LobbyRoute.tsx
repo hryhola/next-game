@@ -164,7 +164,7 @@ export const LobbyRoute: React.FC = () => {
                     <DialogContent>
                         <Grid container>
                             {lobby.readyCheckMembers.map(m => (
-                                <Grid item key={m.nickname}>
+                                <Grid item key={m.id}>
                                     <ProfilePicture
                                         size={90}
                                         color={m.nicknameColor}

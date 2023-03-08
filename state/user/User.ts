@@ -16,6 +16,7 @@ export class User {
     ws: WebSocket<unknown>
 
     readonly token: string
+    readonly id: string
 
     readonly state: {
         readonly nickname: string
@@ -28,6 +29,8 @@ export class User {
         this.emitter = new EventEmitter()
         this.ws = ws
         this.token = v4()
+        this.id = v4()
+
         this.state = {
             nickname: id,
             nicknameColor: randomColor(),
@@ -51,8 +54,8 @@ export class User {
         }, User.AutoLogoutMs)
     }
 
-    update(data: Partial<User['state']>) {
-        Object.assign(this.state, data)
+    update(newData: Partial<User['state']>) {
+        Object.assign(this.state, newData)
 
         this.lobbies.forEach(l => {
             l.publish('Lobby-Update', {
@@ -62,14 +65,17 @@ export class User {
                 }
             })
 
-            l.game.publish(`Game-Update`, {
-                updated: {
-                    players: l.game.players.map(p => p.data())
-                }
-            })
+            const isPlayer = l.game.players.some(p => p.member.user === this)
+
+            if (isPlayer) {
+                l.publish('Game-PlayerUpdate', {
+                    id: this.id,
+                    data: newData
+                })
+            }
         })
 
-        this.emitter.emit('update', data)
+        this.emitter.emit('update', newData)
     }
 
     onUpdate(callback: onUpdateCb) {
@@ -99,7 +105,10 @@ export class User {
     }
 
     data() {
-        return this.state
+        return {
+            ...this.state,
+            id: this.id
+        }
     }
 }
 

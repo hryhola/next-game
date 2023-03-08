@@ -13,7 +13,8 @@ export class UserRegistry {
         State.act.publishTopicEvent('UserRegistry-OnlineUpdate', {
             scope: 'global',
             list: this.onlineUsers.map(u => ({
-                nickname: u.state.nickname
+                nickname: u.state.nickname,
+                id: u.id
             }))
         })
     }

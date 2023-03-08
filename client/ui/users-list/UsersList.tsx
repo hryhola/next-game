@@ -3,7 +3,7 @@ import React, { useState } from 'react'
 import SearchIcon from '@mui/icons-material/Search'
 
 interface Props {
-    users: Array<{ nickname: string }>
+    users: Array<{ nickname: string; id: string }>
 }
 
 export const UsersListBox: React.FC<Props> = props => {
@@ -31,7 +31,7 @@ export const UsersListBox: React.FC<Props> = props => {
             </Toolbar>
             <List>
                 {renderedUsers.map(user => (
-                    <ListItem key={user.nickname}>
+                    <ListItem key={user.id}>
                         <ListItemText>{user.nickname}</ListItemText>
                     </ListItem>
                 ))}
