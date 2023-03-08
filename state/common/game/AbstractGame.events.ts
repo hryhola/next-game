@@ -1,19 +1,18 @@
-import type { ClickerPlayerData } from 'state/games/clicker/ClickerPlayer'
 import type { GameAction } from './AbstractGameSession'
 import type { AbstractPlayerData } from './AbstractPlayer'
 
 export type Events = {
     'Game-Join': {
         lobbyId: string
-        player: ClickerPlayerData
+        player: AbstractPlayerData
     }
     'Game-Leave': {
         lobbyId: string
-        player: ClickerPlayerData
+        player: AbstractPlayerData
     }
     'Game-Update': {
         updated: {
-            players: ClickerPlayerData[]
+            players: AbstractPlayerData[]
         }
     }
     'Game-SessionStart': {
