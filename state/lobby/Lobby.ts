@@ -1,6 +1,6 @@
 import { AbstractGame, Chat, State, GameCtors, GameName, LobbyMember, User, ReadyCheck } from 'state'
 import { GeneralFailure, GeneralSuccess } from 'util/t'
-import { AbstractSocketMessage } from 'uWebSockets/uws.types'
+import { StateEventName, StateEvents } from 'uWebSockets/topicEvents'
 
 export type LobbyCreateOptions<G extends GameName> = {
     id: string
@@ -32,7 +32,7 @@ export class Lobby<G extends GameName = GameName> {
         this.game = new GameConstructor(this)
     }
 
-    publish(сtx: AbstractSocketMessage['ctx'], data: AbstractSocketMessage['data']) {
+    publish<E extends StateEventName>(сtx: E, data: StateEvents[E]) {
         State.act.publish(`Lobby-${this.id}`, {
             ctx: сtx,
             data
