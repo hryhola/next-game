@@ -3,10 +3,17 @@
     position: fixed;
     transform: translate(-50%, -50%);
     z-index: 1;
-    animation: slidein 3s forwards;
 }
 
-@keyframes slidein {
+.success {
+    animation: circleGrow 3s forwards;
+}
+
+.failure {
+    animation: circleShrink 0.75s forwards;
+}
+
+@keyframes circleGrow {
     from {
         width: 1px;
         height: 1px;
@@ -15,5 +22,23 @@
     to {
         width: calc(max(100vw, var(--fullHeight)) * 2.5);
         height: calc(max(100vw, var(--fullHeight)) * 2.5);
+    }
+}
+
+@keyframes circleShrink {
+    from {
+        width: 1px;
+        height: 1px;
+    }
+
+    25% {
+        width: calc(min(50vw, 50vh));
+        height: calc(min(50vw, 50vh));
+    }
+
+    to {
+        width: 1px;
+        height: 1px;
+        visibility: hidden;
     }
 }
