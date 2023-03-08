@@ -4,11 +4,16 @@ import { GeneralSuccess, GeneralFailure } from 'util/t'
 
 export type AbstractSessionStartData = Record<string, string>
 
+export type GameActor = {
+    type: 'player' | 'game'
+    id: string
+}
+
 export type GameAction = {
     type: string
     payload: any
     result: any
-    by: string
+    by: GameActor
 }
 
 export abstract class AbstractGameSession {
@@ -61,7 +66,15 @@ export abstract class AbstractGameSession {
 
         const result = actionHandler.call(this, by, payload)
 
-        const action = { type, payload, result, by: by instanceof AbstractGame ? '#game' : by.member.user.state.nickname }
+        const action: GameAction = {
+            type,
+            payload,
+            result,
+            by: {
+                type: by instanceof AbstractGame ? 'game' : 'player',
+                id: by instanceof AbstractGame ? 'game' : by.member.user.id
+            }
+        }
 
         this.log.push(action)
 

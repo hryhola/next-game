@@ -28,15 +28,7 @@ export const ClickerCanvas: React.FC = () => {
 
         if (data.type === 'Click' && data.result.status !== 'Skipped') {
             drawClick(data.result.color, data.payload.x, data.payload.y, data.result.status)
-        }
-    })
-
-    useEventHandler('Game-SessionAction', data => {
-        if (data.lobbyId !== lobbyId) {
-            return
-        }
-
-        if (data.type === 'ClickAllowed') {
+        } else if (data.type === 'ClickAllowed') {
             setGameClickAllowed(true)
         }
     })
