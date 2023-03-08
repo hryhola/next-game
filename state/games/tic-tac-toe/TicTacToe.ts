@@ -1,138 +1,80 @@
-// import { rotateMatrix } from 'util/matrix'
-// import { Lobby, LobbyMember,User } from 'state'
-// import { AbstractGame, AbstractGameSession, AbstractPlayer } from '../AbstractGame'
+import { AbstractGame } from 'state/common/game/AbstractGame'
+import { LobbyMember } from 'state/lobby/LobbyMember'
+import { TicTacToePlayer } from './TicTacToePlayer'
+import { TicTacToeSession } from './TicTacToeSession'
 
-// type MoveChar = 'x' | 'o'
-// type CellValue = MoveChar | null
-// type TicTacToeMove = {
-//     player: TicTacToePlayer
-//     cell: [number, number]
-//     value: MoveChar
-// }
+export type MoveChar = 'x' | 'o'
+export type CellValue = MoveChar | null
+export type TicTacToeMove = {
+    player: TicTacToePlayer
+    cell: [number, number]
+    value: MoveChar
+}
 
-// export class TicTacToePlayer extends AbstractPlayer {
-//     char: MoveChar
+export class TicTacToe extends AbstractGame {
+    static gameName = 'TicTacToe'
 
-//     constructor(lobby: Lobby, member: LobbyMember, char: MoveChar) {
-//         super(lobby, member.user)
+    maxPlayers = 2
 
-//         this.char = char
-//     }
-// }
+    players: TicTacToePlayer[] = []
 
-// class TicTacToeSessionState {
-//     board: CellValue[][] = [
-//         [null, null, null],
-//         [null, null, null],
-//         [null, null, null]
-//     ]
-//     maxPlayers = 2
-//     moves: TicTacToeMove[] = []
-//     winner?: TicTacToePlayer
-// }
+    currentSession?: TicTacToeSession
 
-// class TicTacToeSession extends AbstractGameSession {
-//     game!: TicTacToe
-//     state = new TicTacToeSessionState()
+    startSession() {
+        if (this.currentSession) {
+            return {
+                success: false,
+                message: 'Session already in progress'
+            }
+        }
 
-//     Move(data: { playerNickname: string; cell: [number, number] }) {
-//         const [x, y] = data.cell
+        this.currentSession = new TicTacToeSession(this)
 
-//         const player = this.game.players.find(p => p.user.nickname === data.playerNickname)!
+        this.publish('Game-SessionStart', {
+            lobbyId: this.lobby.id,
+            session: this.currentSession.data()
+        })
 
-//         this.state.board[x][y] = player.char
+        return {
+            success: true,
+            message: 'Session started'
+        }
+    }
 
-//         const winnerChar = this.checkWin()
+    join(member: LobbyMember) {
+        const existed = this.players.find(p => p.member === member)
 
-//         if (winnerChar) {
-//             this.state.winner = this.game.players.find(p => p.char === winnerChar)
-//             this.game.endSession()
-//         }
-//     }
+        if (existed) {
+            return {
+                success: true,
+                message: 'Already joined'
+            }
+        }
 
-//     isWinRow(row: CellValue[]) {
-//         return row.every(cell => cell === 'x') || row.every(cell => cell === 'o')
-//     }
+        if (this.players.length === this.maxPlayers) {
+            return {
+                success: false,
+                message: 'Max players'
+            }
+        }
 
-//     checkWin(): CellValue | false {
-//         const winRow = this.state.board.find(row => this.isWinRow(row))
+        const char = this.players[0]?.state.char === 'o' ? 'x' : 'o'
 
-//         if (winRow) {
-//             return winRow[0]!
-//         }
+        const player = new TicTacToePlayer(member, char)
 
-//         const winColumn = rotateMatrix(this.state.board).find((row: CellValue[]) => this.isWinRow(row))
+        if (member.state.isCreator) {
+            player.update({ isMaster: true })
+        }
 
-//         if (winColumn) {
-//             return winColumn[0]!
-//         }
+        this.players.push(player)
 
-//         return false
+        this.publish('Game-Join', {
+            lobbyId: this.lobby.id,
+            player: player.data()
+        })
 
-//         // todo directional win
-//     }
-// }
-
-// export class TicTacToe extends AbstractGame {
-//     static gameName = 'TicTacToe'
-
-//     maxPlayers = 2
-//     players: TicTacToePlayer[] = []
-
-//     startSession(): void {
-//         this.currentSession = new TicTacToeSession(this)
-//     }
-
-//     publish(ctx: string, data: any) {
-//         this.lobby.publish({
-//             ctx: `TicTacToe-${ctx}`,
-//             data
-//         })
-//     }
-
-//     join(member: LobbyMember) {
-//         const existed = this.players.find(p => p.user === member.user)
-
-//         if (existed) {
-//             return {
-//                 success: true,
-//                 players: this.players,
-//                 message: 'Already joined'
-//             }
-//         }
-
-//         if (this.players.length === this.maxPlayers) {
-//             return {
-//                 success: false,
-//                 players: this.players,
-//                 message: 'Max players'
-//             }
-//         }
-
-//         const char = this.players[0]?.char === 'o' ? 'x' : 'o'
-
-//         const player = new TicTacToePlayer(this.lobby, member, char)
-
-//         this.players.push(player)
-
-//         this.lobby.publish({
-//             ctx: 'TicTacToe-Join',
-//             data: {
-//                 player: player
-//             }
-//         })
-
-//         return {
-//             success: true,
-//             players: this.players
-//         }
-//     }
-
-//     onPlayerOffline(player: TicTacToePlayer): void {
-//         this.publish('PlayerOffline', {
-//             player: player.toJSON()
-//         })
-//     }
-// }
-
-export {}
+        return {
+            success: true
+        }
+    }
+}

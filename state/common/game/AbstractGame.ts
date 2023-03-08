@@ -20,9 +20,16 @@ export abstract class AbstractGame {
 
     abstract join(user: LobbyMember): void
 
-    abstract leave(user: AbstractPlayer): void
-
     abstract startSession(data?: AbstractSessionStartData): GeneralSuccess | GeneralFailure
+
+    leave(player: AbstractPlayer) {
+        this.players = this.players.filter(p => p !== player)
+
+        this.publish('Game-Leave', {
+            lobbyId: this.lobby.id,
+            player: player.data()
+        })
+    }
 
     endSession() {
         if (!this.currentSession) {

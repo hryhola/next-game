@@ -34,15 +34,6 @@ export class Clicker extends AbstractGame {
         }
     }
 
-    leave(player: ClickerPlayer) {
-        this.players = this.players.filter(p => p !== player)
-
-        this.publish('Game-Leave', {
-            lobbyId: this.lobby.id,
-            player: player.data()
-        })
-    }
-
     startSession(): GeneralSuccess | GeneralFailure {
         if (this.currentSession) {
             return {
