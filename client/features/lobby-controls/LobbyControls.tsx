@@ -1,3 +1,4 @@
+import React from 'react'
 import { Box, Button, IconButton, Slider } from '@mui/material'
 import { chatInputHeight } from 'client/ui'
 import OverlayedTabs, { overlayedTabsToolbarHeight } from 'client/ui/overlayed-tabs/OverlayedTabs'
@@ -11,19 +12,36 @@ import HighlightOffIcon from '@mui/icons-material/HighlightOff'
 import CheckIcon from '@mui/icons-material/Check'
 import { useLobby, useUser, useWS, useAudio, useRouter } from 'client/context/list'
 import { useGlobalModal } from 'client/features/global-modal/GlobalModal'
-import { useRef } from 'react'
+import { useGame } from '../games/common/GameCtx'
 
 export const LobbyControls: React.FC = () => {
     const globalModal = useGlobalModal()
-
     const lobby = useLobby()
     const user = useUser()
     const ws = useWS()
     const audio = useAudio()
     const router = useRouter()
+    const game = useGame()
 
-    const chatInputRef = useRef<HTMLInputElement | null>(null)
+    const [isReadyCheckButtonVisible, setIsReadyCheckVisible] = React.useState(!game.isSessionStarted)
+
+    const chatInputRef = React.useRef<HTMLInputElement | null>(null)
+
+    React.useEffect(() => {
+        setIsReadyCheckVisible(!game.isSessionStarted)
+    }, [game.isSessionStarted])
+
     const isCreatorView = user.nickname === lobby.members.find(m => m.isCreator)?.nickname
+
+    let controlsHeight = 0
+
+    if (isCreatorView) {
+        controlsHeight += 36
+    }
+
+    if (isReadyCheckButtonVisible) {
+        controlsHeight += 36
+    }
 
     return (
         <OverlayedTabs
@@ -91,7 +109,7 @@ export const LobbyControls: React.FC = () => {
                 {
                     type: 'popover',
                     header: <MoreVertIcon />,
-                    height: isCreatorView ? '78px' : '36px',
+                    height: `${controlsHeight}px`,
                     hideIconOnOpen: true,
                     view: opts => (
                         <Box
@@ -122,7 +140,7 @@ export const LobbyControls: React.FC = () => {
                                     <HighlightOffIcon />
                                 </IconButton>
                             )}
-                            {true && (
+                            {isReadyCheckButtonVisible && (
                                 <IconButton onClick={() => ws.send('Lobby-StartReadyCheck', { lobbyId: lobby.lobbyId })}>
                                     <CheckIcon />
                                 </IconButton>
