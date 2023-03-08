@@ -6,7 +6,7 @@ import { LobbyControls } from 'client/features/lobby-controls/LobbyControls'
 import { ClickerCanvas } from './ClickerCanvas'
 import { withGameCtx } from '../common/GameCtx'
 
-export const Clicker = withGameCtx(({ players, isLoading, isSessionStarted }) => {
+export const ClickerView = withGameCtx(({ players, isLoading, isSessionStarted }) => {
     const lobby = useLobby()
     const ws = useWS()
 

@@ -136,9 +136,17 @@ export const LobbyRoute: React.FC = () => {
     })
 
     useEffect(() => {
-        game.current = dynamic(() => import('client/features/games/clicker/ClickerView').then(mod => mod.Clicker), {
-            loading: () => <LoadingOverlay isLoading={true} />
-        })
+        switch (lobby.gameName) {
+            case 'Clicker': {
+                game.current = dynamic(() => import('client/features/games/clicker/ClickerView').then(mod => mod.ClickerView), {
+                    loading: () => <LoadingOverlay isLoading={true} />
+                })
+                break
+            }
+            default: {
+                return
+            }
+        }
 
         setIsLoaded(true)
     }, [])
@@ -161,7 +169,7 @@ export const LobbyRoute: React.FC = () => {
         }
     }, [ws.isConnected])
 
-    const readyCheckVoted = typeof lobby.readyCheckMembers.find(m => m.nickname === user.nickname)?.ready === 'boolean'
+    const readyCheckVoted = typeof lobby.readyCheckMembers.find(m => m.id === user.id)?.ready === 'boolean'
 
     return (
         <>
