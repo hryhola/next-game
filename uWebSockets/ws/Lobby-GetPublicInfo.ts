@@ -10,9 +10,9 @@ type Success = GeneralSuccess & {
     lobbyData: LobbyData
 }
 
-export const handler: Handler<Request, Success | GeneralFailure> = (actions, state, data) => {
+export const handler: Handler<Request, Success | GeneralFailure> = (act, state, data) => {
     if (!data.id) {
-        return actions.res({
+        return act.res({
             success: false,
             message: 'Lobby ID missing'
         })
@@ -21,13 +21,13 @@ export const handler: Handler<Request, Success | GeneralFailure> = (actions, sta
     const lobby = state.lobbies.get(data.id)
 
     if (!lobby) {
-        return actions.res({
+        return act.res({
             success: false,
             message: 'Cannot find lobby with ID: ' + data.id
         })
     }
 
-    actions.res({
+    act.res({
         success: true,
         lobbyData: lobby.data()
     })

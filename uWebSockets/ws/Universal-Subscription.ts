@@ -15,17 +15,17 @@ export type Request = {
       }
 )
 
-export const handler: Handler<Request> = (actions, state, data) => {
+export const handler: Handler<Request> = (act, state, data) => {
     const id = 'lobbyId' in data ? `Lobby-${data.lobbyId}` : data.topic
 
     if (data.mode === 'subscribe') {
         logger.info('subscribed to: ' + id)
 
-        actions.ws.subscribe(id)
+        act.ws.subscribe(id)
     } else if (data.mode === 'unsubscribe') {
         logger.info('unsubscribed from: ' + id)
 
-        actions.ws.unsubscribe(id)
+        act.ws.unsubscribe(id)
     } else {
         logger.error(data, 'Unknown subscription mode')
     }
