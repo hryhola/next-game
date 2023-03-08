@@ -1,20 +1,23 @@
-import React, { useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { Box } from '@mui/material'
 import styles from './Clicker.module.scss'
-import { useEventHandler, useLobby, useWS } from 'client/context/list'
+import { useEventHandler, useLobby, useUser, useWS } from 'client/context/list'
 import { useGame } from '../common/GameCtx'
+import { ClickerPlayerData } from 'state'
 
 export const ClickerCanvas: React.FC = () => {
     const ws = useWS()
     const game = useGame()
+    const user = useUser()
     const { lobbyId } = useLobby()
     const canvasRef = useRef<HTMLDivElement>(null)
 
-    const [clickAllowed, setClickAllowed] = useState(game.session?.isClickAllowed ?? false)
+    const [gameClickAllowed, setGameClickAllowed] = useState(game.session?.isClickAllowed ?? false)
+    const [isCanvasClickable, setIsCanvasClickable] = useState(true)
 
     React.useEffect(() => {
         if (game.session) {
-            setClickAllowed(game.session.isClickAllowed)
+            setGameClickAllowed(game.session.isClickAllowed)
         }
     }, [game.session?.isClickAllowed])
 
@@ -23,8 +26,8 @@ export const ClickerCanvas: React.FC = () => {
             return
         }
 
-        if (data.type === 'Click') {
-            drawClick(data.result.color, data.payload.x, data.payload.y)
+        if (data.type === 'Click' && data.result.status !== 'Skipped') {
+            drawClick(data.result.color, data.payload.x, data.payload.y, data.result.status)
         }
     })
 
@@ -34,7 +37,7 @@ export const ClickerCanvas: React.FC = () => {
         }
 
         if (data.type === 'ClickAllowed') {
-            setClickAllowed(true)
+            setGameClickAllowed(true)
         }
     })
 
@@ -43,7 +46,7 @@ export const ClickerCanvas: React.FC = () => {
             return
         }
 
-        setClickAllowed(false)
+        setGameClickAllowed(false)
     })
 
     useEventHandler('Game-SessionStart', ({ lobbyId }) => {
@@ -58,7 +61,7 @@ export const ClickerCanvas: React.FC = () => {
         }
     })
 
-    const drawClick = (color: string, x: number, y: number) => {
+    const drawClick = (color: string, x: number, y: number, status: 'Ok' | 'Failure') => {
         const canvas = canvasRef.current
 
         if (!canvas) {
@@ -67,7 +70,12 @@ export const ClickerCanvas: React.FC = () => {
 
         const circle = document.createElement('div')
 
-        circle.classList.add(styles.circle)
+        if (status === 'Failure') {
+            circle.classList.add(styles.circle, styles.failure)
+        } else {
+            circle.classList.add(styles.circle, styles.success)
+        }
+
         circle.style.left = `${x}vw`
         circle.style.top = `${y}vh`
         circle.style.backgroundColor = color
@@ -92,7 +100,7 @@ export const ClickerCanvas: React.FC = () => {
         })
     }
 
-    const handleClick: React.MouseEventHandler<HTMLDivElement> = e => {
+    const handleMouseDown: React.MouseEventHandler<HTMLDivElement> = e => {
         actionHandler(e.clientX, e.clientY)
     }
 
@@ -100,24 +108,28 @@ export const ClickerCanvas: React.FC = () => {
         actionHandler(e.touches[0].clientX, e.touches[0].clientY)
     }
 
+    useEffect(() => {
+        const player = game.players.find(p => p.nickname === user.nickname) as ClickerPlayerData | undefined
+
+        if (player) {
+            setIsCanvasClickable(player.isClickAllowed)
+        }
+    }, [game.players])
+
     return (
         <Box
             ref={canvasRef}
-            onMouseDown={handleClick}
+            onMouseDown={handleMouseDown}
             onTouchStart={handleTouch}
+            onTouchEnd={e => e.preventDefault()}
             sx={{
                 width: '100vw',
                 height: 'var(--fullHeight)',
                 backgroundColor: '#000024',
                 backgroundSize: '10px 10px',
                 overflow: 'hidden',
-                ...(clickAllowed
-                    ? {
-                          backgroundImage: 'radial-gradient(#757575 0.5px, #000024 0.5px)'
-                      }
-                    : {
-                          pointerEvents: 'none'
-                      })
+                pointerEvents: isCanvasClickable === false ? 'none' : 'auto',
+                backgroundImage: gameClickAllowed ? 'radial-gradient(#757575 0.5px, #000024 0.5px)' : 'none'
             }}
         ></Box>
     )

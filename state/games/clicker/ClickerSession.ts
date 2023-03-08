@@ -25,7 +25,22 @@ export class ClickerSession extends AbstractGameSession {
             }
         }
 
+        if (!player.state.isClickAllowed) {
+            return {
+                color: player.member.user.state.nicknameColor,
+                status: 'Skipped'
+            }
+        }
+
         if (!this.state.isClickAllowed) {
+            player.update({ isClickAllowed: false })
+
+            setTimeout(() => {
+                if (this.game.currentSession === this) {
+                    player.update({ isClickAllowed: true })
+                }
+            }, 1000)
+
             return {
                 color: player.member.user.state.nicknameColor,
                 status: 'Failure'
