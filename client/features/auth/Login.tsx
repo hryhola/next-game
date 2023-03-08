@@ -16,6 +16,7 @@ export const Login: React.FC = () => {
 
     useRequestHandler('Auth-Register', data => {
         if (data.success) {
+            user.setId(data.user.id)
             user.setNickname(data.user.nickname)
             user.setNicknameColor(data.user.nicknameColor)
 

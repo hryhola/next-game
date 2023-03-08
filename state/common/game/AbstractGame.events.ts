@@ -10,10 +10,9 @@ export type Events = {
         lobbyId: string
         player: AbstractPlayerData
     }
-    'Game-Update': {
-        updated: {
-            players: AbstractPlayerData[]
-        }
+    'Game-PlayerUpdate': {
+        id: string
+        data: Partial<AbstractPlayerData>
     }
     'Game-SessionStart': {
         lobbyId: string

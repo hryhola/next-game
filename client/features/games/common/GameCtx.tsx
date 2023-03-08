@@ -30,8 +30,16 @@ export const withGameCtx = <P extends object>(Component: React.ComponentType<P &
             setPlayers(ps => [...ps.filter(p => p.nickname !== data.player.nickname)])
         })
 
-        useEventHandler('Game-Update', data => {
-            setPlayers(data.updated.players)
+        useEventHandler('Game-PlayerUpdate', data => {
+            setPlayers(ps => {
+                const index = ps.findIndex(p => p.id === data.id)
+
+                if (index === -1) return ps
+
+                Object.assign(ps[index], data.data)
+
+                return ps
+            })
         })
 
         useEventHandler('Game-SessionStart', ({ lobbyId, session }) => {

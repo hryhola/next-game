@@ -20,7 +20,7 @@ export const handler: Handler<Request, GetUsersSuccess | GeneralFailure> = (act,
         success: true,
         scope: data.scope,
         count: users.length,
-        data: users.map(u => u.state)
+        data: users.map(u => u.data())
     }
 
     act.res(response)

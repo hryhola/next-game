@@ -28,7 +28,7 @@ const PlayersHeader: React.FC<HeaderProps> = props => {
                     props.members
                         .sort((a, b) => a.position - b.position)
                         .map(p => (
-                            <Grid key={p.nickname} item>
+                            <Grid key={p.id} item>
                                 <Player player={p} />
                             </Grid>
                         ))

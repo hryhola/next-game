@@ -24,10 +24,9 @@ export abstract class AbstractPlayer {
             ...newState
         }
 
-        this.member.lobby.publish('Game-Update', {
-            updated: {
-                players: this.member.lobby.game.players.map(p => p.data())
-            }
+        this.member.lobby.publish('Game-PlayerUpdate', {
+            id: this.member.user.id,
+            data: newState
         })
     }
 
