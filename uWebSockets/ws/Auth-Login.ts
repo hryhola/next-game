@@ -16,9 +16,9 @@ export interface Failure {
     message: string
 }
 
-export const handler: Handler<Request, Success | Failure> = (actions, state, data) => {
+export const handler: Handler<Request, Success | Failure> = (act, state, data) => {
     if (!data.token) {
-        return actions.res({
+        return act.res({
             success: false,
             message: 'Token is missing'
         })
@@ -27,7 +27,7 @@ export const handler: Handler<Request, Success | Failure> = (actions, state, dat
     const user = state.users.login(data.token)
 
     if (!user) {
-        return actions.res({
+        return act.res({
             success: false,
             message: 'Not valid token'
         })
@@ -35,7 +35,7 @@ export const handler: Handler<Request, Success | Failure> = (actions, state, dat
 
     logger.info('New login: ' + user.state.nickname)
 
-    actions.res({
+    act.res({
         success: true,
         user: user.data()
     })

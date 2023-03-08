@@ -6,19 +6,19 @@ interface Request {
     ready: boolean
 }
 
-export const handler: Handler<Request, GeneralFailure | GeneralSuccess> = (actions, state, data, token) => {
+export const handler: Handler<Request, GeneralFailure | GeneralSuccess> = (act, state, data, token) => {
     const lobby = state.lobbies.get(data.lobbyId)
     const user = state.users.getByToken(token!)
 
     if (!lobby) {
-        return actions.res({
+        return act.res({
             success: false,
             message: 'Lobby not found'
         })
     }
 
     if (!lobby.readyCheck) {
-        return actions.res({
+        return act.res({
             success: false,
             message: 'No ready check in lobby'
         })
@@ -27,7 +27,7 @@ export const handler: Handler<Request, GeneralFailure | GeneralSuccess> = (actio
     const member = user && lobby.members.find(m => m.user === user)
 
     if (!member) {
-        return actions.res({
+        return act.res({
             success: false,
             message: 'User is not in lobby'
         })

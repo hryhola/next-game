@@ -4,7 +4,7 @@ export interface Request {
     nickname: string
 }
 
-export const handler: Handler<Request> = (actions, state, data, token) => {
+export const handler: Handler<Request> = (act, state, data, token) => {
     const user = state.users.logout({
         token: token!,
         nickname: data.nickname

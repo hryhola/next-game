@@ -18,11 +18,11 @@ export interface Failure {
     message: string
 }
 
-export const handler: Handler<Request, Success | Failure> = (actions, state, data) => {
+export const handler: Handler<Request, Success | Failure> = (act, state, data) => {
     const existingUser = state.users.getByNickname(data.nickname)
 
     if (existingUser?.state.isOnline) {
-        return actions.res({
+        return act.res({
             success: false,
             nickname: data.nickname,
             message: 'User exists'
@@ -31,11 +31,11 @@ export const handler: Handler<Request, Success | Failure> = (actions, state, dat
         state.users.destroy(existingUser.token)
     }
 
-    const user = state.users.register(data.nickname, actions.ws)
+    const user = state.users.register(data.nickname, act.ws)
 
     logger.info('New login: ' + user.state.nickname)
 
-    actions.res({
+    act.res({
         success: true,
         user: user.data(),
         token: user.token

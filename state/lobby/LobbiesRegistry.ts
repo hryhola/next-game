@@ -4,7 +4,7 @@ export class LobbiesRegistry {
     container: Record<string, Lobby<GameName>> = {}
 
     publishListUpdate() {
-        State.res.publishTopicEvent('Lobby-ListUpdated', {
+        State.act.publishTopicEvent('Lobby-ListUpdated', {
             lobbies: Object.values(this.container).map(lobby => ({
                 id: lobby.id,
                 private: !!lobby.password

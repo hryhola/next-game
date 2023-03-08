@@ -14,11 +14,11 @@ type Request = {
       }
 )
 
-export const handler: Handler<Request, GeneralSuccess | GeneralFailure> = (actions, state, data) => {
+export const handler: Handler<Request, GeneralSuccess | GeneralFailure> = (act, state, data) => {
     const chat = data.scope === 'global' ? state.globalChat : state.lobbies.get(data.lobbyId).chat
 
     if (!chat) {
-        return actions.res({
+        return act.res({
             success: false,
             message: 'Cannot find chat for scope: ' + data.scope
         })
@@ -26,7 +26,7 @@ export const handler: Handler<Request, GeneralSuccess | GeneralFailure> = (actio
 
     chat.addMessage(data.message)
 
-    actions.res({
+    act.res({
         success: true
     })
 }

@@ -33,7 +33,7 @@ export class Lobby<G extends GameName = GameName> {
     }
 
     publish(сtx: AbstractSocketMessage['ctx'], data: AbstractSocketMessage['data']) {
-        State.res.publish(`Lobby-${this.id}`, {
+        State.act.publish(`Lobby-${this.id}`, {
             ctx: сtx,
             data
         })
