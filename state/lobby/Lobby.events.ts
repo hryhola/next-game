@@ -10,9 +10,10 @@ export type Events = {
         lobbyId: string
         member: LobbyMemberData
     }
-    'Lobby-Update': {
+    'Lobby-MemberUpdate': {
         lobbyId: string
-        updated: Partial<LobbyData>
+        memberId: string
+        data: Partial<LobbyMemberData>
     }
     'Lobby-Destroy': {
         lobbyId: string

@@ -26,11 +26,19 @@ export const LobbyRoute: React.FC = () => {
         }
     })
 
-    useEventHandler('Lobby-Update', data => {
+    useEventHandler('Lobby-MemberUpdate', data => {
         if (data.lobbyId === lobbyRef.current.lobbyId) {
-            if (data.updated.members) {
-                lobbyRef.current.setMembers(data.updated.members)
-            }
+            lobby.setMembers(ms => {
+                const index = ms.findIndex(m => m.id === data.memberId)
+
+                if (index === -1) {
+                    return ms
+                }
+
+                Object.assign(ms[index], data.data)
+
+                return ms
+            })
         }
     })
 
