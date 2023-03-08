@@ -1,5 +1,5 @@
 import { TemplatedApp } from 'uWebSockets.js'
-import { TopicEvents } from 'uWebSockets/topicEvents'
+import { StateEvents } from 'uWebSockets/topicEvents'
 import { AbstractSocketMessage } from 'uWebSockets/uws.types'
 import { WSMessageResponseActions } from './wrappers'
 
@@ -14,7 +14,7 @@ class Publisher {
         WSMessageResponseActions.prototype.publish.call({ app: this.app }, channel, publishMessage)
     }
 
-    publishTopicEvent<T extends keyof TopicEvents>(topic: T, data: TopicEvents[T]) {
+    publishTopicEvent<T extends keyof StateEvents>(topic: T, data: StateEvents[T]) {
         WSMessageResponseActions.prototype.publishTopicEvent.call({ app: this.app }, topic, data)
     }
 }

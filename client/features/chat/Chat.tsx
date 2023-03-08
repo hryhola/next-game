@@ -3,8 +3,7 @@ import { v4 as uuid } from 'uuid'
 import { ChatBox, ChatSXProps } from 'client/ui'
 import { useWS, useUser, useEventHandler, useRequestHandler } from 'client/context/list'
 import { TChatMessage } from 'state'
-import { TopicEvents } from 'uWebSockets/topicEvents'
-import { RequestData, RequestHandler } from 'uWebSockets/uws.types'
+import { RequestData } from 'uWebSockets/uws.types'
 
 type Props = ChatSXProps & {
     scope: 'global' | 'lobby'

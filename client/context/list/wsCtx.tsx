@@ -1,13 +1,13 @@
 import React, { useState, createContext, useContext, useRef, MutableRefObject, useEffect } from 'react'
 import type { HandlerName } from 'uWebSockets/ws'
 import type { AbstractSocketMessage, TopicEventHandler, RequestData, RequestHandler } from 'uWebSockets/uws.types'
-import type { TopicEventName } from 'uWebSockets/topicEvents'
+import type { StateEventName } from 'uWebSockets/topicEvents'
 import { getCookie } from 'cookies-next'
 
-type HandlerOn = <C extends TopicEventName | HandlerName>(context: C, handler: Function) => void
+type HandlerOn = <C extends StateEventName | HandlerName>(context: C, handler: Function) => void
 type HandlerSend = <H extends HandlerName>(context: H, data?: RequestData<H>) => void
 type RequestHandlerRegistrar = <C extends HandlerName>(context: C, handler: RequestHandler<C>) => void
-type EventHandlerRegistrar = <C extends TopicEventName>(context: C, handler: TopicEventHandler<C>) => void
+type EventHandlerRegistrar = <C extends StateEventName>(context: C, handler: TopicEventHandler<C>) => void
 
 export interface WSData {
     wsRef: MutableRefObject<WebSocket | null>
