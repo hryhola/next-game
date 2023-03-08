@@ -2,7 +2,7 @@ import { LobbyMember } from 'state'
 import { GeneralFailure, GeneralSuccess } from 'util/t'
 import { ClickerPlayer } from './ClickerPlayer'
 import { ClickerSession } from './ClickerSession'
-import { AbstractGame } from 'state/games/common/AbstractGame'
+import { AbstractGame } from 'state/common/game/AbstractGame'
 
 function randomInteger(min: number, max: number) {
     return Math.floor(Math.random() * (max - min + 1)) + min
