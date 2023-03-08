@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Box } from '@mui/material'
 import styles from './Clicker.module.scss'
-import { useEventHandler, useLobby, useUser, useWS } from 'client/context/list'
+import { useAudio, useEventHandler, useLobby, useUser, useWS } from 'client/context/list'
 import { useGame } from '../common/GameCtx'
 import { ClickerPlayerData } from 'state'
 
@@ -9,6 +9,7 @@ export const ClickerCanvas: React.FC = () => {
     const ws = useWS()
     const game = useGame()
     const user = useUser()
+    const audio = useAudio()
     const { lobbyId } = useLobby()
     const canvasRef = useRef<HTMLDivElement>(null)
 
@@ -64,8 +65,10 @@ export const ClickerCanvas: React.FC = () => {
 
         if (status === 'Failure') {
             circle.classList.add(styles.circle, styles.failure)
+            audio.play('clicker_fail.wav')
         } else {
             circle.classList.add(styles.circle, styles.success)
+            audio.play('clicker_success.wav')
         }
 
         circle.style.left = `${x}vw`
