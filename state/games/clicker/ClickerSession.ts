@@ -50,7 +50,7 @@ export class ClickerSession extends AbstractGameSession {
         if (this.state.winner) {
             return {
                 color: player.member.user.state.nicknameColor,
-                status: 'Failure'
+                status: 'NotWin'
             }
         }
 

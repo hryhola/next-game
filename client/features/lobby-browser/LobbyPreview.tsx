@@ -34,6 +34,7 @@ export const LobbyPreview: React.FC<Props> = props => {
             return setError(String(postError))
         }
 
+        lobby.setGameName(props.lobby.gameName)
         lobby.setLobbyId(props.lobby.id)
         router.setCurrentRoute('Lobby')
     }
