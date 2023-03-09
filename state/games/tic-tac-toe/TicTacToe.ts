@@ -14,7 +14,7 @@ export type TicTacToeMove = {
 export class TicTacToe extends AbstractGame {
     static gameName = 'TicTacToe'
 
-    maxPlayers = 2
+    requiredPlayersAmount = 2
 
     players: TicTacToePlayer[] = []
 
@@ -25,6 +25,13 @@ export class TicTacToe extends AbstractGame {
             return {
                 success: false,
                 message: 'Session already in progress'
+            }
+        }
+
+        if (this.players.length !== this.requiredPlayersAmount) {
+            return {
+                success: false,
+                message: 'Not enough players'
             }
         }
 
@@ -51,7 +58,7 @@ export class TicTacToe extends AbstractGame {
             }
         }
 
-        if (this.players.length === this.maxPlayers) {
+        if (this.players.length === this.requiredPlayersAmount) {
             return {
                 success: false,
                 message: 'Max players'

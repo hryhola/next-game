@@ -31,4 +31,4 @@ export class TicTacToePlayer extends AbstractPlayer {
     }
 }
 
-export type ClickerPlayerData = ReturnType<TicTacToePlayer['data']>
+export type TicTacToePlayerData = ReturnType<TicTacToePlayer['data']>

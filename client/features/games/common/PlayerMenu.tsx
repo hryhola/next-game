@@ -1,5 +1,6 @@
 import { Menu, MenuItem } from '@mui/material'
 import { useUser, useLobby, useWS } from 'client/context/list'
+import { useGlobalModal } from 'client/features/global-modal/GlobalModal'
 import { AbstractPlayerData } from 'state'
 import { v4 } from 'uuid'
 import { useGame } from './GameCtx'
@@ -12,6 +13,7 @@ type Props = {
 }
 
 export const PlayerMenu: React.FC<Props> = props => {
+    const globalModal = useGlobalModal()
     const user = useUser()
     const lobby = useLobby()
     const ws = useWS()
@@ -30,9 +32,14 @@ export const PlayerMenu: React.FC<Props> = props => {
         }
 
         if (option === 'kick') {
-            ws.send('Lobby-Kick', {
-                lobbyId: lobby.lobbyId,
-                memberNickname: props.player.nickname
+            globalModal.confirm({
+                content: `Want to kick ${props.player.nickname}?`,
+                onConfirm: () => {
+                    ws.send('Lobby-Kick', {
+                        lobbyId: lobby.lobbyId,
+                        memberNickname: props.player.nickname
+                    })
+                }
             })
         }
     }

@@ -74,7 +74,7 @@ export const LobbyCreator: React.FC = () => {
                             fullWidth
                         >
                             {/* <MenuItem value="jeopardy">Jeopardy</MenuItem> */}
-                            {/* <MenuItem value="TicTacToe">Tic Tac Toe</MenuItem> */}
+                            <MenuItem value="TicTacToe">Tic Tac Toe</MenuItem>
                             <MenuItem value="Clicker">Clicker</MenuItem>
                         </Select>
                     </FormControl>

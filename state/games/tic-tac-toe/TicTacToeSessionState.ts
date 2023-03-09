@@ -7,6 +7,6 @@ export class TicTacToeSessionState {
         [null, null, null],
         [null, null, null]
     ]
-    moves: TicTacToeMove[] = []
     winner?: TicTacToePlayer
+    turn?: TicTacToePlayer
 }

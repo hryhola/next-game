@@ -62,7 +62,8 @@ export const ProfilePicture: React.FC<Props> = props => {
         display: 'flex',
         flexDirection: 'column',
         ...sizeProps,
-        padding: 0
+        padding: 0,
+        pointerEvents: 'auto'
     }
 
     if (props.editBorder !== true) {
