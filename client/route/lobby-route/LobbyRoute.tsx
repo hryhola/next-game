@@ -143,6 +143,12 @@ export const LobbyRoute: React.FC = () => {
                 })
                 break
             }
+            case 'TicTacToe': {
+                game.current = dynamic(() => import('client/features/games/tic-tac-toe/TicTacToeView').then(mod => mod.TicTacToeView), {
+                    loading: () => <LoadingOverlay isLoading={true} />
+                })
+                break
+            }
             default: {
                 return
             }

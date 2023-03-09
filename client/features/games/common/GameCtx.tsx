@@ -14,7 +14,7 @@ export type GameCtxValue = {
 
 export const GameCtx = React.createContext<GameCtxValue | null>(null)
 
-export const withGameCtx = <P extends object>(Component: React.ComponentType<P & GameCtxValue>) => {
+export const createGame = <P extends object>(Component: React.ComponentType<P & GameCtxValue>) => {
     return (props: P) => {
         const lobby = useLobby()
 
@@ -23,11 +23,11 @@ export const withGameCtx = <P extends object>(Component: React.ComponentType<P &
         const [session, setSession] = React.useState<Record<string, any> | null>(null)
 
         useEventHandler('Game-Join', data => {
-            setPlayers(ps => [...ps.filter(p => p.nickname !== data.player.nickname), data.player])
+            setPlayers(ps => [...ps.filter(p => p.id !== data.player.id), data.player])
         })
 
         useEventHandler('Game-Leave', data => {
-            setPlayers(ps => [...ps.filter(p => p.nickname !== data.player.nickname)])
+            setPlayers(ps => [...ps.filter(p => p.id !== data.player.id)])
         })
 
         useEventHandler('Game-PlayerUpdate', data => {
@@ -86,6 +86,12 @@ export const withGameCtx = <P extends object>(Component: React.ComponentType<P &
                 <GameCtx.Consumer>{ctx => <Component {...props} {...ctx!} />}</GameCtx.Consumer>
             </GameCtx.Provider>
         )
+    }
+}
+
+export const withGameCtx = <P extends object>(Component: React.ComponentType<P & GameCtxValue>) => {
+    return (props: P) => {
+        return <GameCtx.Consumer>{ctx => <Component {...props} {...ctx!} />}</GameCtx.Consumer>
     }
 }
 
