@@ -121,10 +121,13 @@ export const ClickerCanvas: React.FC = () => {
                 width: '100vw',
                 height: 'var(--fullHeight)',
                 backgroundColor: '#000024',
-                backgroundSize: '10px 10px',
                 overflow: 'hidden',
                 pointerEvents: isCanvasClickable === false ? 'none' : 'auto',
-                backgroundImage: gameClickAllowed ? 'radial-gradient(#757575 0.5px, #000024 0.5px)' : 'none'
+                opacity: '0.8',
+                background: gameClickAllowed
+                    ? 'radial-gradient(circle, transparent 20%, #000024 20%, #000024 80%, transparent 80%, transparent), radial-gradient(circle, transparent 20%, #000024 20%, #000024 80%, transparent 80%, transparent) 32.5px 32.5px, linear-gradient(#8787ca 2.6px, transparent 2.6px) 0 -1.3px, linear-gradient(90deg, #8787ca 2.6px, #000024 2.6px) -1.3px 0'
+                    : '#000024',
+                backgroundSize: '65px 65px, 65px 65px, 32.5px 32.5px, 32.5px 32.5px'
             }}
         ></Box>
     )
