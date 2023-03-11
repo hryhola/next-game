@@ -1,0 +1,28 @@
+.win-line {
+    // position: 'absolute';
+    // top: '0';
+    // left: '0';
+    // z-index: '1000';
+    // pointer-events: 'none';
+
+    line {
+        filter: drop-shadow(0px 0px 10px rgba(0, 191, 255, 1));
+        animation: glowing 2s ease-in-out infinite;
+        mix-blend-mode: screen;
+
+        stroke: rgba(0, 191, 255, 0.5);
+        stroke-width: 4;
+    }
+}
+
+@keyframes glowing {
+    0% {
+        stroke-opacity: 0.5;
+    }
+    50% {
+        stroke-opacity: 1;
+    }
+    100% {
+        stroke-opacity: 0.5;
+    }
+}

@@ -3,11 +3,13 @@ import { LobbyMember } from 'state/lobby/LobbyMember'
 import { TicTacToePlayer } from './TicTacToePlayer'
 import { TicTacToeSession } from './TicTacToeSession'
 
+export type WinningLine = [CellCoords, CellCoords, CellCoords]
 export type MoveChar = 'x' | 'o'
 export type CellValue = MoveChar | null
+export type CellCoords = [number, number]
 export type TicTacToeMove = {
     player: TicTacToePlayer
-    cell: [number, number]
+    cell: CellCoords
     value: MoveChar
 }
 
