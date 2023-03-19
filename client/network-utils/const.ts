@@ -12,8 +12,8 @@ export const URL = {
     get Profile() {
         return `${location.origin}/api/profile`
     },
-    get Lobby() {
-        return `${location.origin}/api/lobby`
+    get LobbyCreate() {
+        return `${location.origin}/api/lobby-create`
     },
     get LobbyJoin() {
         return `${location.origin}/api/lobby-join`
