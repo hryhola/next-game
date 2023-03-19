@@ -1,13 +1,13 @@
+import { useEffect, useRef, useState } from 'react'
+import { useSnackbar } from 'notistack'
 import dynamic from 'next/dynamic'
 import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Grid } from '@mui/material'
-import { useAudio, useEventHandler, useLobby, useRouter, useUser, useWS } from 'client/context/list/'
+import { useAudio, useEventHandler, useLobby, useUser, useWS } from 'client/context/list/'
+import { useRouter } from 'client/route/Router'
 import { ProfilePicture } from 'client/features/profile-picture/ProfilePicture'
 import { LoadingOverlay } from 'client/ui'
-import { useSnackbar } from 'notistack'
-import { useEffect, useRef, useState } from 'react'
-import { LobbyMemberData } from 'state'
 
-export const LobbyRoute: React.FC = () => {
+export const LobbyFrame: React.FC = () => {
     const lobby = useLobby()
     const user = useUser()
     const lobbyRef = useRef(lobby)
@@ -81,7 +81,7 @@ export const LobbyRoute: React.FC = () => {
             })
 
             lobby.reset()
-            router.setCurrentRoute('Home')
+            router.setFrame('Home')
         }
     })
 
@@ -131,7 +131,7 @@ export const LobbyRoute: React.FC = () => {
             })
 
             lobby.reset()
-            router.setCurrentRoute('Home')
+            router.setFrame('Home')
         }
     })
 

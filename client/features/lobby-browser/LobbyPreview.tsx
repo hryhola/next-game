@@ -1,4 +1,5 @@
-import { useLobby, useRouter } from 'client/context/list'
+import { useLobby } from 'client/context/list'
+import { useRouter } from 'client/route/Router'
 import { FormEventHandler, useState } from 'react'
 import { TextField, Button, Alert, Grid, Typography, SxProps, Theme } from '@mui/material'
 import { LoadingOverlay } from 'client/ui'
@@ -36,7 +37,7 @@ export const LobbyPreview: React.FC<Props> = props => {
 
         lobby.setGameName(props.lobby.gameName)
         lobby.setLobbyId(props.lobby.id)
-        router.setCurrentRoute('Lobby')
+        router.setFrame('Lobby')
     }
 
     return (

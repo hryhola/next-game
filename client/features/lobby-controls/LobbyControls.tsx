@@ -10,7 +10,8 @@ import MoreVertIcon from '@mui/icons-material/MoreVert'
 import LogoutIcon from '@mui/icons-material/Logout'
 import HighlightOffIcon from '@mui/icons-material/HighlightOff'
 import CheckIcon from '@mui/icons-material/Check'
-import { useLobby, useUser, useWS, useAudio, useRouter } from 'client/context/list'
+import { useLobby, useUser, useWS, useAudio } from 'client/context/list'
+import { useRouter } from 'client/route/Router'
 import { useGlobalModal } from 'client/features/global-modal/GlobalModal'
 import { useGame } from '../games/common/GameCtx'
 
@@ -132,7 +133,7 @@ export const LobbyControls: React.FC = () => {
                                             content: 'Destroy this lobby?',
                                             onConfirm: () => {
                                                 lobby.destroy()
-                                                router.setCurrentRoute('Home')
+                                                router.setFrame('Home')
                                             }
                                         })
                                     }
@@ -151,7 +152,7 @@ export const LobbyControls: React.FC = () => {
                                         content: 'Want to leave?',
                                         onConfirm: () => {
                                             lobby.exit()
-                                            router.setCurrentRoute('Home')
+                                            router.setFrame('Home')
                                         }
                                     })
                                 }
