@@ -21,14 +21,11 @@
         "cookies-next": "^2.1.1",
         "cross-env": "^7.0.3",
         "formidable": "^2.1.1",
-        "mobx": "^6.7.0",
         "next": "^13.2.4",
         "node-fetch": "^3.3.0",
-        "node-sass": "^8.0.0",
         "notistack": "^2.0.8",
         "pino": "^8.8.0",
         "pino-pretty": "^9.1.1",
-        "pino-tee": "^0.3.0",
         "query-string": "^8.1.0",
         "randomcolor": "^0.6.2",
         "react": "^18.2.0",
@@ -38,7 +35,7 @@
         "react-swipeable-views": "^0.14.0",
         "sass": "^1.55.0",
         "styled-components": "^5.3.6",
-        "uWebSockets.js": "uNetworking/uWebSockets.js#v20.19.0",
+        "uWebSockets.js": "uNetworking/uWebSockets.js#v20.20.0",
         "uuid": "^9.0.0"
     },
     "devDependencies": {
