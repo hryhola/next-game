@@ -1,8 +1,8 @@
 import { useState, FormEventHandler } from 'react'
-import { useWS, useUser, useRouter, useRequestHandler } from 'client/context/list'
-import { Button, Grid, TextField } from '@mui/material'
-import { RequestHandler } from 'uWebSockets/uws.types'
 import { setCookie } from 'cookies-next'
+import { Button, Grid, TextField } from '@mui/material'
+import { useWS, useUser, useRequestHandler } from 'client/context/list'
+import { useRouter } from 'client/route/Router'
 
 const inSeconds90Days = 7776000
 
@@ -22,7 +22,7 @@ export const Login: React.FC = () => {
 
             setCookie('token', data.token, { maxAge: inSeconds90Days })
 
-            router.setCurrentRoute('Home')
+            router.setFrame('Home')
         } else {
             setError(data.message)
         }

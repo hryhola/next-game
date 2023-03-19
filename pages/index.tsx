@@ -1,8 +1,7 @@
 import { GetServerSideProps, NextPage } from 'next'
-import { Router } from 'client/features/app/Router'
 import Head from 'next/head'
 import { AppContext } from 'client/context/AppContext'
-import { Route } from 'client/context/list/routerCtx'
+import { RouterProvider, Frame } from 'client/route/Router'
 import { deleteCookie } from 'cookies-next'
 import logger from 'logger'
 import { LobbyData, UserData } from 'state'
@@ -11,7 +10,7 @@ import { initializeSocketServer } from 'uWebSockets/createSocketServer'
 import { SnackbarProvider } from 'notistack'
 
 type Props = {
-    defaultRoute: Route
+    defaultFrame: Frame
     user?: UserData
     lobby?: LobbyData
 }
@@ -30,7 +29,7 @@ const Home: NextPage<Props> = props => {
                 <Head>
                     <title>Game Club</title>
                 </Head>
-                <Router />
+                <RouterProvider page="main" defaultFrame={props.defaultFrame} />
             </AppContext>
         </SnackbarProvider>
     )
@@ -40,7 +39,7 @@ export const getServerSideProps: GetServerSideProps = async context => {
     initializeSocketServer(context.res as NextApiResponseUWS)
 
     const props: Props = {
-        defaultRoute: 'Login'
+        defaultFrame: 'Login'
     }
 
     const token = context.req.cookies.token
@@ -53,11 +52,11 @@ export const getServerSideProps: GetServerSideProps = async context => {
             if (!user) {
                 deleteCookie('token')
             } else {
-                props.defaultRoute = 'Home'
+                props.defaultFrame = 'Home'
                 props.user = user.data()
 
                 if (user.hasLobbies) {
-                    props.defaultRoute = 'Lobby'
+                    props.defaultFrame = 'Lobby'
                     props.lobby = user.lobby.data()
                 }
             }

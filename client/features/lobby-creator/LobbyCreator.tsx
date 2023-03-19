@@ -1,4 +1,5 @@
-import { useLobby, useRouter } from 'client/context/list'
+import { useLobby } from 'client/context/list'
+import { useRouter } from 'client/route/Router'
 import { FormEventHandler, useContext, useState, useRef } from 'react'
 import { TextField, Button, FormControl, InputLabel, MenuItem, Select, Alert, Grid } from '@mui/material'
 import { LoadingOverlay } from 'client/ui'
@@ -45,7 +46,7 @@ export const LobbyCreator: React.FC = () => {
 
         home.setIsCreateLobbyOpen(false)
 
-        router.setCurrentRoute('Lobby')
+        router.setFrame('Lobby')
     }
 
     return (

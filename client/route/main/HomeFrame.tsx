@@ -8,9 +8,8 @@ import { Grid } from '@mui/material'
 import { ProfileEditor } from 'client/features/profile-editor/ProfileEditor'
 import { FullScreenModal } from 'client/ui/full-screen-modal/FullScreenModal'
 import { LobbyCreator } from 'client/features/lobby-creator/LobbyCreator'
-import filters from 'client/filters.svg'
 
-export const HomeRoute: React.FC = () => {
+export const HomeFrame: React.FC = () => {
     const home = useContext(HomeContext)
 
     return (
