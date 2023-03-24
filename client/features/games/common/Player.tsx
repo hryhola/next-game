@@ -1,21 +1,21 @@
 import { Box, Skeleton, SxProps, Theme, Typography } from '@mui/material'
 import { useUser } from 'client/context/list'
-import { AbstractPlayerData } from 'state'
+import { PlayerData } from 'state'
 import { ProfilePicture } from '../../profile-picture/ProfilePicture'
 import * as React from 'react'
 import { PlayerMenu } from './PlayerMenu'
 
 type Props = {
     size?: 'medium' | 'small'
-} & (PlayerData | LoadingData)
+} & (PlayerProps | LoadingData)
 
-type PlayerData = {
-    player: AbstractPlayerData
+type PlayerProps = {
+    player: PlayerData
     isLoading?: false
 }
 
 type LoadingData = {
-    player?: AbstractPlayerData
+    player?: PlayerData
     isLoading: true
 }
 

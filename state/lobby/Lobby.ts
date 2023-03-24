@@ -1,4 +1,4 @@
-import { AbstractGame, Chat, State, GameCtors, GameName, LobbyMember, User, ReadyCheck } from 'state'
+import { Game, Chat, State, GameCtors, GameName, LobbyMember, User, ReadyCheck } from 'state'
 import { GeneralFailure, GeneralSuccess } from 'util/t'
 import { StateEventName, StateEvents } from 'uWebSockets/topicEvents'
 
@@ -16,7 +16,7 @@ export class Lobby<G extends GameName = GameName> {
     creator: User
     password?: string
     chat: Chat
-    game!: AbstractGame
+    game!: Game
     sessionStartData: any
     readyCheck?: ReadyCheck
 
@@ -158,7 +158,7 @@ export class Lobby<G extends GameName = GameName> {
         return {
             id: this.id,
             private: Boolean(this.password),
-            gameName: (Object.getPrototypeOf(this.game).constructor as typeof AbstractGame).gameName as GameName,
+            gameName: (Object.getPrototypeOf(this.game).constructor as typeof Game).gameName as GameName,
             members: this.members.map(m => m.data()),
             creator: this.creator.data(),
             readyCheck: this.readyCheck ? this.readyCheck.data() : null

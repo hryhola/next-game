@@ -1,6 +1,6 @@
-import { AbstractPlayer } from 'state'
+import { Player } from 'state'
 
-export class ClickerPlayer extends AbstractPlayer {
+export class ClickerPlayer extends Player {
     state = {
         score: 0,
         isMaster: false,

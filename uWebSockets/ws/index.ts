@@ -1,6 +1,6 @@
 import uws from 'uWebSockets.js'
 import util from 'util'
-import { AbstractSocketMessage, ResponseActions } from '../uws.types'
+import { SocketMessage, ResponseActions } from '../uws.types'
 import logger from 'logger'
 import { WSMessageResponseActions } from 'uWebSockets/utils/ws/wrappers'
 import { State } from 'state'
@@ -85,7 +85,7 @@ export const WSHandlerRegister = (app: uws.TemplatedApp, state: State) => {
                     return ws.send('pong')
                 }
 
-                const request: AbstractSocketMessage<HandlerName, never> = JSON.parse(decodedMsg)
+                const request: SocketMessage<HandlerName, never> = JSON.parse(decodedMsg)
 
                 if (request.token) {
                     const user = state.users.getByToken(request.token)

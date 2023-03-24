@@ -2,13 +2,13 @@ import { LobbyMember } from 'state'
 import { GeneralFailure, GeneralSuccess } from 'util/t'
 import { ClickerPlayer } from './ClickerPlayer'
 import { ClickerSession } from './ClickerSession'
-import { AbstractGame } from 'state/common/game/AbstractGame'
+import { Game } from 'state/common/game/Game'
 
 function randomInteger(min: number, max: number) {
     return Math.floor(Math.random() * (max - min + 1)) + min
 }
 
-export class Clicker extends AbstractGame {
+export class Clicker extends Game {
     static gameName = 'Clicker'
 
     currentSession?: ClickerSession

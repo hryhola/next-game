@@ -1,8 +1,8 @@
 import logger from 'logger'
-import { AbstractGame, AbstractPlayer } from 'state'
+import { Game, Player } from 'state'
 import { GeneralSuccess, GeneralFailure } from 'util/t'
 
-export type AbstractSessionStartData = Record<string, string>
+export type SessionStartData = Record<string, string>
 
 export type GameActor = {
     type: 'player' | 'game'
@@ -16,17 +16,17 @@ export type GameAction = {
     by: GameActor
 }
 
-export abstract class AbstractGameSession {
-    game: AbstractGame
+export abstract class GameSession {
+    game: Game
     log: GameAction[] = []
 
     abstract state: any
 
-    constructor(game: AbstractGame) {
+    constructor(game: Game) {
         this.game = game
     }
 
-    action(by: AbstractPlayer | AbstractGame, type: string, payload: any): GeneralSuccess | GeneralFailure {
+    action(by: Player | Game, type: string, payload: any): GeneralSuccess | GeneralFailure {
         if (!type) {
             const message = 'Action type is missing'
 
@@ -71,8 +71,8 @@ export abstract class AbstractGameSession {
             payload,
             result,
             by: {
-                type: by instanceof AbstractGame ? 'game' : 'player',
-                id: by instanceof AbstractGame ? 'game' : by.member.user.id
+                type: by instanceof Game ? 'game' : 'player',
+                id: by instanceof Game ? 'game' : by.member.user.id
             }
         }
 

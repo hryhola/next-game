@@ -1,5 +1,5 @@
 import type { NextApiRequest } from 'next'
-import { AbstractGameData, LobbyData } from 'state'
+import { GameData, LobbyData } from 'state'
 import { NextApiResponseUWS } from 'util/t'
 
 export interface Failure {
@@ -10,7 +10,7 @@ export interface Failure {
 export interface Success {
     success: true
     lobby: LobbyData
-    game: AbstractGameData
+    game: GameData
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponseUWS<Success | Failure>) {

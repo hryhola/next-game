@@ -1,7 +1,7 @@
 import { Menu, MenuItem } from '@mui/material'
 import { useUser, useLobby, useWS } from 'client/context/list'
 import { useGlobalModal } from 'client/features/global-modal/GlobalModal'
-import { AbstractPlayerData } from 'state'
+import { PlayerData } from 'state'
 import { v4 } from 'uuid'
 import { useGame } from './GameCtx'
 
@@ -9,7 +9,7 @@ type Props = {
     playerMenuAnchor: Element | null
     isPlayerMenuOpen: boolean
     handleClose: () => void
-    player: AbstractPlayerData
+    player: PlayerData
 }
 
 export const PlayerMenu: React.FC<Props> = props => {

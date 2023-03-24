@@ -4,14 +4,14 @@ import type { StateEvents, StateEventName } from 'uWebSockets/topicEvents'
 import queryString from 'query-string'
 import { State } from 'state'
 
-export interface AbstractSocketMessage<Ctx extends string = string, Data extends null | {} = null | {}> {
+export interface SocketMessage<Ctx extends string = string, Data extends null | {} = null | {}> {
     ctx: Ctx
     token?: string
     data: Data
 }
 
 export type ResponseActions<ResponseType = unknown> = {
-    publish(channel: string, message: AbstractSocketMessage): void
+    publish(channel: string, message: SocketMessage): void
     publishTopicEvent<C extends StateEventName>(channel: C, message: StateEvents[C]): void
     res(data: ResponseType): void
     send(ctx: string, data: any): void
