@@ -1,5 +1,5 @@
 import { useLobby } from 'client/context/list'
-import { useRouter } from 'client/route/Router'
+import { useClientRouter } from 'client/route/ClientRouter'
 import { FormEventHandler, useState } from 'react'
 import { TextField, Button, Alert, Grid, Typography, SxProps, Theme } from '@mui/material'
 import { LoadingOverlay } from 'client/ui'
@@ -13,7 +13,7 @@ interface Props {
 }
 
 export const LobbyPreview: React.FC<Props> = props => {
-    const router = useRouter()
+    const router = useClientRouter()
     const lobby = useLobby()
 
     const [password, setPassword] = useState('')

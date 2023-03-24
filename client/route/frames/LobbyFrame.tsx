@@ -3,7 +3,7 @@ import { useSnackbar } from 'notistack'
 import dynamic from 'next/dynamic'
 import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Grid } from '@mui/material'
 import { useAudio, useEventHandler, useLobby, useUser, useWS } from 'client/context/list/'
-import { useRouter } from 'client/route/Router'
+import { useClientRouter } from 'client/route/ClientRouter'
 import { ProfilePicture } from 'client/features/profile-picture/ProfilePicture'
 import { LoadingOverlay } from 'client/ui'
 
@@ -13,7 +13,7 @@ export const LobbyFrame: React.FC = () => {
     const lobbyRef = useRef(lobby)
     const ws = useWS()
     const audio = useAudio()
-    const router = useRouter()
+    const router = useClientRouter()
 
     const game = useRef<ReturnType<typeof dynamic<any>> | null>(null)
     const [isLoaded, setIsLoaded] = useState(false)

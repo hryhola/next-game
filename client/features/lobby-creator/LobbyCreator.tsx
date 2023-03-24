@@ -1,5 +1,5 @@
 import { useLobby } from 'client/context/list'
-import { useRouter } from 'client/route/Router'
+import { useClientRouter } from 'client/route/ClientRouter'
 import { FormEventHandler, useContext, useState, useRef } from 'react'
 import { TextField, Button, FormControl, InputLabel, MenuItem, Select, Alert, Grid } from '@mui/material'
 import { LoadingOverlay } from 'client/ui'
@@ -11,7 +11,7 @@ import { HomeContext } from 'client/context/list/homeCtx'
 
 export const LobbyCreator: React.FC = () => {
     const home = useContext(HomeContext)
-    const router = useRouter()
+    const router = useClientRouter()
     const lobby = useLobby()
 
     const formRef = useRef<HTMLFormElement | null>(null)
