@@ -1,6 +1,6 @@
 import React, { useState, createContext, useContext, useRef, MutableRefObject, useEffect } from 'react'
 import type { HandlerName } from 'uWebSockets/ws'
-import type { AbstractSocketMessage, TopicEventHandler, RequestData, RequestHandler } from 'uWebSockets/uws.types'
+import type { SocketMessage, TopicEventHandler, RequestData, RequestHandler } from 'uWebSockets/uws.types'
 import type { StateEventName } from 'uWebSockets/topicEvents'
 import { getCookie } from 'cookies-next'
 
@@ -49,7 +49,7 @@ export const WSProvider: React.FC<Props> = props => {
             return
         }
 
-        const message: AbstractSocketMessage = {
+        const message: SocketMessage = {
             ctx: context,
             data: data || null
         }

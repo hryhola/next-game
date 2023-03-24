@@ -1,13 +1,13 @@
 import logger from 'logger'
-import { Lobby, LobbyMember, AbstractGameSession, AbstractSessionStartData, AbstractPlayer } from 'state'
+import { Lobby, LobbyMember, GameSession, SessionStartData, Player } from 'state'
 import { GeneralFailure, GeneralSuccess } from 'util/t'
 
-export abstract class AbstractGame {
+export abstract class Game {
     static gameName: string
 
-    abstract currentSession?: AbstractGameSession
+    abstract currentSession?: GameSession
 
-    prevSessions: AbstractGameSession[] = []
+    prevSessions: GameSession[] = []
     lobby: Lobby
     publish: Lobby['publish']
 
@@ -16,13 +16,13 @@ export abstract class AbstractGame {
         this.publish = lobby.publish.bind(lobby)
     }
 
-    abstract players: AbstractPlayer[]
+    abstract players: Player[]
 
     abstract join(user: LobbyMember): void
 
-    abstract startSession(data?: AbstractSessionStartData): GeneralSuccess | GeneralFailure
+    abstract startSession(data?: SessionStartData): GeneralSuccess | GeneralFailure
 
-    leave(player: AbstractPlayer) {
+    leave(player: Player) {
         this.players = this.players.filter(p => p !== player)
 
         this.publish('Game-Leave', {
@@ -50,11 +50,11 @@ export abstract class AbstractGame {
 
     data() {
         return {
-            name: (this.constructor as typeof AbstractGame).gameName,
+            name: (this.constructor as typeof Game).gameName,
             players: this.players.map(p => p.data()),
             session: this.currentSession?.data()
         }
     }
 }
 
-export type AbstractGameData = ReturnType<AbstractGame['data']>
+export type GameData = ReturnType<Game['data']>

@@ -1,10 +1,10 @@
-import { AbstractGameSession } from 'state/common/game/AbstractGameSession'
+import { GameSession } from 'state/common/game/GameSession'
 import { TicTacToe, CellValue, WinningLine, MoveChar } from './TicTacToe'
 import { TicTacToePlayer } from './TicTacToePlayer'
 import { TicTacToeSessionState } from './TicTacToeSessionState'
 import { rotateMatrix } from '../../../util/matrix'
 
-export class TicTacToeSession extends AbstractGameSession {
+export class TicTacToeSession extends GameSession {
     state: TicTacToeSessionState
 
     constructor(game: TicTacToe) {

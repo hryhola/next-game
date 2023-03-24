@@ -1,8 +1,8 @@
-import { AbstractGameSession } from 'state/common/game/AbstractGameSession'
+import { GameSession } from 'state/common/game/GameSession'
 import { Clicker } from './Clicker'
 import { ClickerPlayer } from './ClickerPlayer'
 import { ClickerSessionState } from './ClickerSessionState'
-export class ClickerSession extends AbstractGameSession {
+export class ClickerSession extends GameSession {
     state: ClickerSessionState
 
     constructor(game: Clicker) {

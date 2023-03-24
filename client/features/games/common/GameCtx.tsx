@@ -1,12 +1,12 @@
 import React, { useEffect } from 'react'
-import { AbstractPlayerData } from 'state'
+import { PlayerData } from 'state'
 import { useLobby, useEventHandler } from 'client/context/list'
 import { api } from 'client/network-utils/api'
 import { URL } from 'client/network-utils/const'
 import { Failure, Success } from 'pages/api/lobby-join'
 
 export type GameCtxValue = {
-    players: AbstractPlayerData[]
+    players: PlayerData[]
     isLoading: boolean
     isSessionStarted: boolean
     session: any | null
@@ -18,7 +18,7 @@ export const createGame = <P extends object>(Component: React.ComponentType<P & 
     return (props: P) => {
         const lobby = useLobby()
 
-        const [players, setPlayers] = React.useState<AbstractPlayerData[]>([])
+        const [players, setPlayers] = React.useState<PlayerData[]>([])
         const [isLoading, setIsLoading] = React.useState(true)
         const [session, setSession] = React.useState<Record<string, any> | null>(null)
 

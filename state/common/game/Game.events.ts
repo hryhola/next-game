@@ -1,18 +1,18 @@
-import type { GameAction } from './AbstractGameSession'
-import type { AbstractPlayerData } from './AbstractPlayer'
+import type { GameAction } from './GameSession'
+import type { PlayerData } from './Player'
 
 export type Events = {
     'Game-Join': {
         lobbyId: string
-        player: AbstractPlayerData
+        player: PlayerData
     }
     'Game-Leave': {
         lobbyId: string
-        player: AbstractPlayerData
+        player: PlayerData
     }
     'Game-PlayerUpdate': {
         id: string
-        data: Partial<AbstractPlayerData>
+        data: Partial<PlayerData>
     }
     'Game-SessionStart': {
         lobbyId: string
@@ -24,6 +24,6 @@ export type Events = {
     'Game-SessionEnd': {
         lobbyId: string
         session: any
-        players: AbstractPlayerData[]
+        players: PlayerData[]
     }
 }

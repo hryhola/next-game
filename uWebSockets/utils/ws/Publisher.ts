@@ -1,6 +1,6 @@
 import { TemplatedApp } from 'uWebSockets.js'
 import { StateEvents } from 'uWebSockets/topicEvents'
-import { AbstractSocketMessage } from 'uWebSockets/uws.types'
+import { SocketMessage } from 'uWebSockets/uws.types'
 import { WSMessageResponseActions } from './wrappers'
 
 class Publisher {
@@ -10,7 +10,7 @@ class Publisher {
         this.app = app
     }
 
-    publish(channel: string, publishMessage: AbstractSocketMessage) {
+    publish(channel: string, publishMessage: SocketMessage) {
         WSMessageResponseActions.prototype.publish.call({ app: this.app }, channel, publishMessage)
     }
 

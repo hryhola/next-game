@@ -1,6 +1,6 @@
 import { LobbyMember } from 'state'
 
-export abstract class AbstractPlayer {
+export abstract class Player {
     member: LobbyMember
 
     state = {
@@ -38,4 +38,4 @@ export abstract class AbstractPlayer {
     }
 }
 
-export type AbstractPlayerData = ReturnType<AbstractPlayer['data']>
+export type PlayerData = ReturnType<Player['data']>

@@ -1,4 +1,4 @@
-import { AbstractGame } from 'state/common/game/AbstractGame'
+import { Game } from 'state/common/game/Game'
 import { LobbyMember } from 'state/lobby/LobbyMember'
 import { TicTacToePlayer } from './TicTacToePlayer'
 import { TicTacToeSession } from './TicTacToeSession'
@@ -13,7 +13,7 @@ export type TicTacToeMove = {
     value: MoveChar
 }
 
-export class TicTacToe extends AbstractGame {
+export class TicTacToe extends Game {
     static gameName = 'TicTacToe'
 
     requiredPlayersAmount = 2

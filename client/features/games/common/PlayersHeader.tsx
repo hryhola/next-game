@@ -1,9 +1,9 @@
 import { Box, Grid } from '@mui/material'
-import { AbstractPlayerData } from 'state'
+import { PlayerData } from 'state'
 import { Player } from './Player'
 
 interface HeaderProps {
-    members: AbstractPlayerData[]
+    members: PlayerData[]
     isLoading: boolean
 }
 

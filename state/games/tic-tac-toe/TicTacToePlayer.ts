@@ -1,8 +1,8 @@
-import { AbstractPlayer } from 'state/common/game/AbstractPlayer'
+import { Player } from 'state/common/game/Player'
 import { LobbyMember } from 'state/lobby/LobbyMember'
 import { MoveChar } from './TicTacToe'
 
-export class TicTacToePlayer extends AbstractPlayer {
+export class TicTacToePlayer extends Player {
     state: {
         score: number
         isMaster: boolean

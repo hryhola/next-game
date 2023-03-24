@@ -1,20 +1,20 @@
 import logger from 'logger'
 import { TemplatedApp, WebSocket } from 'uWebSockets.js'
 import { StateEvents } from 'uWebSockets/topicEvents'
-import { AbstractSocketMessage } from 'uWebSockets/uws.types'
+import { SocketMessage } from 'uWebSockets/uws.types'
 
 export class WSMessageResponseActions {
     ws: WebSocket<unknown>
     app: TemplatedApp
-    request: AbstractSocketMessage
+    request: SocketMessage
 
-    constructor(app: TemplatedApp, ws: WebSocket<unknown>, request: AbstractSocketMessage) {
+    constructor(app: TemplatedApp, ws: WebSocket<unknown>, request: SocketMessage) {
         this.app = app
         this.ws = ws
         this.request = request
     }
 
-    publish(channel: string, publishMessage: AbstractSocketMessage) {
+    publish(channel: string, publishMessage: SocketMessage) {
         const messageString = JSON.stringify(publishMessage)
 
         logger.info(`publishing to ${channel} ${messageString}`)
@@ -23,7 +23,7 @@ export class WSMessageResponseActions {
     }
 
     publishTopicEvent<T extends keyof StateEvents>(topic: T, data: StateEvents[T]) {
-        const message: AbstractSocketMessage = {
+        const message: SocketMessage = {
             ctx: topic,
             data
         }

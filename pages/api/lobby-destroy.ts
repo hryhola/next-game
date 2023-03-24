@@ -1,5 +1,5 @@
 import type { NextApiRequest } from 'next'
-import { AbstractGameData, LobbyData } from 'state'
+import { GameData, LobbyData } from 'state'
 import { GeneralFailure, NextApiResponseUWS } from 'util/t'
 
 export interface Success {
