@@ -11,7 +11,7 @@ import LogoutIcon from '@mui/icons-material/Logout'
 import HighlightOffIcon from '@mui/icons-material/HighlightOff'
 import CheckIcon from '@mui/icons-material/Check'
 import { useLobby, useUser, useWS, useAudio } from 'client/context/list'
-import { useRouter } from 'client/route/Router'
+import { useClientRouter } from 'client/route/ClientRouter'
 import { useGlobalModal } from 'client/features/global-modal/GlobalModal'
 import { useGame } from '../games/common/GameCtx'
 
@@ -21,7 +21,7 @@ export const LobbyControls: React.FC = () => {
     const user = useUser()
     const ws = useWS()
     const audio = useAudio()
-    const router = useRouter()
+    const router = useClientRouter()
     const game = useGame()
 
     const [isReadyCheckButtonVisible, setIsReadyCheckVisible] = React.useState(!game.isSessionStarted)

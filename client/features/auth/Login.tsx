@@ -2,14 +2,14 @@ import { useState, FormEventHandler } from 'react'
 import { setCookie } from 'cookies-next'
 import { Button, Grid, TextField } from '@mui/material'
 import { useWS, useUser, useRequestHandler } from 'client/context/list'
-import { useRouter } from 'client/route/Router'
+import { useClientRouter } from 'client/route/ClientRouter'
 
 const inSeconds90Days = 7776000
 
 export const Login: React.FC = () => {
     const ws = useWS()
     const user = useUser()
-    const router = useRouter()
+    const router = useClientRouter()
 
     const [nickname, setNickname] = useState('')
     const [error, setError] = useState('')
