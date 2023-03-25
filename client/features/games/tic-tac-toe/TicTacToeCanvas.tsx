@@ -2,10 +2,10 @@ import React, { useEffect, useRef } from 'react'
 import { Box, Button, ButtonProps, Grid, Skeleton, styled } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
 import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked'
-import { useEventHandler, useLobby, useUser, useWS } from 'client/context/list'
+import { useEventHandler, useUser } from 'client/context/list'
 import { useSnackbar } from 'notistack'
 import styles from './TicTacToe.module.scss'
-import { useTicTacToe, useTicTacToeAction } from './TicTacToeView'
+import { useActionSender, useTicTacToe, useTicTacToeAction } from './TicTacToeView'
 
 const Cell = styled(Button)<ButtonProps>(({ theme }) => ({
     maxWidth: '200px',
@@ -23,8 +23,7 @@ type Props = {
 
 export const TicTacToeCanvas: React.FC<Props> = ({ isLoading }) => {
     const { enqueueSnackbar } = useSnackbar()
-    const { lobbyId } = useLobby()
-    const ws = useWS()
+    const sendAction = useActionSender()
 
     const user = useUser()
     const game = useTicTacToe()
@@ -147,12 +146,8 @@ export const TicTacToeCanvas: React.FC<Props> = ({ isLoading }) => {
 
         const [x, y] = button.id.split('-')
 
-        ws.send('Game-SendAction', {
-            lobbyId,
-            actionName: '$Move',
-            actionPayload: {
-                cell: [Number(x), Number(y)]
-            }
+        sendAction('$Move', {
+            cell: [Number(x), Number(y)]
         })
     }
 

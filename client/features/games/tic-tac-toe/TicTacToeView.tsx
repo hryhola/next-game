@@ -7,7 +7,7 @@ import PlayersHeader from '../common/PlayersHeader'
 import { createGame } from '../common/GameCtx'
 import { TicTacToe } from 'state'
 
-export const [TicTacToeView, useTicTacToe, useTicTacToeAction] = createGame<TicTacToe>(() => {
+export const [TicTacToeView, useTicTacToe, useTicTacToeAction, useActionSender] = createGame<TicTacToe>(() => {
     const game = useTicTacToe()
     const lobby = useLobby()
     const ws = useWS()

@@ -7,7 +7,7 @@ import { ClickerCanvas } from './ClickerCanvas'
 import { createGame } from '../common/GameCtx'
 import { Clicker } from 'state'
 
-export const [ClickerView, useClicker, useClickerAction] = createGame<Clicker>(() => {
+export const [ClickerView, useClicker, useClickerAction, useActionSender] = createGame<Clicker>(() => {
     const game = useClicker()
     const lobby = useLobby()
     const ws = useWS()

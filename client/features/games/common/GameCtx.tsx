@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react'
 import { PlayerData, GameSessionData, GameSessionActionsName, GameSessionAction, Game as AbstractGame } from 'state'
-import { useLobby, useEventHandler } from 'client/context/list'
+import { useLobby, useEventHandler, useWS } from 'client/context/list'
 import { api } from 'client/network-utils/api'
 import { URL } from 'client/network-utils/const'
 import { Failure, Success } from 'pages/api/lobby-join'
@@ -113,6 +113,8 @@ export const createGame = <Game extends AbstractGame>(Component: React.Component
 
     type SessionAction<ActionName extends SessionActionName = SessionActionName> = GameSessionAction<ThisSession, ActionName>
 
+    type SessionActionPayload<ActionName extends SessionActionName> = SessionAction<ActionName>['payload']
+
     const useActionHandler = <T extends SessionActionName>(name: T, handler: (data: SessionAction<T>) => void) => {
         const lobby = useLobby()
         const lobbyRef = React.useRef(lobby)
@@ -130,7 +132,37 @@ export const createGame = <Game extends AbstractGame>(Component: React.Component
         })
     }
 
-    return [GameComponent, useGame, useActionHandler] as const
+    const useActionSender = () => {
+        const ws = useWS()
+        const lobby = useLobby()
+
+        const wsRef = React.useRef(ws)
+        const lobbyRef = React.useRef(lobby)
+
+        useEffect(() => {
+            wsRef.current = ws
+        }, [ws])
+
+        useEffect(() => {
+            lobbyRef.current = lobby
+        }, [lobby])
+
+        return <T extends SessionActionName>(name: T, payload: SessionActionPayload<T>) => {
+            if (!wsRef.current || !lobbyRef.current) {
+                console.error('ws or lobby is not defined')
+
+                return
+            }
+
+            wsRef.current.send('Game-SendAction', {
+                lobbyId: lobbyRef.current.lobbyId,
+                actionName: name as string,
+                actionPayload: payload
+            })
+        }
+    }
+
+    return [GameComponent, useGame, useActionHandler, useActionSender] as const
 }
 
 export const useGame = () => {
