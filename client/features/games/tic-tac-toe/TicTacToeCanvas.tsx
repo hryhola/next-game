@@ -3,11 +3,10 @@ import { Box, Button, ButtonProps, Grid, Skeleton, styled } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
 import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked'
 import { useEventHandler, useLobby, useUser, useWS } from 'client/context/list'
-import { useGame, withGameCtx } from '../common/GameCtx'
 import { TicTacToePlayerData } from 'state/games/tic-tac-toe/TicTacToePlayer'
 import { useSnackbar } from 'notistack'
-import { CellCoords } from 'state'
 import styles from './TicTacToe.module.scss'
+import { useTicTacToe } from './TicTacToeView'
 
 const Cell = styled(Button)<ButtonProps>(({ theme }) => ({
     maxWidth: '200px',
@@ -23,20 +22,19 @@ type Props = {
     isLoading?: boolean
 }
 
-export const TicTacToeCanvas: React.FC<Props> = withGameCtx(({ isLoading, isSessionStarted, session }) => {
+export const TicTacToeCanvas: React.FC<Props> = ({ isLoading }) => {
     const { enqueueSnackbar } = useSnackbar()
     const { lobbyId } = useLobby()
     const ws = useWS()
 
     const user = useUser()
-    const game = useGame()
+    const game = useTicTacToe()
     const gameRef = useRef(game)
 
     const winLineBoxRef = useRef<HTMLDivElement>(null)
     const boardRef = useRef<HTMLDivElement>(null)
 
-    const [turn, setTurn] = React.useState<string | null>(session?.turn || null)
-    const [winLine, setWinLine] = React.useState<[CellCoords, CellCoords] | null>(null)
+    const [turn, setTurn] = React.useState<string | null>(game.session?.turn || null)
 
     const [cellValues, setCellValues] = React.useState<('x' | 'o' | null)[][]>([
         [null, null, null],
@@ -49,10 +47,10 @@ export const TicTacToeCanvas: React.FC<Props> = withGameCtx(({ isLoading, isSess
     }, [game.players])
 
     useEffect(() => {
-        if (!session) return
+        if (!game.session) return
 
-        setTurn(session.turn)
-    }, [session?.turn])
+        setTurn(game.session.turn)
+    }, [game.session?.turn])
 
     useEventHandler('Game-SessionAction', data => {
         if (data.lobbyId !== lobbyId) return
@@ -190,7 +188,7 @@ export const TicTacToeCanvas: React.FC<Props> = withGameCtx(({ isLoading, isSess
                                 ) : (
                                     <Cell
                                         sx={{ pointerEvents: isMyTurn && cell === null ? 'auto' : 'none' }}
-                                        disabled={!isSessionStarted}
+                                        disabled={!game.isSessionStarted}
                                         id={x + '-' + y}
                                         onClick={cellClickHandler}
                                         variant="contained"
@@ -208,4 +206,4 @@ export const TicTacToeCanvas: React.FC<Props> = withGameCtx(({ isLoading, isSess
             <Box ref={winLineBoxRef}></Box>
         </>
     )
-})
+}
