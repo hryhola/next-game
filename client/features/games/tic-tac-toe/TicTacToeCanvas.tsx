@@ -3,7 +3,6 @@ import { Box, Button, ButtonProps, Grid, Skeleton, styled } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
 import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked'
 import { useEventHandler, useLobby, useUser, useWS } from 'client/context/list'
-import { TicTacToePlayerData } from 'state/games/tic-tac-toe/TicTacToePlayer'
 import { useSnackbar } from 'notistack'
 import styles from './TicTacToe.module.scss'
 import { useTicTacToe, useTicTacToeAction } from './TicTacToeView'
@@ -55,7 +54,7 @@ export const TicTacToeCanvas: React.FC<Props> = ({ isLoading }) => {
     useTicTacToeAction('$Move', action => {
         if (action.result.status !== 'Success') return
 
-        const by = gameRef.current.players.find(p => p.id === action.actor.id) as TicTacToePlayerData
+        const by = gameRef.current.players.find(p => p.id === action.actor.id)
 
         if (!by) {
             console.error('Player not found')
@@ -77,7 +76,7 @@ export const TicTacToeCanvas: React.FC<Props> = ({ isLoading }) => {
         })
 
         if (action.result.winner) {
-            const winner = (gameRef.current.players as TicTacToePlayerData[]).find(p => p.id === action.result.winner)
+            const winner = gameRef.current.players.find(p => p.id === action.result.winner)
             const {
                 winLine: [startCell, , endCell]
             } = action.result

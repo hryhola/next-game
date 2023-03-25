@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react'
-import { PlayerData, GameSessionData, GameSessionActionsName, GameSession, GameSessionAction } from 'state'
+import { PlayerData, GameSessionData, GameSessionActionsName, GameSessionAction, Game as AbstractGame } from 'state'
 import { useLobby, useEventHandler } from 'client/context/list'
 import { api } from 'client/network-utils/api'
 import { URL } from 'client/network-utils/const'
@@ -14,23 +14,27 @@ export type GameCtxValue = {
 
 export const GameCtx = React.createContext<GameCtxValue | null>(null)
 
-export const createGame = <GameInstanceCtx extends Partial<GameCtxValue>, GameInstanceSession extends GameSession = GameSession>(
-    Component: React.ComponentType<GameCtxValue & GameInstanceCtx>
-) => {
-    type GameInstanceValue = GameCtxValue & GameInstanceCtx
+export const createGame = <Game extends AbstractGame>(Component: React.ComponentType<{}>) => {
+    type ThisPlayerData = ReturnType<Game['players'][0]['data']>
+    type ThisSession = NonNullable<Game['currentSession']>
+    type ThisSessionData = ReturnType<ThisSession['data']>
+
+    type ThisGameCtxValue = {
+        players: ThisPlayerData[]
+        isLoading: boolean
+        isSessionStarted: boolean
+        session: ThisSessionData | null
+    }
 
     const GameComponent = () => {
-        type GameInstancePlayerData = PlayerData & GameInstanceCtx['players']
-        type GameInstanceSessionData = GameSessionData & GameInstanceCtx['session']
-
         const lobby = useLobby()
 
-        const [players, setPlayers] = React.useState<GameInstancePlayerData[]>([])
+        const [players, setPlayers] = React.useState<ThisPlayerData[]>([])
         const [isLoading, setIsLoading] = React.useState(true)
-        const [session, setSession] = React.useState<GameInstanceSessionData | null>(null)
+        const [session, setSession] = React.useState<ThisSessionData | null>(null)
 
         useEventHandler('Game-Join', data => {
-            setPlayers(ps => [...ps.filter(p => p.id !== data.player.id), data.player as GameInstancePlayerData])
+            setPlayers(ps => [...ps.filter(p => p.id !== data.player.id), data.player as ThisPlayerData])
         })
 
         useEventHandler('Game-Leave', data => {
@@ -74,10 +78,10 @@ export const createGame = <GameInstanceCtx extends Partial<GameCtxValue>, GameIn
                 lobby.setMembers(response.lobby.members)
                 lobby.setGameName(response.game.name as 'Clicker')
 
-                setPlayers(response.game.players as GameInstancePlayerData[])
+                setPlayers(response.game.players as ThisPlayerData[])
                 setIsLoading(false)
 
-                if (response.game.session) setSession(response.game.session)
+                if (response.game.session) setSession(response.game.session as ThisSessionData)
             })()
         }, [])
 
@@ -90,7 +94,7 @@ export const createGame = <GameInstanceCtx extends Partial<GameCtxValue>, GameIn
 
         return (
             <GameCtx.Provider value={game}>
-                <GameCtx.Consumer>{ctx => <Component {...(ctx as GameInstanceValue)} />}</GameCtx.Consumer>
+                <GameCtx.Consumer>{() => <Component />}</GameCtx.Consumer>
             </GameCtx.Provider>
         )
     }
@@ -102,12 +106,12 @@ export const createGame = <GameInstanceCtx extends Partial<GameCtxValue>, GameIn
             throw new Error('useGame must be used within a GameCtxProvider')
         }
 
-        return ctx as GameInstanceValue
+        return ctx as ThisGameCtxValue
     }
 
-    type SessionActionName = GameSessionActionsName<GameInstanceSession>
+    type SessionActionName = GameSessionActionsName<ThisSession>
 
-    type SessionAction<ActionName extends SessionActionName = SessionActionName> = GameSessionAction<GameInstanceSession, ActionName>
+    type SessionAction<ActionName extends SessionActionName = SessionActionName> = GameSessionAction<ThisSession, ActionName>
 
     const useActionHandler = <T extends SessionActionName>(name: T, handler: (data: SessionAction<T>) => void) => {
         const lobby = useLobby()
