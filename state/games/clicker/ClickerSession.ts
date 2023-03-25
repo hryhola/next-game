@@ -77,3 +77,5 @@ export class ClickerSession extends GameSession {
         }
     }
 }
+
+export type ClickerSessionData = ReturnType<ClickerSession['data']>

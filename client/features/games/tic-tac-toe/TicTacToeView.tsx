@@ -5,8 +5,14 @@ import { useLobby, useWS } from 'client/context/list'
 import { LobbyControls } from 'client/features/lobby-controls/LobbyControls'
 import PlayersHeader from '../common/PlayersHeader'
 import { createGame } from '../common/GameCtx'
+import { TicTacToePlayerData, TicTacToeSessionData } from 'state'
 
-export const TicTacToeView = createGame(({ isSessionStarted, isLoading, players }) => {
+type TicTacToeCtx = {
+    players: TicTacToePlayerData[]
+    session: TicTacToeSessionData | null
+}
+
+export const [TicTacToeView, useTicTacToe] = createGame<TicTacToeCtx>(({ isSessionStarted, isLoading, players }) => {
     const lobby = useLobby()
     const ws = useWS()
 

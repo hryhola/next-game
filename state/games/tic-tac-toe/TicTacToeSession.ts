@@ -71,7 +71,7 @@ export class TicTacToeSession extends GameSession {
         return {
             board: this.state.board,
             winner: this.state.winner?.data().id,
-            turn: this.state.turn?.data().id
+            turn: this.state.turn?.data().id || null
         }
     }
 

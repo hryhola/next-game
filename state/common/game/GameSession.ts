@@ -90,3 +90,5 @@ export abstract class GameSession {
 
     abstract data(): object
 }
+
+export type GameSessionData = object

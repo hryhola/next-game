@@ -2,12 +2,12 @@ import React, { useEffect, useRef, useState } from 'react'
 import { Box } from '@mui/material'
 import styles from './Clicker.module.scss'
 import { useAudio, useEventHandler, useLobby, useUser, useWS } from 'client/context/list'
-import { useGame } from '../common/GameCtx'
 import { ClickerPlayerData } from 'state'
+import { useClicker } from './ClickerView'
 
 export const ClickerCanvas: React.FC = () => {
     const ws = useWS()
-    const game = useGame()
+    const game = useClicker()
     const user = useUser()
     const audio = useAudio()
     const { lobbyId } = useLobby()

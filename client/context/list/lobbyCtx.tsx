@@ -5,11 +5,6 @@ import { GameName } from 'state/games'
 import { URL as ApiUrl } from 'client/network-utils/const'
 import { GeneralFailure, GeneralSuccess } from 'util/t'
 
-type ReadyCheck = {
-    members: string[]
-    ready: string[]
-}
-
 export const LobbyContext = createContext({
     members: [] as LobbyMemberData[],
     setMembers: (_value: LobbyMemberData[] | ((curr: LobbyMemberData[]) => LobbyMemberData[])) => {},
