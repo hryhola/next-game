@@ -9,11 +9,11 @@ export type GameActor = {
     id: string
 }
 
-export type GameAction = {
-    type: string
-    payload: any
-    result: any
-    by: GameActor
+export type GameAction<T extends string | number | symbol = string, P = any, R = any> = {
+    type: T
+    payload: P
+    result: R
+    actor: GameActor
 }
 
 export abstract class GameSession {
@@ -26,7 +26,7 @@ export abstract class GameSession {
         this.game = game
     }
 
-    action(by: Player | Game, type: string, payload: any): GeneralSuccess | GeneralFailure {
+    action(actor: Player | Game, type: string, payload: any): GeneralSuccess | GeneralFailure {
         if (!type) {
             const message = 'Action type is missing'
 
@@ -38,9 +38,18 @@ export abstract class GameSession {
             }
         }
 
-        const handlerName = '$' + type
+        if (typeof type !== 'string' || type[0] !== '$') {
+            const message = `Action type '${type.toString()}' is invalid`
 
-        if (!(handlerName in this)) {
+            logger.error({ payload }, message)
+
+            return {
+                success: false,
+                message
+            }
+        }
+
+        if (!(type in this)) {
             const message = `Handler for type '${type.toString()}' is missing`
 
             logger.error({ payload }, message)
@@ -51,7 +60,7 @@ export abstract class GameSession {
             }
         }
 
-        const actionHandler = this[handlerName as keyof this]
+        const actionHandler = this[type as keyof this]
 
         if (typeof actionHandler !== 'function') {
             const message = `Handler for type '${type.toString()}' is missing`
@@ -64,15 +73,15 @@ export abstract class GameSession {
             }
         }
 
-        const result = actionHandler.call(this, by, payload)
+        const result = actionHandler.call(this, actor, payload)
 
         const action: GameAction = {
             type,
             payload,
             result,
-            by: {
-                type: by instanceof Game ? 'game' : 'player',
-                id: by instanceof Game ? 'game' : by.member.user.id
+            actor: {
+                type: actor instanceof Game ? 'game' : 'player',
+                id: actor instanceof Game ? 'game' : actor.member.user.id
             }
         }
 
@@ -90,5 +99,15 @@ export abstract class GameSession {
 
     abstract data(): object
 }
+
+export type GameSessionActionsName<GS extends GameSession> = Exclude<keyof GS, Exclude<keyof GS, `$${string}`>>
+
+export type GameSessionAction<GS extends GameSession, ActionName extends GameSessionActionsName<GS> = GameSessionActionsName<GS>> = GameAction<
+    ActionName,
+    // @ts-ignore
+    Parameters<GS[ActionName]>[1],
+    // @ts-ignore
+    ReturnType<GS[ActionName]>
+>
 
 export type GameSessionData = object

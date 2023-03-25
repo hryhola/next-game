@@ -6,7 +6,7 @@ import { useEventHandler, useLobby, useUser, useWS } from 'client/context/list'
 import { TicTacToePlayerData } from 'state/games/tic-tac-toe/TicTacToePlayer'
 import { useSnackbar } from 'notistack'
 import styles from './TicTacToe.module.scss'
-import { useTicTacToe } from './TicTacToeView'
+import { useTicTacToe, useTicTacToeAction } from './TicTacToeView'
 
 const Cell = styled(Button)<ButtonProps>(({ theme }) => ({
     maxWidth: '200px',
@@ -52,14 +52,10 @@ export const TicTacToeCanvas: React.FC<Props> = ({ isLoading }) => {
         setTurn(game.session.turn)
     }, [game.session?.turn])
 
-    useEventHandler('Game-SessionAction', data => {
-        if (data.lobbyId !== lobbyId) return
+    useTicTacToeAction('$Move', action => {
+        if (action.result.status !== 'Success') return
 
-        if (data.type !== 'Move') return
-
-        if (data.result.status !== 'Success') return
-
-        const by = (gameRef.current.players as TicTacToePlayerData[]).find(p => p.id === data.by.id)
+        const by = gameRef.current.players.find(p => p.id === action.actor.id) as TicTacToePlayerData
 
         if (!by) {
             console.error('Player not found')
@@ -68,9 +64,11 @@ export const TicTacToeCanvas: React.FC<Props> = ({ isLoading }) => {
 
         const {
             cell: [x, y]
-        } = data.payload
+        } = action.payload
 
-        setTurn(data.result.nextTurn)
+        if (action.result.nextTurn) {
+            setTurn(action.result.nextTurn)
+        }
 
         setCellValues(value => {
             value[x][y] = by.char
@@ -78,11 +76,11 @@ export const TicTacToeCanvas: React.FC<Props> = ({ isLoading }) => {
             return value.slice()
         })
 
-        if (data.result.winner) {
-            const winner = (gameRef.current.players as TicTacToePlayerData[]).find(p => p.id === data.result.winner)
+        if (action.result.winner) {
+            const winner = (gameRef.current.players as TicTacToePlayerData[]).find(p => p.id === action.result.winner)
             const {
                 winLine: [startCell, , endCell]
-            } = data.result
+            } = action.result
 
             const winCell1 = boardRef.current?.querySelector<HTMLDivElement>(`[id='${startCell[0]}-${startCell[1]}']`)
             const winCell2 = boardRef.current?.querySelector<HTMLDivElement>(`[id='${endCell[0]}-${endCell[1]}']`)
@@ -125,7 +123,7 @@ export const TicTacToeCanvas: React.FC<Props> = ({ isLoading }) => {
             })
         }
 
-        if (data.result.isDraw) {
+        if (action.result.isDraw) {
             enqueueSnackbar(`Draw!`, {
                 anchorOrigin: {
                     vertical: 'bottom',
@@ -152,7 +150,7 @@ export const TicTacToeCanvas: React.FC<Props> = ({ isLoading }) => {
 
         ws.send('Game-SendAction', {
             lobbyId,
-            actionName: 'Move',
+            actionName: '$Move',
             actionPayload: {
                 cell: [Number(x), Number(y)]
             }

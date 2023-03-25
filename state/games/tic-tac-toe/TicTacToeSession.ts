@@ -1,8 +1,7 @@
-import { GameSession } from 'state/common/game/GameSession'
+import { GameAction, GameSession, GameSessionAction, GameSessionActionsName } from 'state/common/game/GameSession'
 import { TicTacToe, CellValue, WinningLine, MoveChar } from './TicTacToe'
 import { TicTacToePlayer } from './TicTacToePlayer'
 import { TicTacToeSessionState } from './TicTacToeSessionState'
-import { rotateMatrix } from '../../../util/matrix'
 
 export class TicTacToeSession extends GameSession {
     state: TicTacToeSessionState
@@ -19,7 +18,7 @@ export class TicTacToeSession extends GameSession {
             return {
                 status: 'Error',
                 message: 'Not your turn'
-            }
+            } as const
         }
 
         const [x, y] = data.cell
@@ -28,14 +27,14 @@ export class TicTacToeSession extends GameSession {
             return {
                 status: 'Error',
                 message: 'Invalid cell'
-            }
+            } as const
         }
 
         if (this.state.board[x][y]) {
             return {
                 status: 'Error',
                 message: 'Cell is already taken'
-            }
+            } as const
         }
 
         this.state.board[x][y] = by.state.char
@@ -62,9 +61,9 @@ export class TicTacToeSession extends GameSession {
             status: 'Success',
             nextTurn: this.state.turn?.data().id,
             winner: this.state.winner?.data().id,
-            winLine: winCheck.line,
+            winLine: winCheck.line!,
             isDraw
-        }
+        } as const
     }
 
     data() {

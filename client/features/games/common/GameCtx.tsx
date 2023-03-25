@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react'
-import { PlayerData, GameSessionData, GameName } from 'state'
+import { PlayerData, GameSessionData, GameSessionActionsName, GameSession, GameSessionAction } from 'state'
 import { useLobby, useEventHandler } from 'client/context/list'
 import { api } from 'client/network-utils/api'
 import { URL } from 'client/network-utils/const'
@@ -14,7 +14,9 @@ export type GameCtxValue = {
 
 export const GameCtx = React.createContext<GameCtxValue | null>(null)
 
-export const createGame = <GameInstanceCtx extends Partial<GameCtxValue>>(Component: React.ComponentType<GameCtxValue & GameInstanceCtx>) => {
+export const createGame = <GameInstanceCtx extends Partial<GameCtxValue>, GameInstanceSession extends GameSession = GameSession>(
+    Component: React.ComponentType<GameCtxValue & GameInstanceCtx>
+) => {
     type GameInstanceValue = GameCtxValue & GameInstanceCtx
 
     const GameComponent = () => {
@@ -103,7 +105,28 @@ export const createGame = <GameInstanceCtx extends Partial<GameCtxValue>>(Compon
         return ctx as GameInstanceValue
     }
 
-    return [GameComponent, useGame] as const
+    type SessionActionName = GameSessionActionsName<GameInstanceSession>
+
+    type SessionAction<ActionName extends SessionActionName = SessionActionName> = GameSessionAction<GameInstanceSession, ActionName>
+
+    const useActionHandler = <T extends SessionActionName>(name: T, handler: (data: SessionAction<T>) => void) => {
+        const lobby = useLobby()
+        const lobbyRef = React.useRef(lobby)
+
+        useEffect(() => {
+            lobbyRef.current = lobby
+        }, [lobby])
+
+        useEventHandler('Game-SessionAction', data => {
+            if (!lobbyRef.current || data.lobbyId !== lobbyRef.current.lobbyId || data.type !== name) {
+                return
+            }
+
+            handler(data as unknown as SessionAction<T>)
+        })
+    }
+
+    return [GameComponent, useGame, useActionHandler] as const
 }
 
 export const useGame = () => {
