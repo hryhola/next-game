@@ -1,12 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Box } from '@mui/material'
 import styles from './Clicker.module.scss'
-import { useAudio, useEventHandler, useLobby, useUser, useWS } from 'client/context/list'
+import { useAudio, useEventHandler, useLobby, useUser } from 'client/context/list'
 import { ClickerPlayerData } from 'state'
-import { useClicker, useClickerAction } from './ClickerView'
+import { useActionSender, useClicker, useClickerAction } from './ClickerView'
 
 export const ClickerCanvas: React.FC = () => {
-    const ws = useWS()
     const game = useClicker()
     const user = useUser()
     const audio = useAudio()
@@ -15,6 +14,8 @@ export const ClickerCanvas: React.FC = () => {
 
     const [gameClickAllowed, setGameClickAllowed] = useState(game.session?.isClickAllowed ?? false)
     const [isCanvasClickable, setIsCanvasClickable] = useState(true)
+
+    const sendAction = useActionSender()
 
     React.useEffect(() => {
         if (game.session) {
@@ -83,14 +84,7 @@ export const ClickerCanvas: React.FC = () => {
         const x = (clientX / width) * 100
         const y = (clientY / height) * 100
 
-        ws.send('Game-SendAction', {
-            lobbyId,
-            actionName: '$Click',
-            actionPayload: {
-                x,
-                y
-            }
-        })
+        sendAction('$Click', { x, y })
     }
 
     const handleMouseDown: React.MouseEventHandler<HTMLDivElement> = e => {
