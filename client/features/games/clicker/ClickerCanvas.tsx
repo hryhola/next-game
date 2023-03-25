@@ -3,7 +3,7 @@ import { Box } from '@mui/material'
 import styles from './Clicker.module.scss'
 import { useAudio, useEventHandler, useLobby, useUser, useWS } from 'client/context/list'
 import { ClickerPlayerData } from 'state'
-import { useClicker } from './ClickerView'
+import { useClicker, useClickerAction } from './ClickerView'
 
 export const ClickerCanvas: React.FC = () => {
     const ws = useWS()
@@ -22,16 +22,14 @@ export const ClickerCanvas: React.FC = () => {
         }
     }, [game.session?.isClickAllowed])
 
-    useEventHandler('Game-SessionAction', data => {
-        if (data.lobbyId !== lobbyId) {
-            return
+    useClickerAction('$Click', action => {
+        if (action.result.status && action.result.status !== 'Skipped') {
+            drawClick(action.result.color, action.payload.x, action.payload.y, action.result.status)
         }
+    })
 
-        if (data.type === 'Click' && data.result.status !== 'Skipped') {
-            drawClick(data.result.color, data.payload.x, data.payload.y, data.result.status)
-        } else if (data.type === 'ClickAllowed') {
-            setGameClickAllowed(true)
-        }
+    useClickerAction('$ClickAllowed', () => {
+        setGameClickAllowed(true)
     })
 
     useEventHandler('Game-SessionEnd', data => {
@@ -54,7 +52,7 @@ export const ClickerCanvas: React.FC = () => {
         }
     })
 
-    const drawClick = (color: string, x: number, y: number, status: 'Ok' | 'Failure') => {
+    const drawClick = (color: string, x: number, y: number, status: 'Ok' | 'Failure' | 'NotWin') => {
         const canvas = canvasRef.current
 
         if (!canvas) {
@@ -87,7 +85,7 @@ export const ClickerCanvas: React.FC = () => {
 
         ws.send('Game-SendAction', {
             lobbyId,
-            actionName: 'Click',
+            actionName: '$Click',
             actionPayload: {
                 x,
                 y

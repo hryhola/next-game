@@ -1,4 +1,4 @@
-import { GameSession } from 'state/common/game/GameSession'
+import { GameSession, GameSessionAction, GameSessionActionsName } from 'state/common/game/GameSession'
 import { Clicker } from './Clicker'
 import { ClickerPlayer } from './ClickerPlayer'
 import { ClickerSessionState } from './ClickerSessionState'
@@ -18,18 +18,18 @@ export class ClickerSession extends GameSession {
         }
     }
 
-    $Click(player: ClickerPlayer | Clicker) {
+    $Click(player: ClickerPlayer | Clicker, payload: { x: number; y: number }) {
         if (player instanceof Clicker) {
             return {
                 error: 'Not allowed'
-            }
+            } as const
         }
 
         if (!player.state.isClickAllowed) {
             return {
                 color: player.member.user.state.nicknameColor,
                 status: 'Skipped'
-            }
+            } as const
         }
 
         if (!this.state.isClickAllowed) {
@@ -44,14 +44,14 @@ export class ClickerSession extends GameSession {
             return {
                 color: player.member.user.state.nicknameColor,
                 status: 'Failure'
-            }
+            } as const
         }
 
         if (this.state.winner) {
             return {
                 color: player.member.user.state.nicknameColor,
                 status: 'NotWin'
-            }
+            } as const
         }
 
         this.state.winner = player
@@ -66,7 +66,7 @@ export class ClickerSession extends GameSession {
         return {
             color: player.member.user.state.nicknameColor,
             status: 'Ok'
-        }
+        } as const
     }
 
     $ClickAllowed() {
