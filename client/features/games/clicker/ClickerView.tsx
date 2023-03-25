@@ -5,22 +5,18 @@ import PlayersHeader from '../common/PlayersHeader'
 import { LobbyControls } from 'client/features/lobby-controls/LobbyControls'
 import { ClickerCanvas } from './ClickerCanvas'
 import { createGame } from '../common/GameCtx'
-import { ClickerPlayerData, ClickerSession, ClickerSessionData } from 'state'
+import { Clicker } from 'state'
 
-type ClickerCtx = {
-    players: ClickerPlayerData[]
-    session: ClickerSessionData | null
-}
-
-export const [ClickerView, useClicker, useClickerAction] = createGame<ClickerCtx, ClickerSession>(({ players, isLoading, isSessionStarted }) => {
+export const [ClickerView, useClicker, useClickerAction] = createGame<Clicker>(() => {
+    const game = useClicker()
     const lobby = useLobby()
     const ws = useWS()
 
     return (
         <>
-            <PlayersHeader members={players} isLoading={isLoading} />
+            <PlayersHeader members={game.players} isLoading={game.isLoading} />
             <ClickerCanvas />
-            <Dialog open={!isSessionStarted} sx={{ zIndex: 1 }} disableEnforceFocus>
+            <Dialog open={!game.isSessionStarted} sx={{ zIndex: 1 }} disableEnforceFocus>
                 <Button onClick={() => ws.send('Game-Start', { lobbyId: lobby.lobbyId })}>Start game</Button>
             </Dialog>
             <LobbyControls />
