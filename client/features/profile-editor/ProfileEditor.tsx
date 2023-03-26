@@ -3,10 +3,8 @@ import TextField from '@mui/material/TextField'
 import { useWS, useUser } from 'client/context/list'
 import React, { useState, useRef } from 'react'
 import { LoadingOverlay } from 'client/ui'
-import { URL as ApiUrl } from 'client/network-utils/const'
 import { api } from 'client/network-utils/api'
 import CircleIcon from '@mui/icons-material/Circle'
-import type { Failure, Success } from 'pages/api/profile'
 import { ProfilePicture } from '../profile-picture/ProfilePicture'
 import randomColor from 'randomcolor'
 import { deleteCookie } from 'cookies-next'
@@ -54,7 +52,7 @@ export const ProfileEditor: React.FC<Props> = props => {
 
         setIsLoading(true)
 
-        const [response, postError] = await api.post<Failure | Success>(ApiUrl.Profile, data).finally(() => setIsLoading(false))
+        const [response, postError] = await api.post('profile', data).finally(() => setIsLoading(false))
 
         if (!response) {
             return setError(String(postError))

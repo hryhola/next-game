@@ -5,23 +5,24 @@ export const URL = {
         } else {
             return `ws://${location.hostname}:${process.env.NEXT_PUBLIC_WS_PORT}/ws`
         }
-    },
-    get SocketStartStarter() {
-        return `${location.origin}/api/init`
-    },
-    get Profile() {
-        return `${location.origin}/api/profile`
-    },
-    get LobbyCreate() {
-        return `${location.origin}/api/lobby-create`
-    },
-    get LobbyJoin() {
-        return `${location.origin}/api/lobby-join`
-    },
-    get LobbyLeave() {
-        return `${location.origin}/api/lobby-leave`
-    },
-    get LobbyDestroy() {
-        return `${location.origin}/api/lobby-destroy`
     }
 }
+
+export type EndpointInfo<Url extends string, Req = null, Res = null> = {
+    relativeUrl: Url
+    request: Req
+    response: Res
+}
+
+export type Endpoints = {
+    // @index('../../pages/api/*.ts', f => `    '${f.name}': EndpointInfo<'pages/api/${f.name}', import('pages/api/${f.name}').Request, import('pages/api/${f.name}').Response>`)
+    hello: EndpointInfo<'pages/api/hello', import('pages/api/hello').Request, import('pages/api/hello').Response>
+    'lobby-create': EndpointInfo<'pages/api/lobby-create', import('pages/api/lobby-create').Request, import('pages/api/lobby-create').Response>
+    'lobby-destroy': EndpointInfo<'pages/api/lobby-destroy', import('pages/api/lobby-destroy').Request, import('pages/api/lobby-destroy').Response>
+    'lobby-join': EndpointInfo<'pages/api/lobby-join', import('pages/api/lobby-join').Request, import('pages/api/lobby-join').Response>
+    'lobby-leave': EndpointInfo<'pages/api/lobby-leave', import('pages/api/lobby-leave').Request, import('pages/api/lobby-leave').Response>
+    profile: EndpointInfo<'pages/api/profile', import('pages/api/profile').Request, import('pages/api/profile').Response>
+    // @endindex
+}
+
+export type EndpointName = keyof Endpoints

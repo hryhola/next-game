@@ -4,9 +4,13 @@ import logger from 'logger'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { GameCtors, GameName } from 'state/games'
 import { parseForm } from 'util/formDataRequest'
-import { NextApiResponseUWS } from 'util/t'
+import { GeneralFailure, GeneralSuccess, NextApiResponseUWS } from 'util/t'
 
-export default async function handler(req: NextApiRequest, res: NextApiResponseUWS) {
+export type Request = FormData
+
+export type Response = GeneralSuccess | GeneralFailure
+
+export default async function handler(req: NextApiRequest, res: NextApiResponseUWS<Response>) {
     const token = req.cookies.token
 
     if (!token) {

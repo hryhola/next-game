@@ -29,7 +29,7 @@ export const LobbyCreator: React.FC = () => {
 
         setIsLoading(true)
 
-        const [response, postError] = await api.post<GeneralSuccess | GeneralFailure>(ApiUrl.LobbyCreate, data).finally(() => setIsLoading(false))
+        const [response, postError] = await api.post('lobby-create', data).finally(() => setIsLoading(false))
 
         if (!response) {
             return setError(String(postError))

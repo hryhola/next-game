@@ -2,16 +2,23 @@ import type { NextApiRequest } from 'next'
 import { GameData, LobbyData } from 'state'
 import { NextApiResponseUWS } from 'util/t'
 
-export interface Failure {
+export type Request = {
+    lobbyId: string
+    joinAs: 'player' | 'spectator'
+}
+
+interface Failure {
     success: false
     message: string
 }
 
-export interface Success {
+interface Success {
     success: true
     lobby: LobbyData
     game: GameData
 }
+
+export type Response = Failure | Success
 
 export default async function handler(req: NextApiRequest, res: NextApiResponseUWS<Success | Failure>) {
     const token = req.cookies.token
@@ -34,7 +41,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponseU
         })
     }
 
-    const request = JSON.parse(req.body)
+    const request: Partial<Request> = JSON.parse(req.body)
+
+    if (!request.lobbyId || typeof request.lobbyId !== 'string') {
+        return res.json({
+            success: false,
+            message: 'Lobby id is missing'
+        })
+    }
+
+    if (!request.joinAs || typeof request.joinAs !== 'string' || !['player', 'spectator'].includes(request.joinAs)) {
+        return res.json({
+            success: false,
+            message: 'Join role is incorrect'
+        })
+    }
 
     const lobby = appState.lobbies.get(request.lobbyId)
 
@@ -45,12 +66,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponseU
         })
     }
 
-    const lobbyJoinResult = lobby.join(user)
+    const lobbyJoinResult = lobby.join(user, request.joinAs)
 
     if (lobbyJoinResult.success === false) {
         return res.json({
             success: false,
-            message: lobbyJoinResult.message!
+            message: lobbyJoinResult.message
         })
     }
 
