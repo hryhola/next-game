@@ -1,12 +1,13 @@
 import type { NextApiRequest } from 'next'
-import { GameData, LobbyData } from 'state'
-import { GeneralFailure, NextApiResponseUWS } from 'util/t'
+import { GeneralFailure, GeneralSuccess, NextApiResponseUWS } from 'util/t'
 
-export interface Success {
-    success: true
+export type Request = {
+    lobbyId: string
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponseUWS<Success | GeneralFailure>) {
+export type Response = GeneralSuccess | GeneralFailure
+
+export default async function handler(req: NextApiRequest, res: NextApiResponseUWS<Response>) {
     const token = req.cookies.token
 
     if (!token) {

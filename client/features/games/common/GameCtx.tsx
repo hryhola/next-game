@@ -2,8 +2,6 @@ import React, { useEffect } from 'react'
 import { PlayerData, GameSessionData, GameSessionActionsName, GameSessionAction, Game as AbstractGame } from 'state'
 import { useLobby, useEventHandler, useWS } from 'client/context/list'
 import { api } from 'client/network-utils/api'
-import { URL } from 'client/network-utils/const'
-import { Failure, Success } from 'pages/api/lobby-join'
 
 export type GameCtxValue = {
     players: PlayerData[]
@@ -67,8 +65,9 @@ export const createGame = <Game extends AbstractGame>(Component: React.Component
 
         useEffect(() => {
             ;(async () => {
-                const [response, postError] = await api.post<Success | Failure>(URL.LobbyJoin, {
-                    lobbyId: lobby.lobbyId
+                const [response, postError] = await api.post('lobby-join', {
+                    lobbyId: lobby.lobbyId,
+                    joinAs: 'player'
                 })
 
                 if (!response || !response.success) {

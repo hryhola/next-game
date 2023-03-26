@@ -1,11 +1,10 @@
 import { useLobby } from 'client/context/list'
 import { useClientRouter } from 'client/route/ClientRouter'
 import { FormEventHandler, useState } from 'react'
-import { TextField, Button, Alert, Grid, Typography, SxProps, Theme } from '@mui/material'
+import { TextField, Button, Alert, Grid, Typography, SxProps, Theme, ButtonGroup } from '@mui/material'
 import { LoadingOverlay } from 'client/ui'
 import { LobbyData } from 'state'
 import { api } from 'client/network-utils/api'
-import { URL } from 'client/network-utils/const'
 
 interface Props {
     lobby: LobbyData
@@ -23,11 +22,18 @@ export const LobbyPreview: React.FC<Props> = props => {
     const handleSubmit: FormEventHandler<HTMLFormElement> = async event => {
         event.preventDefault()
 
+        const role = (event.nativeEvent as SubmitEvent).submitter?.getAttribute('data-role')
+
+        if (role !== 'player' && role !== 'spectator') {
+            return setError('Invalid role')
+        }
+
         setIsLoading(true)
 
         const [response, postError] = await api
-            .post(URL.LobbyJoin, {
-                lobbyId: props.lobby.id
+            .post('lobby-join', {
+                lobbyId: props.lobby.id,
+                joinAs: role as 'player' | 'spectator'
             })
             .finally(() => setIsLoading(false))
 
@@ -81,9 +87,14 @@ export const LobbyPreview: React.FC<Props> = props => {
                 )}
 
                 <Grid item sx={{ mt: 'auto' }}>
-                    <Button color="primary" variant="contained" type="submit" size="large" fullWidth>
-                        Join
-                    </Button>
+                    <ButtonGroup fullWidth>
+                        <Button color="primary" variant="outlined" type="submit" data-role="player">
+                            Play 🎮
+                        </Button>
+                        <Button color="primary" variant="outlined" type="submit" data-role="spectator">
+                            Watch 👀
+                        </Button>
+                    </ButtonGroup>
                 </Grid>
             </Grid>
             <LoadingOverlay isLoading={isLoading} />

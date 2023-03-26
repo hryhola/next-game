@@ -2,8 +2,6 @@ import { api } from 'client/network-utils/api'
 import React, { useState, createContext, useEffect } from 'react'
 import { TChatMessage, LobbyMemberData, LobbyData, ReadyCheckMember } from 'state'
 import { GameName } from 'state/games'
-import { URL as ApiUrl } from 'client/network-utils/const'
-import { GeneralFailure, GeneralSuccess } from 'util/t'
 
 export const LobbyContext = createContext({
     members: [] as LobbyMemberData[],
@@ -45,13 +43,13 @@ export const LobbyProvider: React.FC<Props> = ({ children, lobby }) => {
     }
 
     const exit = () => {
-        api.post<GeneralSuccess | GeneralFailure>(ApiUrl.LobbyLeave, { lobbyId })
+        api.post('lobby-leave', { lobbyId })
 
         reset()
     }
 
     const destroy = () => {
-        api.post<GeneralSuccess | GeneralFailure>(ApiUrl.LobbyDestroy, { lobbyId })
+        api.post('lobby-destroy', { lobbyId })
 
         reset()
     }

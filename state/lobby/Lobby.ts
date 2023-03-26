@@ -39,14 +39,14 @@ export class Lobby<G extends GameName = GameName> {
         })
     }
 
-    join(user: User) {
+    join(user: User, as: 'player' | 'spectator') {
         const existed = this.members.find(m => m.user === user)
 
         if (existed) {
             return {
-                success: true,
-                message: 'Already existed'
-            }
+                success: false,
+                message: 'Already joined'
+            } as const
         }
 
         const member = new LobbyMember(this, user)
@@ -60,11 +60,13 @@ export class Lobby<G extends GameName = GameName> {
             member: member.data()
         })
 
-        this.game.join(member)
+        if (as === 'player') {
+            this.game.join(member)
+        }
 
         return {
             success: true
-        }
+        } as const
     }
 
     leave(user: User) {

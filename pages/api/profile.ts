@@ -4,19 +4,17 @@ import type { NextApiRequest } from 'next'
 import { parseForm } from 'util/formDataRequest'
 import logger from 'logger'
 import path from 'path'
-import { NextApiResponseUWS } from 'util/t'
+import { GeneralFailure, GeneralSuccess, NextApiResponseUWS } from 'util/t'
 
-export type Failure = {
-    success: false
-    message: string
-}
+export type Request = FormData
 
-export type Success = {
-    success: true
+type Success = GeneralSuccess & {
     avatarUrl?: string
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponseUWS<Success | Failure>) {
+export type Response = Success | GeneralFailure
+
+export default async function handler(req: NextApiRequest, res: NextApiResponseUWS<Response>) {
     if (req.method !== 'POST') {
         res.status(400)
 
