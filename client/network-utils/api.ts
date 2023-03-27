@@ -1,8 +1,8 @@
-import { X } from 'util/t'
+import { Resulted } from 'util/universalTypes'
 import { EndpointName, Endpoints } from './const'
 
 const createHandler = (method: string) => {
-    return async function <E extends EndpointName>(endpoint: E, data: Endpoints[E]['request']): Promise<X<Endpoints[E]['response']>> {
+    return async function <E extends EndpointName>(endpoint: E, data: Endpoints[E]['request']): Promise<Resulted<Endpoints[E]['response']>> {
         const req: RequestInit = {
             method
         }

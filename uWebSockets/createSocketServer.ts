@@ -7,7 +7,7 @@ import sslPath from '../ssl-path'
 import logger from 'logger'
 import { State } from 'state'
 import Publisher from './utils/ws/Publisher'
-import { NextApiResponseUWS } from 'util/t'
+import { NextApiResponseUWS } from 'util/universalTypes'
 
 export const port = Number(process.env.NEXT_PUBLIC_WS_PORT)
 

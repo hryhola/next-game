@@ -1,7 +1,7 @@
 import { Box, Container } from '@mui/material'
 import { GetServerSideProps, NextPage } from 'next'
 import { useEffect, useRef, useState } from 'react'
-import { NextApiResponseUWS } from 'util/t'
+import { NextApiResponseUWS } from 'util/universalTypes'
 
 type Props = {
     state: string

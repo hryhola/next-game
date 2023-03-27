@@ -1,5 +1,5 @@
 import { Game, Chat, State, GameCtors, GameName, LobbyMember, User, ReadyCheck } from 'state'
-import { GeneralFailure, GeneralSuccess } from 'util/t'
+import { GeneralFailure, GeneralSuccess } from 'util/universalTypes'
 import { StateEventName, StateEvents } from 'uWebSockets/topicEvents'
 
 export type LobbyCreateOptions<G extends GameName> = {

@@ -1,6 +1,6 @@
 import logger from 'logger'
 import { Lobby, LobbyMember, GameSession, SessionStartData, Player } from 'state'
-import { GeneralFailure, GeneralSuccess } from 'util/t'
+import { GeneralFailure, GeneralSuccess } from 'util/universalTypes'
 
 export abstract class Game {
     static gameName: string

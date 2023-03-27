@@ -1,5 +1,5 @@
 import { LobbyMember } from 'state'
-import { GeneralFailure, GeneralSuccess } from 'util/t'
+import { GeneralFailure, GeneralSuccess } from 'util/universalTypes'
 import { ClickerPlayer } from './ClickerPlayer'
 import { ClickerSession } from './ClickerSession'
 import { Game } from 'state/common/game/Game'

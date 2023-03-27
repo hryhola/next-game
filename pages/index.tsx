@@ -5,7 +5,7 @@ import { ClientRouterProvider, FrameName } from 'client/route/ClientRouter'
 import { deleteCookie } from 'cookies-next'
 import logger from 'logger'
 import { LobbyData, UserData } from 'state'
-import { NextApiResponseUWS } from 'util/t'
+import { NextApiResponseUWS } from 'util/universalTypes'
 import { initializeSocketServer } from 'uWebSockets/createSocketServer'
 import { SnackbarProvider } from 'notistack'
 
