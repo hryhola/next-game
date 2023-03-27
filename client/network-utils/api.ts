@@ -1,5 +1,5 @@
 import { Resulted } from 'util/universalTypes'
-import { EndpointName, Endpoints } from './const'
+import { EndpointName, Endpoints } from './url'
 
 const createHandler = (method: string) => {
     return async function <E extends EndpointName>(endpoint: E, data: Endpoints[E]['request']): Promise<Resulted<Endpoints[E]['response']>> {

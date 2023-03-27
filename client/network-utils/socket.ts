@@ -1,4 +1,4 @@
-import { URL } from './const'
+import { URL } from './url'
 import { WebSocketCallbacks } from './types'
 
 const messageLogger = (message: MessageEvent<any>) => {
