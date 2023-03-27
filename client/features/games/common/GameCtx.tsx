@@ -65,20 +65,20 @@ export const createGame = <Game extends AbstractGame>(Component: React.Component
 
         useEffect(() => {
             ;(async () => {
-                const [response, postError] = await api.post('lobby-join', {
-                    lobbyId: lobby.lobbyId,
-                    joinAs: 'player'
-                })
+                const [response, postError] = await api
+                    .post('lobby-data', {
+                        lobbyId: lobby.lobbyId
+                    })
+                    .finally(() => setIsLoading(false))
 
                 if (!response || !response.success) {
-                    return console.error(String(postError))
+                    return console.error(response ? response.message : postError)
                 }
 
                 lobby.setMembers(response.lobby.members)
                 lobby.setGameName(response.game.name as 'Clicker')
 
                 setPlayers(response.game.players as ThisPlayerData[])
-                setIsLoading(false)
 
                 if (response.game.session) setSession(response.game.session as ThisSessionData)
             })()

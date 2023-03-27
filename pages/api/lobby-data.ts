@@ -4,11 +4,11 @@ import { GeneralFailure, GeneralSuccess, NextApiResponseUWS } from 'util/univers
 
 export type Request = {
     lobbyId: string
-    joinAs: LobbyMemberRole
 }
 
 type Success = GeneralSuccess & {
-    gameJoiningResult?: GeneralSuccess | GeneralFailure | null
+    lobby: LobbyData
+    game: GameData
 }
 
 export type Response = GeneralFailure | Success
@@ -43,13 +43,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponseU
         })
     }
 
-    if (!request.joinAs || typeof request.joinAs !== 'string' || !['player', 'spectator'].includes(request.joinAs)) {
-        return res.json({
-            success: false,
-            message: 'Join role is incorrect'
-        })
-    }
-
     const lobby = appState.lobbies.get(request.lobbyId)
 
     if (!lobby) {
@@ -59,17 +52,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponseU
         })
     }
 
-    const lobbyJoiningResult = lobby.join(user, request.joinAs)
-
-    if (lobbyJoiningResult.success === false) {
+    if (lobby.creator !== user && !lobby.members.some(member => member.user === user)) {
         return res.json({
             success: false,
-            message: lobbyJoiningResult.message
+            message: 'You are not a member of this lobby'
         })
     }
 
     res.json({
         success: true,
-        gameJoiningResult: lobbyJoiningResult.gameJoiningResult
+        lobby: lobby.data(),
+        game: lobby.game.data()
     })
 }

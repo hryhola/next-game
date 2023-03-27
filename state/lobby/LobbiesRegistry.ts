@@ -22,6 +22,8 @@ export class LobbiesRegistry {
         this.container[data.id] = lobby
 
         this.publishListUpdate()
+
+        return lobby
     }
 
     destroyLobby(lobby: Lobby) {

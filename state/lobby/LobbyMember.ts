@@ -1,4 +1,5 @@
-import { Lobby, User } from 'state'
+import logger from 'logger'
+import { Lobby, LobbyMemberRole, User } from 'state'
 
 export class LobbyMember {
     readonly user: User
@@ -8,6 +9,7 @@ export class LobbyMember {
         isCreator: boolean
         isPlayer: boolean
         position: number
+        role: LobbyMemberRole
     }
 
     constructor(lobby: Lobby, user: User) {
@@ -16,7 +18,13 @@ export class LobbyMember {
         this.state = {
             isCreator: lobby.creator === user,
             isPlayer: false,
-            position: lobby.members.length
+            position: lobby.members.length,
+            get role() {
+                return lobby.game.players.some(p => p.member.user === user) ? 'player' : 'spectator'
+            },
+            set role(_value: LobbyMemberRole) {
+                logger.error('Cannot set role directly')
+            }
         }
     }
 
