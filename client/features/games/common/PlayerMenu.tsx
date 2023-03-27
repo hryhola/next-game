@@ -3,7 +3,7 @@ import { useUser, useLobby, useWS } from 'client/context/list'
 import { useGlobalModal } from 'client/features/global-modal/GlobalModal'
 import { PlayerData } from 'state'
 import { v4 } from 'uuid'
-import { useGame } from './GameCtx'
+import { useGame } from './GameFactory'
 
 type Props = {
     playerMenuAnchor: Element | null
