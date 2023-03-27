@@ -115,6 +115,7 @@ export const TicTacToeCanvas: React.FC<Props> = ({ isLoading }) => {
                 line.setAttribute('x2', div2CenterX.toString())
                 line.setAttribute('y2', div2CenterY.toString())
                 line.setAttribute('stroke', 'black')
+                line.style.stroke = winner!.nicknameColor
 
                 svg.appendChild(line)
             }
