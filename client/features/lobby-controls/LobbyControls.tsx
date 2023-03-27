@@ -13,7 +13,7 @@ import CheckIcon from '@mui/icons-material/Check'
 import { useLobby, useUser, useWS, useAudio } from 'client/context/list'
 import { useClientRouter } from 'client/route/ClientRouter'
 import { useGlobalModal } from 'client/features/global-modal/GlobalModal'
-import { useGame } from '../games/common/GameCtx'
+import { useGame } from '../games/common/GameFactory'
 
 export const LobbyControls: React.FC = () => {
     const globalModal = useGlobalModal()

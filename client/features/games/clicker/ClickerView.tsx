@@ -4,7 +4,7 @@ import { useLobby, useWS } from 'client/context/list'
 import PlayersHeader from '../common/PlayersHeader'
 import { LobbyControls } from 'client/features/lobby-controls/LobbyControls'
 import { ClickerCanvas } from './ClickerCanvas'
-import { createGame } from '../common/GameCtx'
+import { createGame } from '../common/GameFactory'
 import { Clicker } from 'state'
 
 export const [ClickerView, useClicker, useClickerAction, useActionSender] = createGame<Clicker>(() => {
