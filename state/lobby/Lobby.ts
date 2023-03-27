@@ -10,6 +10,14 @@ export type LobbyCreateOptions<G extends GameName> = {
     sessionStartData?: any
 }
 
+export type LobbyMemberRole = 'player' | 'spectator'
+
+export type LobbyJoiningResult =
+    | (GeneralSuccess & {
+          gameJoiningResult?: GeneralSuccess | GeneralFailure | null
+      })
+    | GeneralFailure
+
 export class Lobby<G extends GameName = GameName> {
     id: string
     members: LobbyMember[] = []
@@ -39,14 +47,14 @@ export class Lobby<G extends GameName = GameName> {
         })
     }
 
-    join(user: User, as: 'player' | 'spectator') {
+    join(user: User, as: LobbyMemberRole): LobbyJoiningResult {
         const existed = this.members.find(m => m.user === user)
 
         if (existed) {
             return {
                 success: false,
                 message: 'Already joined'
-            } as const
+            }
         }
 
         const member = new LobbyMember(this, user)
@@ -60,13 +68,16 @@ export class Lobby<G extends GameName = GameName> {
             member: member.data()
         })
 
+        var gameJoiningResult: GeneralFailure | GeneralSuccess | null = null
+
         if (as === 'player') {
-            this.game.join(member)
+            gameJoiningResult = this.game.join(member)
         }
 
         return {
-            success: true
-        } as const
+            success: true,
+            gameJoiningResult
+        }
     }
 
     leave(user: User) {

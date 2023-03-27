@@ -1,14 +1,18 @@
 // Next.js API route support: https://nextjs.org/docs/api-routes/introduction
-import { deleteCookie } from 'cookies-next'
 import logger from 'logger'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { GameCtors, GameName } from 'state/games'
 import { parseForm } from 'util/formDataRequest'
 import { GeneralFailure, GeneralSuccess, NextApiResponseUWS } from 'util/universalTypes'
+import { LobbyJoiningResult } from 'state/lobby/Lobby'
 
 export type Request = FormData
 
-export type Response = GeneralSuccess | GeneralFailure
+export type Response =
+    | (GeneralSuccess & {
+          lobbyJoiningResult: LobbyJoiningResult
+      })
+    | GeneralFailure
 
 export default async function handler(req: NextApiRequest, res: NextApiResponseUWS<Response>) {
     const token = req.cookies.token
@@ -63,7 +67,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponseU
         })
     }
 
-    res.socket.server.appState.lobbies.createLobby({
+    const lobby = res.socket.server.appState.lobbies.createLobby({
         id: fields.lobbyId,
         creator,
         gameName: fields.gameName as GameName,
@@ -71,8 +75,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponseU
         // sessionStartData
     })
 
+    const lobbyJoiningResult = lobby.join(creator, 'player')
+
     res.json({
-        success: true
+        success: true,
+        lobbyJoiningResult
     })
 }
 

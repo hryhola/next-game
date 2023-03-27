@@ -1,5 +1,6 @@
 import { Game } from 'state/common/game/Game'
 import { LobbyMember } from 'state/lobby/LobbyMember'
+import { GeneralFailure, GeneralSuccess } from 'util/universalTypes'
 import { TicTacToePlayer } from './TicTacToePlayer'
 import { TicTacToeSession } from './TicTacToeSession'
 
@@ -50,12 +51,12 @@ export class TicTacToe extends Game {
         }
     }
 
-    join(member: LobbyMember) {
+    join(member: LobbyMember): GeneralSuccess | GeneralFailure {
         const existed = this.players.find(p => p.member === member)
 
         if (existed) {
             return {
-                success: true,
+                success: false,
                 message: 'Already joined'
             }
         }

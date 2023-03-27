@@ -3,7 +3,7 @@ import { useClientRouter } from 'client/route/ClientRouter'
 import { FormEventHandler, useState } from 'react'
 import { TextField, Button, Alert, Grid, Typography, SxProps, Theme, ButtonGroup } from '@mui/material'
 import { LoadingOverlay } from 'client/ui'
-import { LobbyData } from 'state'
+import { LobbyData, LobbyMemberRole } from 'state'
 import { api } from 'client/network-utils/api'
 
 interface Props {
@@ -33,7 +33,7 @@ export const LobbyPreview: React.FC<Props> = props => {
         const [response, postError] = await api
             .post('lobby-join', {
                 lobbyId: props.lobby.id,
-                joinAs: role as 'player' | 'spectator'
+                joinAs: role as LobbyMemberRole
             })
             .finally(() => setIsLoading(false))
 

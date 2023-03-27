@@ -18,7 +18,7 @@ export abstract class Game {
 
     abstract players: Player[]
 
-    abstract join(user: LobbyMember): void
+    abstract join(user: LobbyMember): GeneralSuccess | GeneralFailure
 
     abstract startSession(data?: SessionStartData): GeneralSuccess | GeneralFailure
 

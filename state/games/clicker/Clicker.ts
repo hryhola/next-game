@@ -15,7 +15,7 @@ export class Clicker extends Game {
 
     players: ClickerPlayer[] = []
 
-    join(member: LobbyMember) {
+    join(member: LobbyMember): GeneralSuccess | GeneralFailure {
         const player = new ClickerPlayer(member)
 
         if (member.state.isCreator) {

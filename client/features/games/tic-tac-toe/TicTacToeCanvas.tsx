@@ -151,11 +151,6 @@ export const TicTacToeCanvas: React.FC<Props> = ({ isLoading }) => {
         })
     }
 
-    console.log({
-        turn,
-        user: user.id
-    })
-
     const isMyTurn = turn === user.id
 
     return (
