@@ -1,6 +1,6 @@
 import { Handler } from 'uWebSockets/uws.types'
 import { TChatMessage } from 'state'
-import { GeneralFailure, GeneralSuccess } from 'util/t'
+import { GeneralFailure, GeneralSuccess } from 'util/universalTypes'
 
 type Request = {
     message: TChatMessage

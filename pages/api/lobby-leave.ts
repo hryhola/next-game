@@ -1,5 +1,5 @@
 import type { NextApiRequest } from 'next'
-import { GeneralFailure, GeneralSuccess, NextApiResponseUWS } from 'util/t'
+import { GeneralFailure, GeneralSuccess, NextApiResponseUWS } from 'util/universalTypes'
 
 export type Request = {
     lobbyId: string

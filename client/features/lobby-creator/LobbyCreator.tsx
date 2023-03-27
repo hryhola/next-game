@@ -5,7 +5,7 @@ import { TextField, Button, FormControl, InputLabel, MenuItem, Select, Alert, Gr
 import { LoadingOverlay } from 'client/ui'
 import { api } from 'client/network-utils/api'
 import { URL as ApiUrl } from 'client/network-utils/const'
-import { GeneralFailure, GeneralSuccess } from 'util/t'
+import { GeneralFailure, GeneralSuccess } from 'util/universalTypes'
 import { GameName } from 'state/games'
 import { HomeContext } from 'client/context/list/homeCtx'
 

@@ -1,6 +1,6 @@
 import type { NextApiRequest } from 'next'
 import { GameData, LobbyData } from 'state'
-import { NextApiResponseUWS } from 'util/t'
+import { NextApiResponseUWS } from 'util/universalTypes'
 
 export type Request = {
     lobbyId: string

@@ -3,7 +3,7 @@ import { NextApiResponse } from 'next'
 import { State } from 'state'
 import { TemplatedApp } from 'uWebSockets.js'
 
-export type X<Result, Error = unknown> = [Result, undefined] | [undefined, Error]
+export type Resulted<Result, Error = unknown> = [Result, undefined] | [undefined, Error]
 
 export type NextApiResponseUWS<T = any> = NextApiResponse<T> & {
     socket: Socket & {

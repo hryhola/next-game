@@ -1,4 +1,4 @@
-import { GeneralFailure, GeneralSuccess } from 'util/t'
+import { GeneralFailure, GeneralSuccess } from 'util/universalTypes'
 import { Handler } from 'uWebSockets/uws.types'
 
 interface Request {

@@ -4,7 +4,7 @@ import logger from 'logger'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { GameCtors, GameName } from 'state/games'
 import { parseForm } from 'util/formDataRequest'
-import { GeneralFailure, GeneralSuccess, NextApiResponseUWS } from 'util/t'
+import { GeneralFailure, GeneralSuccess, NextApiResponseUWS } from 'util/universalTypes'
 
 export type Request = FormData
 

@@ -4,7 +4,7 @@ import type { NextApiRequest } from 'next'
 import { parseForm } from 'util/formDataRequest'
 import logger from 'logger'
 import path from 'path'
-import { GeneralFailure, GeneralSuccess, NextApiResponseUWS } from 'util/t'
+import { GeneralFailure, GeneralSuccess, NextApiResponseUWS } from 'util/universalTypes'
 
 export type Request = FormData
 
