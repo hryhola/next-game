@@ -29,6 +29,8 @@ export const TicTacToeCanvas: React.FC<Props> = ({ isLoading }) => {
     const game = useTicTacToe()
     const gameRef = useRef(game)
 
+    console.log(game.session?.board)
+
     const winLineBoxRef = useRef<HTMLDivElement>(null)
     const boardRef = useRef<HTMLDivElement>(null)
 
@@ -43,6 +45,10 @@ export const TicTacToeCanvas: React.FC<Props> = ({ isLoading }) => {
     useEffect(() => {
         gameRef.current = game
     }, [game.players])
+
+    useEffect(() => {
+        game.session?.board && setCellValues(game.session?.board)
+    }, [game.session?.board])
 
     useEffect(() => {
         if (!game.session) return
