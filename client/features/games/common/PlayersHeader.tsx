@@ -7,7 +7,7 @@ interface HeaderProps {
     isLoading: boolean
 }
 
-const PlayersHeader: React.FC<HeaderProps> = props => {
+export const PlayersHeader: React.FC<HeaderProps> = props => {
     return (
         <Box
             sx={{
@@ -38,5 +38,3 @@ const PlayersHeader: React.FC<HeaderProps> = props => {
         </Box>
     )
 }
-
-export default PlayersHeader
