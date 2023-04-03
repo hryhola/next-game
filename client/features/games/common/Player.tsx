@@ -1,5 +1,5 @@
 import { Box, Skeleton, SxProps, Theme, Typography } from '@mui/material'
-import { useUser } from 'client/context/list'
+import { useLobby, useUser } from 'client/context/list'
 import { PlayerData } from 'state'
 import { ProfilePicture } from '../../profile-picture/ProfilePicture'
 import * as React from 'react'
@@ -21,6 +21,7 @@ type LoadingData = {
 
 export const Player: React.FC<Props> = props => {
     const user = useUser()
+    const lobby = useLobby()
 
     const [playerMenuAnchor, setPlayerMenuAnchor] = React.useState<null | HTMLElement>(null)
     const size = props.size || 'small'
@@ -66,7 +67,7 @@ export const Player: React.FC<Props> = props => {
     return withBox(
         <>
             <ProfilePicture
-                clickable={user.nickname !== props.player.nickname}
+                clickable={user.nickname !== props.player.nickname && lobby.myRole === 'player'}
                 onClick={handleClick}
                 size={sizes.width}
                 maxSize={sizes.maxWidth}

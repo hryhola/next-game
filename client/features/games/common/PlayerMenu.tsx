@@ -46,7 +46,7 @@ export const PlayerMenu: React.FC<Props> = props => {
 
     let options: string[][] = []
 
-    if (props.player.nickname !== user.nickname) {
+    if (props.player.nickname !== user.nickname && lobby.myRole !== 'spectator') {
         options = [...options, ['tip', 'Tip']]
     }
 
@@ -59,6 +59,8 @@ export const PlayerMenu: React.FC<Props> = props => {
             options = [...options, ['kick', 'Kick']]
         }
     }
+
+    if (options.length === 0) return <></>
 
     return (
         <>
