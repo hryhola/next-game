@@ -21,9 +21,31 @@ export const LobbyFrame: React.FC = () => {
     const { enqueueSnackbar } = useSnackbar()
 
     useEventHandler('Lobby-Join', data => {
-        if (data.lobbyId === lobbyRef.current.lobbyId) {
-            lobby.setMembers(ms => [...ms.filter(m => m.nickname !== data.member.nickname), data.member])
+        if (data.lobbyId !== lobbyRef.current.lobbyId) {
+            return
         }
+
+        lobby.setMembers(ms => [...ms.filter(m => m.nickname !== data.member.nickname), data.member])
+
+        enqueueSnackbar(
+            <>
+                <span style={{ color: data.member?.nicknameColor }}>{data.member.nickname}</span> joined as{' '}
+                <span
+                    style={{
+                        color: data.member.role === 'player' ? '#00ff00' : '#777777'
+                    }}
+                >
+                    {data.member.role}
+                </span>
+            </>,
+            {
+                content: (key, message) => (
+                    <div className="lobby-tip noselect" key={key}>
+                        {message}
+                    </div>
+                )
+            }
+        )
     })
 
     useEventHandler('Lobby-MemberUpdate', data => {
@@ -43,25 +65,27 @@ export const LobbyFrame: React.FC = () => {
     })
 
     useEventHandler('Lobby-Tipped', data => {
-        if (data.lobbyId === lobbyRef.current.lobbyId) {
-            const from = lobbyRef.current.members.find(member => member.nickname === data.from)
-            const to = lobbyRef.current.members.find(member => member.nickname === data.to)
-
-            audio.play(Math.random() > 0.1 ? 'comp_coin.wav' : 'coins.wav')
-
-            enqueueSnackbar(
-                <>
-                    <span style={{ color: to?.nicknameColor }}>{data.to}</span> tipped by <span style={{ color: from?.nicknameColor }}>{data.from}</span>
-                </>,
-                {
-                    content: (key, message) => (
-                        <div className="lobby-tip noselect" key={key}>
-                            {message}
-                        </div>
-                    )
-                }
-            )
+        if (data.lobbyId !== lobbyRef.current.lobbyId) {
+            return
         }
+
+        const from = lobbyRef.current.members.find(member => member.nickname === data.from)
+        const to = lobbyRef.current.members.find(member => member.nickname === data.to)
+
+        audio.play(Math.random() > 0.1 ? 'comp_coin.wav' : 'coins.wav')
+
+        enqueueSnackbar(
+            <>
+                <span style={{ color: to?.nicknameColor }}>{data.to}</span> tipped by <span style={{ color: from?.nicknameColor }}>{data.from}</span>
+            </>,
+            {
+                content: (key, message) => (
+                    <div className="lobby-tip noselect" key={key}>
+                        {message}
+                    </div>
+                )
+            }
+        )
     })
 
     useEventHandler('Lobby-Destroy', data => {

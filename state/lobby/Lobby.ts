@@ -63,16 +63,16 @@ export class Lobby<G extends GameName = GameName> {
 
         user.linkLobby(this)
 
-        this.publish('Lobby-Join', {
-            lobbyId: this.id,
-            member: member.data()
-        })
-
         var gameJoiningResult: GeneralFailure | GeneralSuccess | null = null
 
         if (as === 'player') {
             gameJoiningResult = this.game.join(member)
         }
+
+        this.publish('Lobby-Join', {
+            lobbyId: this.id,
+            member: member.data()
+        })
 
         return {
             success: true,
