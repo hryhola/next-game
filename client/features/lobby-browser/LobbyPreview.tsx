@@ -33,12 +33,17 @@ export const LobbyPreview: React.FC<Props> = props => {
         const [response, postError] = await api
             .post('lobby-join', {
                 lobbyId: props.lobby.id,
-                joinAs: role as LobbyMemberRole
+                joinAs: role as LobbyMemberRole,
+                password: password || undefined
             })
             .finally(() => setIsLoading(false))
 
         if (!response) {
             return setError(String(postError))
+        }
+
+        if (!response.success) {
+            return setError(response.message)
         }
 
         lobby.setGameName(props.lobby.gameName)
@@ -76,6 +81,7 @@ export const LobbyPreview: React.FC<Props> = props => {
                 {props.lobby.private && (
                     <Grid item>
                         <TextField
+                            size="small"
                             label="Password"
                             name="password"
                             required

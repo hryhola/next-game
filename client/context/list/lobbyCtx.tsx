@@ -86,7 +86,7 @@ export const LobbyProvider: React.FC<Props> = ({ children, lobby }) => {
             const me = members.find(p => p.id === user.id)
 
             if (!me || !me.role) {
-                console.error('Player role is not defined', me)
+                console.warn('Player role is not defined', me)
             }
 
             return me?.role || 'spectator'
