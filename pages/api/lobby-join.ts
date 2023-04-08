@@ -5,6 +5,7 @@ import { GeneralFailure, GeneralSuccess, NextApiResponseUWS } from 'util/univers
 export type Request = {
     lobbyId: string
     joinAs: LobbyMemberRole
+    password?: string
 }
 
 type Success = GeneralSuccess & {
@@ -56,6 +57,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponseU
         return res.json({
             success: false,
             message: 'Cannot lobby with id: ' + request.lobbyId
+        })
+    }
+
+    if (lobby.password && lobby.password !== request.password) {
+        return res.json({
+            success: false,
+            message: 'Incorrect password'
         })
     }
 

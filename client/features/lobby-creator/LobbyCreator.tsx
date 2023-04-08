@@ -87,14 +87,7 @@ export const LobbyCreator: React.FC = () => {
                 </Grid> */}
 
                 <Grid item>
-                    <TextField
-                        sx={{ visibility: 'hidden' }}
-                        label="Password"
-                        name="password"
-                        value={password}
-                        onChange={e => setPassword(e.target.value.split('\\').pop()!)}
-                        fullWidth
-                    />
+                    <TextField label="Password" name="password" value={password} onChange={e => setPassword(e.target.value.split('\\').pop()!)} fullWidth />
                 </Grid>
                 <Grid item sx={{ mt: 'auto', mb: 2 }}>
                     <Button color="primary" variant="contained" type="submit" size="large" fullWidth>

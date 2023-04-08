@@ -67,7 +67,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponseU
         })
     }
 
-    const lobby = res.socket.server.appState.lobbies.createLobby({
+    const { lobbies } = res.socket.server.appState
+
+    if (lobbies.get(fields.lobbyId)) {
+        return res.status(400).json({
+            success: false,
+            message: 'Lobby with this ID already exists'
+        })
+    }
+
+    const lobby = lobbies.createLobby({
         id: fields.lobbyId,
         creator,
         gameName: fields.gameName as GameName,
