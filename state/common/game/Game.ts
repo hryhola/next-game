@@ -1,9 +1,14 @@
 import logger from 'logger'
-import { Lobby, LobbyMember, GameSession, SessionStartData, Player } from 'state'
+import { Lobby, LobbyMember, GameSession, Player } from 'state'
 import { GeneralFailure, GeneralSuccess } from 'util/universalTypes'
+import { InitialGameData, InitialGameDataSchema } from './GameInitialData'
 
 export abstract class Game {
     static gameName: string
+
+    static initialDataSchema?: InitialGameDataSchema
+
+    initialData?: InitialGameData
 
     abstract currentSession?: GameSession
 
@@ -20,7 +25,7 @@ export abstract class Game {
 
     abstract join(user: LobbyMember): GeneralSuccess | GeneralFailure
 
-    abstract startSession(data?: SessionStartData): GeneralSuccess | GeneralFailure
+    abstract startSession(): GeneralSuccess | GeneralFailure
 
     leave(player: Player) {
         this.players = this.players.filter(p => p !== player)
@@ -52,7 +57,8 @@ export abstract class Game {
         return {
             name: (this.constructor as typeof Game).gameName,
             players: this.players.map(p => p.data()),
-            session: this.currentSession?.data()
+            session: this.currentSession?.data(),
+            initialData: this.initialData
         }
     }
 }

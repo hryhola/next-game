@@ -110,6 +110,9 @@ export const ClickerCanvas: React.FC = () => {
             onTouchStart={handleTouch}
             onTouchEnd={e => e.preventDefault()}
             sx={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
                 width: '100vw',
                 height: 'var(--fullHeight)',
                 backgroundColor: '#000024',
@@ -121,6 +124,8 @@ export const ClickerCanvas: React.FC = () => {
                     : '#000024',
                 backgroundSize: '65px 65px, 65px 65px, 32.5px 32.5px, 32.5px 32.5px'
             }}
-        ></Box>
+        >
+            {gameClickAllowed && game.initialData?.background.value && <img src={game.initialData.background.value} alt="background" />}
+        </Box>
     )
 }

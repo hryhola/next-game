@@ -3,6 +3,7 @@ import { GeneralFailure, GeneralSuccess } from 'util/universalTypes'
 import { ClickerPlayer } from './ClickerPlayer'
 import { ClickerSession } from './ClickerSession'
 import { Game } from 'state/common/game/Game'
+import { ClickerInitialData, clickerInitialDataSchema } from './ClickerInitialData'
 
 function randomInteger(min: number, max: number) {
     return Math.floor(Math.random() * (max - min + 1)) + min
@@ -10,6 +11,10 @@ function randomInteger(min: number, max: number) {
 
 export class Clicker extends Game {
     static gameName = 'Clicker'
+
+    static initialDataSchema = clickerInitialDataSchema
+
+    initialData?: ClickerInitialData
 
     currentSession?: ClickerSession
 
