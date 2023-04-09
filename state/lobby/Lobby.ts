@@ -1,4 +1,5 @@
 import { Game, Chat, State, GameCtors, GameName, LobbyMember, User, ReadyCheck } from 'state'
+import { InitialGameData } from 'state/common/game/GameInitialData'
 import { GeneralFailure, GeneralSuccess } from 'util/universalTypes'
 import { StateEventName, StateEvents } from 'uWebSockets/topicEvents'
 
@@ -7,7 +8,7 @@ export type LobbyCreateOptions<G extends GameName> = {
     creator: User
     password?: string
     gameName: G
-    sessionStartData?: any
+    initialGameData?: InitialGameData
 }
 
 export type LobbyMemberRole = 'player' | 'spectator'
@@ -25,19 +26,19 @@ export class Lobby<G extends GameName = GameName> {
     password?: string
     chat: Chat
     game!: Game
-    sessionStartData: any
     readyCheck?: ReadyCheck
 
     constructor(data: LobbyCreateOptions<G>) {
         this.id = data.id
         this.password = data.password
         this.creator = data.creator
-        this.sessionStartData = data.sessionStartData
         this.chat = new Chat(this.id)
 
         const GameConstructor = GameCtors[data.gameName]
 
         this.game = new GameConstructor(this)
+
+        this.game.initialData = data.initialGameData
     }
 
     publish<E extends StateEventName>(сtx: E, data: StateEvents[E]) {

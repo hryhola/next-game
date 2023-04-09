@@ -1,10 +1,13 @@
 // Next.js API route support: https://nextjs.org/docs/api-routes/introduction
 import logger from 'logger'
-import type { NextApiRequest, NextApiResponse } from 'next'
+import type { NextApiRequest } from 'next'
 import { GameCtors, GameName } from 'state/games'
 import { parseForm } from 'util/formDataRequest'
 import { GeneralFailure, GeneralSuccess, NextApiResponseUWS } from 'util/universalTypes'
 import { LobbyJoiningResult } from 'state/lobby/Lobby'
+import { InitialGameData, GameDataPropertyValue } from 'state/common/game/GameInitialData'
+import formidable from 'formidable'
+import path from 'path'
 
 export type Request = FormData
 
@@ -33,7 +36,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponseU
         })
     }
 
-    const [result, error] = await parseForm(req)
+    const [result, error] = await parseForm(req, 'lobby')
 
     if (error) {
         logger.error({ error }, 'Error during form parsing (lobby create)')
@@ -76,12 +79,45 @@ export default async function handler(req: NextApiRequest, res: NextApiResponseU
         })
     }
 
+    const { initialDataSchema } = GameCtors[fields.gameName as GameName]
+
+    const initialGameData: InitialGameData = {}
+
+    if (initialDataSchema) {
+        Object.keys(files).forEach(fileName => {
+            if (fileName.slice(0, 12) !== 'initialData-') {
+                return
+            }
+
+            const dataName = fileName.slice(12)
+
+            const propertySchema = initialDataSchema.find(propertySchema => propertySchema.name === dataName)
+
+            if (!propertySchema) {
+                return
+            }
+
+            const file = files[fileName] as formidable.File
+
+            const fullPath = file.filepath
+            const parsedPath = path.parse(fullPath)
+            const fileRelativeUrl = 'res/lobby/' + parsedPath.base
+
+            const propertyValue: GameDataPropertyValue = {
+                ...propertySchema,
+                value: fileRelativeUrl
+            }
+
+            initialGameData[dataName] = propertyValue
+        })
+    }
+
     const lobby = lobbies.createLobby({
         id: fields.lobbyId,
         creator,
         gameName: fields.gameName as GameName,
-        password: fields.password
-        // sessionStartData
+        password: fields.password,
+        initialGameData
     })
 
     const lobbyJoiningResult = lobby.join(creator, 'player')

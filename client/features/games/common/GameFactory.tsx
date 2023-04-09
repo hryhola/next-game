@@ -2,12 +2,14 @@ import React, { useEffect } from 'react'
 import { PlayerData, GameSessionData, GameSessionActionsName, GameSessionAction, Game as AbstractGame } from 'state'
 import { useLobby, useEventHandler, useWS } from 'client/context/list'
 import { api } from 'client/network-utils/api'
+import { InitialGameData } from 'state/common/game/GameInitialData'
 
 export type GameCtxValue = {
     players: PlayerData[]
     isLoading: boolean
     isSessionStarted: boolean
     session: GameSessionData | null
+    initialData?: InitialGameData
 }
 
 export const GameCtx = React.createContext<GameCtxValue | null>(null)
@@ -16,12 +18,14 @@ export const createGame = <Game extends AbstractGame>(Component: React.Component
     type ThisPlayerData = ReturnType<Game['players'][0]['data']>
     type ThisSession = NonNullable<Game['currentSession']>
     type ThisSessionData = ReturnType<ThisSession['data']>
+    type ThisInitialData = Game['initialData']
 
     type ThisGameCtxValue = {
         players: ThisPlayerData[]
         isLoading: boolean
         isSessionStarted: boolean
         session: ThisSessionData | null
+        initialData: ThisInitialData
     }
 
     const GameComponent = () => {
@@ -30,6 +34,7 @@ export const createGame = <Game extends AbstractGame>(Component: React.Component
         const [players, setPlayers] = React.useState<ThisPlayerData[]>([])
         const [isLoading, setIsLoading] = React.useState(true)
         const [session, setSession] = React.useState<ThisSessionData | null>(null)
+        const [initialData, setInitialData] = React.useState<ThisInitialData>({})
 
         useEventHandler('Game-Join', data => {
             setPlayers(ps => [...ps.filter(p => p.id !== data.player.id), data.player as ThisPlayerData])
@@ -78,6 +83,7 @@ export const createGame = <Game extends AbstractGame>(Component: React.Component
                 lobby.setMembers(response.lobby.members)
                 lobby.setGameName(response.game.name as 'Clicker')
 
+                setInitialData(response.game.initialData)
                 setPlayers(response.game.players as ThisPlayerData[])
 
                 if (response.game.session) setSession(response.game.session as ThisSessionData)
@@ -88,7 +94,8 @@ export const createGame = <Game extends AbstractGame>(Component: React.Component
             players,
             isLoading,
             isSessionStarted: session !== null,
-            session
+            session,
+            initialData
         }
 
         return (

@@ -8,21 +8,21 @@ export const URL = {
     }
 }
 
-export type EndpointInfo<Url extends string, Req = null, Res = null> = {
-    relativeUrl: Url
+export type EndpointInfo<Req = null, Res = null> = {
     request: Req
     response: Res
 }
 
 export type Endpoints = {
-    // @index('../../pages/api/*.ts', f => `'${f.name}': EndpointInfo<'pages/api/${f.name}', import('pages/api/${f.name}').Request, import('pages/api/${f.name}').Response>`)
-    hello: EndpointInfo<'pages/api/hello', import('pages/api/hello').Request, import('pages/api/hello').Response>
-    'lobby-create': EndpointInfo<'pages/api/lobby-create', import('pages/api/lobby-create').Request, import('pages/api/lobby-create').Response>
-    'lobby-data': EndpointInfo<'pages/api/lobby-data', import('pages/api/lobby-data').Request, import('pages/api/lobby-data').Response>
-    'lobby-destroy': EndpointInfo<'pages/api/lobby-destroy', import('pages/api/lobby-destroy').Request, import('pages/api/lobby-destroy').Response>
-    'lobby-join': EndpointInfo<'pages/api/lobby-join', import('pages/api/lobby-join').Request, import('pages/api/lobby-join').Response>
-    'lobby-leave': EndpointInfo<'pages/api/lobby-leave', import('pages/api/lobby-leave').Request, import('pages/api/lobby-leave').Response>
-    profile: EndpointInfo<'pages/api/profile', import('pages/api/profile').Request, import('pages/api/profile').Response>
+    // @index('../../pages/api/*.ts', f => `'${f.name}': EndpointInfo<import('pages/api/${f.name}').Request, import('pages/api/${f.name}').Response>`)
+    'game-get-schema': EndpointInfo<import('pages/api/game-get-schema').Request, import('pages/api/game-get-schema').Response>
+    hello: EndpointInfo<import('pages/api/hello').Request, import('pages/api/hello').Response>
+    'lobby-create': EndpointInfo<import('pages/api/lobby-create').Request, import('pages/api/lobby-create').Response>
+    'lobby-data': EndpointInfo<import('pages/api/lobby-data').Request, import('pages/api/lobby-data').Response>
+    'lobby-destroy': EndpointInfo<import('pages/api/lobby-destroy').Request, import('pages/api/lobby-destroy').Response>
+    'lobby-join': EndpointInfo<import('pages/api/lobby-join').Request, import('pages/api/lobby-join').Response>
+    'lobby-leave': EndpointInfo<import('pages/api/lobby-leave').Request, import('pages/api/lobby-leave').Response>
+    profile: EndpointInfo<import('pages/api/profile').Request, import('pages/api/profile').Response>
     // @endindex
 }
 

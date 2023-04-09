@@ -2,8 +2,6 @@ import logger from 'logger'
 import { Game, Player } from 'state'
 import { GeneralSuccess, GeneralFailure } from 'util/universalTypes'
 
-export type SessionStartData = Record<string, string>
-
 export type GameActor = {
     type: 'player' | 'game'
     id: string
