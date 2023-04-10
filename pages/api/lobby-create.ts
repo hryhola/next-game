@@ -99,6 +99,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponseU
 
             const file = files[fileName] as formidable.File
 
+            if (file.size === 0) {
+                return
+            }
+
             const fullPath = file.filepath
             const parsedPath = path.parse(fullPath)
             const fileRelativeUrl = 'res/lobby/' + parsedPath.base
