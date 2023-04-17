@@ -125,7 +125,9 @@ export const ClickerCanvas: React.FC = () => {
                 backgroundSize: '65px 65px, 65px 65px, 32.5px 32.5px, 32.5px 32.5px'
             }}
         >
-            {gameClickAllowed && game.initialData?.background?.value && <img src={game.initialData.background.value} alt="background" />}
+            {gameClickAllowed && game.initialData?.background?.value && (
+                <img style={{ pointerEvents: 'none', userSelect: 'none' }} src={game.initialData.background.value} alt="background" />
+            )}
         </Box>
     )
 }

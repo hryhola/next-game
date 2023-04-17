@@ -36,9 +36,7 @@ export class Lobby<G extends GameName = GameName> {
 
         const GameConstructor = GameCtors[data.gameName]
 
-        this.game = new GameConstructor(this)
-
-        this.game.initialData = data.initialGameData
+        this.game = new GameConstructor(this, data.initialGameData)
     }
 
     publish<E extends StateEventName>(сtx: E, data: StateEvents[E]) {

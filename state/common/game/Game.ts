@@ -8,18 +8,25 @@ export abstract class Game {
 
     static initialDataSchema?: InitialGameDataSchema
 
-    initialData?: InitialGameData
+    initialData: InitialGameData
+
+    state?: any
+
+    prevSessions: GameSession[] = []
+
+    lobby: Lobby
 
     abstract currentSession?: GameSession
 
-    prevSessions: GameSession[] = []
-    lobby: Lobby
-    publish: Lobby['publish']
-
-    constructor(lobby: Lobby) {
+    constructor(lobby: Lobby, initialGameData?: InitialGameData) {
         this.lobby = lobby
+        this.initialData = initialGameData || {}
         this.publish = lobby.publish.bind(lobby)
     }
+
+    publish: Lobby['publish']
+
+    async postConstructor() {}
 
     abstract players: Player[]
 
@@ -54,11 +61,22 @@ export abstract class Game {
     }
 
     data() {
+        const publicInitialData = Object.entries(this.initialData).reduce((acc, [key, value]) => {
+            if (value.public) {
+                acc[key] = {
+                    public: true,
+                    value: value.value
+                }
+            }
+
+            return acc
+        }, {} as InitialGameData)
+
         return {
             name: (this.constructor as typeof Game).gameName,
             players: this.players.map(p => p.data()),
             session: this.currentSession?.data(),
-            initialData: this.initialData
+            initialData: publicInitialData
         }
     }
 }

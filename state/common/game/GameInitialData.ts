@@ -1,22 +1,24 @@
-export type GameDataTextProperty = {
+export type InitialGameDataSchemeTextProperty = {
     type: 'field'
 }
 
-export type GameDataFileProperty = {
+export type InitialGameDataSchemeFileProperty = {
     type: 'file'
     accept: string[]
 }
 
-export type GameDataProperty = {
+export type InitialGameDataSchemeProperty = {
     name: string
     label: string
     required: boolean
-} & (GameDataTextProperty | GameDataFileProperty)
+    public: boolean
+} & (InitialGameDataSchemeTextProperty | InitialGameDataSchemeFileProperty)
 
-export type GameDataPropertyValue = GameDataProperty & {
+export type InitialGameDataSchema = InitialGameDataSchemeProperty[]
+
+export type InitialGameDataProperty = {
     value: string
+    public: boolean
 }
 
-export type InitialGameDataSchema = GameDataProperty[]
-
-export type InitialGameData = Record<string, GameDataPropertyValue>
+export type InitialGameData = Record<string, InitialGameDataProperty>

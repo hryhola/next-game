@@ -1,5 +1,5 @@
 import type { NextApiRequest } from 'next'
-import { GameData, LobbyData, LobbyMemberRole } from 'state'
+import { LobbyMemberRole } from 'state'
 import { GeneralFailure, GeneralSuccess, NextApiResponseUWS } from 'util/universalTypes'
 
 export type Request = {

@@ -12,12 +12,14 @@ export class LobbiesRegistry {
         })
     }
 
-    createLobby<G extends GameName>(data: LobbyCreateOptions<G>) {
+    async createLobby<G extends GameName>(data: LobbyCreateOptions<G>) {
         if (data.id in this.container) {
             throw new Error(`Lobby with id ${data.id} already exists`)
         }
 
         const lobby = new Lobby(data)
+
+        await lobby.game.postConstructor()
 
         this.container[data.id] = lobby
 

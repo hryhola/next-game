@@ -5,7 +5,7 @@ import { GameCtors, GameName } from 'state/games'
 import { parseForm } from 'util/formDataRequest'
 import { GeneralFailure, GeneralSuccess, NextApiResponseUWS } from 'util/universalTypes'
 import { LobbyJoiningResult } from 'state/lobby/Lobby'
-import { InitialGameData, GameDataPropertyValue } from 'state/common/game/GameInitialData'
+import { InitialGameData, InitialGameDataProperty } from 'state/common/game/GameInitialData'
 import formidable from 'formidable'
 import path from 'path'
 
@@ -107,8 +107,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponseU
             const parsedPath = path.parse(fullPath)
             const fileRelativeUrl = 'res/lobby/' + parsedPath.base
 
-            const propertyValue: GameDataPropertyValue = {
-                ...propertySchema,
+            const propertyValue: InitialGameDataProperty = {
+                public: propertySchema.public,
                 value: fileRelativeUrl
             }
 
@@ -116,7 +116,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponseU
         })
     }
 
-    const lobby = lobbies.createLobby({
+    const lobby = await lobbies.createLobby({
         id: fields.lobbyId,
         creator,
         gameName: fields.gameName as GameName,

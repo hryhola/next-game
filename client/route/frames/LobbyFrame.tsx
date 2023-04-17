@@ -173,6 +173,12 @@ export const LobbyFrame: React.FC = () => {
                 })
                 break
             }
+            case 'Jeopardy': {
+                game.current = dynamic(() => import('client/features/games/jeopardy/JeopardyView').then(mod => mod.JeopardyView), {
+                    loading: () => <LoadingOverlay isLoading={true} />
+                })
+                break
+            }
             default: {
                 return
             }
