@@ -116,20 +116,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponseU
         })
     }
 
-    const lobby = await lobbies.createLobby({
-        id: fields.lobbyId,
-        creator,
-        gameName: fields.gameName as GameName,
-        password: fields.password,
-        initialGameData
-    })
+    try {
+        const lobby = await lobbies.createLobby({
+            id: fields.lobbyId,
+            creator,
+            gameName: fields.gameName as GameName,
+            password: fields.password,
+            initialGameData
+        })
 
-    const lobbyJoiningResult = lobby.join(creator, 'player')
+        const lobbyJoiningResult = lobby.join(creator, 'player')
 
-    res.json({
-        success: true,
-        lobbyJoiningResult
-    })
+        res.json({
+            success: true,
+            lobbyJoiningResult
+        })
+    } catch (error) {
+        logger.error({ error }, 'Error during lobby creation: ' + (error instanceof Error ? error.message : '') + (error instanceof Error ? error.stack : ''))
+
+        res.status(500).json({
+            success: false,
+            message: 'Error during lobby creation'
+        })
+    }
 }
 
 export const config = {

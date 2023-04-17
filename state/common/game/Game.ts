@@ -10,8 +10,6 @@ export abstract class Game {
 
     initialData: InitialGameData
 
-    state?: any
-
     prevSessions: GameSession[] = []
 
     lobby: Lobby
