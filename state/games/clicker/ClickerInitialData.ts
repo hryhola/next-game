@@ -1,4 +1,4 @@
-import { InitialGameDataSchema } from 'state/common/game/GameInitialData'
+import { InitialGameDataProperty, InitialGameDataSchema } from 'state/common/game/GameInitialData'
 
 export const clickerInitialDataSchema: InitialGameDataSchema = [
     {
@@ -6,14 +6,13 @@ export const clickerInitialDataSchema: InitialGameDataSchema = [
         label: 'Background',
         required: false,
         accept: ['image/*'],
-        type: 'file'
+        type: 'file',
+        public: true
     }
 ]
 
 export type ClickerInitialDataSchema = typeof clickerInitialDataSchema
 
 export type ClickerInitialData = {
-    background: ClickerInitialDataSchema[0] & {
-        value: string
-    }
+    background: InitialGameDataProperty
 }

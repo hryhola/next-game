@@ -14,7 +14,7 @@ export class Clicker extends Game {
 
     static initialDataSchema = clickerInitialDataSchema
 
-    initialData?: ClickerInitialData
+    initialData!: ClickerInitialData
 
     currentSession?: ClickerSession
 
