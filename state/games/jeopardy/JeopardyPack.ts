@@ -1,24 +1,42 @@
 import path from 'path'
-import { v4 } from 'uuid'
-import { unzip } from 'util/zip'
+import fs from 'fs'
+import JSZip from 'jszip'
+import xml2js from 'xml-js'
+import { findFileInJSZip } from 'util/zip'
+import logger from 'logger'
+import { JeopardyDeclaration } from './JeopardyPack.types'
 
 export class JeopardyPack {
-    sourceFile: string
-    packFolder: string
+    static getJeopardyDeclaration = async (archivePath: string): Promise<any> => {
+        const data: Buffer = await fs.promises.readFile(archivePath)
+        const zip = new JSZip()
+        const contents = await zip.loadAsync(data)
+        const contentXmlEntry = findFileInJSZip(contents, 'content.xml')
 
-    isParsed = false
+        if (!contentXmlEntry) {
+            throw new Error('content.xml not found in the zip file')
+        }
+
+        const contentXml: string = await contents.files[contentXmlEntry].async('text')
+        const contentJs = xml2js.xml2js(contentXml, { compact: true }) as JeopardyDeclaration.Pack
+
+        return contentJs
+    }
+
+    sourceFile: string
+    declaration!: JeopardyDeclaration.Pack
 
     constructor(sourceRes: string) {
         const publicFolder = process.env.NODE_ENV === 'production' ? '/var/www/game-club.click/html' : process.cwd() + '/public'
 
         this.sourceFile = path.join(publicFolder, sourceRes)
-
-        this.packFolder = path.join(publicFolder, 'res', 'jeopardy', v4() + '-' + path.parse(sourceRes).name)
     }
 
     async parse() {
-        await unzip(this.sourceFile, this.packFolder)
-
-        this.isParsed = true
+        try {
+            this.declaration = await JeopardyPack.getJeopardyDeclaration(this.sourceFile)
+        } catch (error) {
+            logger.error({ error }, 'JeopardyPack.parse()')
+        }
     }
 }

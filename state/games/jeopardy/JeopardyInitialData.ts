@@ -6,7 +6,7 @@ const packProperty: InitialGameDataSchemeProperty = {
     required: true,
     accept: ['.siq'],
     type: 'file',
-    public: false
+    public: true
 }
 
 export const jeopardyInitialDataSchema: InitialGameDataSchema = [packProperty]
