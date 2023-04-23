@@ -1,87 +1,42 @@
-import path from 'path'
 import fs from 'fs'
-import yauzl, { Entry } from 'yauzl'
+import path from 'path'
+import JSZip from 'jszip'
 
-export const unzip = async (targetPath: string, outputDirPath: string) => {
+export const unzip = async (targetPath: string, outputDirPath: string): Promise<boolean> => {
     await fs.promises.mkdir(outputDirPath, { recursive: true })
 
-    return new Promise((resolve, reject) =>
-        yauzl.open(targetPath, { lazyEntries: true }, (error, zipFile) => {
-            if (error) {
-                zipFile?.close()
+    const data: Buffer = await fs.promises.readFile(targetPath)
+    const zip = new JSZip()
+    const contents = await zip.loadAsync(data)
 
-                throw new Error('Failed to unzip ' + targetPath)
-            }
+    const processEntry = async (entryName: string): Promise<void> => {
+        const entry = contents.files[entryName]
+        const decodedEntryName = decodeURI(entryName)
+        const filePath = path.join(outputDirPath, decodedEntryName)
 
-            zipFile.on('entry', async (entry: Entry) => {
-                const isDir = /\/$/.test(entry.fileName)
-
-                if (isDir) {
-                    const dirPath = path.join(outputDirPath, entry.fileName)
-
-                    await fs.promises.mkdir(dirPath)
-
-                    zipFile.readEntry()
-
-                    return
+        if (entry.dir) {
+            await fs.promises.mkdir(filePath, { recursive: true })
+        } else {
+            const parentDir = path.dirname(filePath)
+            await fs.promises.mkdir(parentDir, { recursive: true }).catch(error => {
+                if (error.code !== 'EEXIST') {
+                    throw error
                 }
-
-                zipFile.openReadStream(entry, async (fileReadingError, readingStream) => {
-                    if (fileReadingError) {
-                        zipFile.close()
-
-                        reject(fileReadingError)
-
-                        return
-                    }
-
-                    const archiveFilePath = entry.fileName.split('/').map(str => decodeURI(str))
-
-                    const pathWithinCurrentDir = path.join(outputDirPath, ...archiveFilePath)
-
-                    const dirsListWithinArchive = archiveFilePath.slice(0, -1)
-
-                    if (dirsListWithinArchive.length) {
-                        const dirsPathWithinCurrentDir = path.join(outputDirPath, ...archiveFilePath.slice(0, -1))
-
-                        await fs.promises.mkdir(dirsPathWithinCurrentDir).catch(error => {
-                            if (error.code !== 'EEXIST') {
-                                zipFile.close()
-
-                                return reject(error)
-                            }
-                        })
-                    }
-
-                    const file = fs.createWriteStream(pathWithinCurrentDir)
-
-                    readingStream.pipe(file)
-
-                    file.on('finish', () => {
-                        file.close(() => {
-                            zipFile.readEntry()
-                        })
-
-                        file.on('error', fileError => {
-                            zipFile.close()
-
-                            reject(fileError)
-                        })
-                    })
-                })
             })
 
-            zipFile.on('end', () => {
-                resolve(true)
-            })
+            const content: Buffer = await entry.async('nodebuffer')
+            await fs.promises.writeFile(filePath, content)
+        }
+    }
 
-            zipFile.on('error', archiveReadingError => {
-                zipFile.close()
+    const entryNames: string[] = Object.keys(contents.files)
+    await Promise.all(entryNames.map(processEntry))
 
-                reject(archiveReadingError)
-            })
+    return true
+}
 
-            zipFile.readEntry()
-        })
-    )
+export const findFileInJSZip = (zip: JSZip, fileName: string): string | null => {
+    const entryNames = Object.keys(zip.files)
+    const contentXmlEntry = entryNames.find(entryName => entryName === fileName)
+    return contentXmlEntry || null
 }
