@@ -1,6 +1,9 @@
+import { Game } from 'state/common/game/Game'
 import { GameOnlyActed } from 'state/common/game/Game.decorators'
-import { A, E, P, GameSession } from 'state/common/game/GameSession'
+import { A, E, P, GameSession, GameSessionActionHandlerEventOptions, GameSessionActionsName } from 'state/common/game/GameSession'
+import { Player } from 'state/common/game/Player'
 import { Chronos, TimeHall } from 'util/chronos'
+import { GeneralSuccess, GeneralFailure } from 'util/universalTypes'
 import { Jeopardy } from './Jeopardy'
 import { JeopardySessionState } from './JeopardySessionState'
 
@@ -16,20 +19,31 @@ export class JeopardySession extends GameSession {
         this.timeHall = Chronos.createTimeHall()
     }
 
+    action<T extends GameSessionActionsName<JeopardySession>>(
+        actor: Game | Player,
+        type: T,
+        payload: Parameters<this[T]>[1],
+        eventOptions: GameSessionActionHandlerEventOptions
+    ): GeneralSuccess | GeneralFailure {
+        return super.action(actor, String(type), payload, eventOptions)
+    }
+
     data() {
         return {}
     }
 
     start() {
+        this.action(this.game, '$PickQuestion', { playerID: '1', round: 1 }, { complete: () => null })
+
         this.game.publish('Game-SessionStart', {
             lobbyId: this.game.lobby.id,
             session: this.data()
         })
 
         this.actionSequence([
-            [this.game, '$CategoriesPreview', null],
-            [this.game, '$ThemePreview', null],
-            [this.game, '$PickQuestion', { category: 0 }]
+            [this.game, '$AllThemesPreview', null],
+            [this.game, '$RoundPreview', null],
+            [this.game, '$PickQuestion', {}]
         ])
     }
 
@@ -42,7 +56,7 @@ export class JeopardySession extends GameSession {
     }
 
     @GameOnlyActed
-    $PickQuestion(actor: A, payload: P, { complete }: E) {
+    $PickQuestion(actor: A, payload: { round: number; playerID: string }, { complete }: E) {
         complete()
 
         return {
@@ -51,8 +65,8 @@ export class JeopardySession extends GameSession {
     }
 
     @GameOnlyActed
-    $ThemePreview(actor: A, payload: P, { complete }: E) {
-        this.timeHall.createAndStartEvent('ThemePreview', 5, complete)
+    $RoundPreview(actor: A, payload: P, { complete }: E) {
+        this.timeHall.createAndStartEvent('RoundPreview', 5, complete)
 
         return {
             success: true
@@ -60,8 +74,8 @@ export class JeopardySession extends GameSession {
     }
 
     @GameOnlyActed
-    $CategoriesPreview(actor: A, payload: P, { complete }: E) {
-        this.timeHall.createAndStartEvent('CategoriesPreview', 5, complete)
+    $AllThemesPreview(actor: A, payload: P, { complete }: E) {
+        this.timeHall.createAndStartEvent('AllThemesPreview', 5, complete)
 
         return {
             success: true
