@@ -1,4 +1,5 @@
-import { GameSession, GameSessionActionHandler } from 'state/common/game/GameSession'
+import { GameOnlyActed } from 'state/common/game/Game.decorators'
+import { A, E, P, GameSession } from 'state/common/game/GameSession'
 import { Chronos, TimeHall } from 'util/chronos'
 import { Jeopardy } from './Jeopardy'
 import { JeopardySessionState } from './JeopardySessionState'
@@ -40,7 +41,8 @@ export class JeopardySession extends GameSession {
         }
     }
 
-    $PickQuestion: GameSessionActionHandler = (actor, payload, { complete }) => {
+    @GameOnlyActed
+    $PickQuestion(actor: A, payload: P, { complete }: E) {
         complete()
 
         return {
@@ -48,7 +50,8 @@ export class JeopardySession extends GameSession {
         }
     }
 
-    $ThemePreview: GameSessionActionHandler = (actor, payload, { complete }) => {
+    @GameOnlyActed
+    $ThemePreview(actor: A, payload: P, { complete }: E) {
         this.timeHall.createAndStartEvent('ThemePreview', 5, complete)
 
         return {
@@ -56,16 +59,8 @@ export class JeopardySession extends GameSession {
         }
     }
 
-    $CategoriesPreview: GameSessionActionHandler = (actor, payload, { complete }) => {
-        if (actor !== this.game) {
-            complete()
-
-            return {
-                success: false,
-                message: 'Only game can start categories preview'
-            }
-        }
-
+    @GameOnlyActed
+    $CategoriesPreview(actor: A, payload: P, { complete }: E) {
         this.timeHall.createAndStartEvent('CategoriesPreview', 5, complete)
 
         return {
