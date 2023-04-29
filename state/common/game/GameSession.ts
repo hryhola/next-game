@@ -108,6 +108,10 @@ export type GameSessionActionHandler = (
     eventOptions: GameSessionActionHandlerEventOptions
 ) => GeneralSuccess | GeneralFailure
 
+export type A = Parameters<GameSessionActionHandler>[0]
+export type P = Parameters<GameSessionActionHandler>[1]
+export type E = Parameters<GameSessionActionHandler>[2]
+
 export type GameSessionActionsName<GS extends GameSession> = Exclude<keyof GS, Exclude<keyof GS, `$${string}`>>
 
 export type GameSessionAction<GS extends GameSession, ActionName extends GameSessionActionsName<GS> = GameSessionActionsName<GS>> = GameAction<
