@@ -1,1 +1,3 @@
-export class JeopardySessionState {}
+export class JeopardySessionState {
+    currentTheme = 0
+}

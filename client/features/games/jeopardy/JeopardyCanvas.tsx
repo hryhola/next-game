@@ -1,6 +1,15 @@
 import React from 'react'
 import { Box } from '@mui/material'
+import { LoadingOverlay } from 'client/ui/loading-overlay/LoadingOverlay'
 
-export const JeopardyCanvas: React.FC = () => {
-    return <Box></Box>
+type JeopardyCanvasProps = {
+    isPackLoading: boolean
+}
+
+export const JeopardyCanvas: React.FC<JeopardyCanvasProps> = props => {
+    return (
+        <>
+            <Box></Box>
+        </>
+    )
 }

@@ -53,12 +53,11 @@ export class Jeopardy extends Game {
             }
         }
 
+        // TODO Check if there are enough players
+
         this.currentSession = new JeopardySession(this)
 
-        this.publish('Game-SessionStart', {
-            lobbyId: this.lobby.id,
-            session: this.currentSession.data()
-        })
+        this.currentSession.start()
 
         return {
             success: true

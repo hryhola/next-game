@@ -51,7 +51,7 @@ export class Clicker extends Game {
 
         setTimeout(() => {
             if (this.currentSession) {
-                this.currentSession.action(this, '$ClickAllowed', {})
+                this.currentSession.action(this, '$ClickAllowed', {}, { complete: () => {} })
             }
         }, randomInteger(500, 3000))
 

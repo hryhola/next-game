@@ -24,7 +24,7 @@ export abstract class GameSession {
         this.game = game
     }
 
-    action(actor: Player | Game, type: string, payload: any): GeneralSuccess | GeneralFailure {
+    action(actor: Player | Game, type: string, payload: any = {}, eventOptions: GameSessionActionHandlerEventOptions): GeneralSuccess | GeneralFailure {
         if (!type) {
             const message = 'Action type is missing'
 
@@ -58,7 +58,7 @@ export abstract class GameSession {
             }
         }
 
-        const actionHandler = this[type as keyof this]
+        const actionHandler = this[type as keyof this] as GameSessionActionHandler | null
 
         if (typeof actionHandler !== 'function') {
             const message = `Handler for type '${type.toString()}' is missing`
@@ -71,7 +71,7 @@ export abstract class GameSession {
             }
         }
 
-        const result = actionHandler.call(this, actor, payload)
+        const result = actionHandler.call(this, actor, payload, eventOptions)
 
         const action: GameAction = {
             type,
@@ -97,6 +97,16 @@ export abstract class GameSession {
 
     abstract data(): object
 }
+
+export type GameSessionActionHandlerEventOptions = {
+    complete: () => any
+}
+
+export type GameSessionActionHandler = (
+    actor: Player | Game,
+    payload: any,
+    eventOptions: GameSessionActionHandlerEventOptions
+) => GeneralSuccess | GeneralFailure
 
 export type GameSessionActionsName<GS extends GameSession> = Exclude<keyof GS, Exclude<keyof GS, `$${string}`>>
 
