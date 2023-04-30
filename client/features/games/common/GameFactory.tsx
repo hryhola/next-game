@@ -45,15 +45,16 @@ export const createGame = <Game extends AbstractGame>(Component: React.Component
         })
 
         useEventHandler('Game-PlayerUpdate', data => {
-            setPlayers(ps => {
-                const index = ps.findIndex(p => p.id === data.id)
-
-                if (index === -1) return ps
-
-                Object.assign(ps[index], data.data)
-
-                return ps
-            })
+            setPlayers(ps =>
+                ps.map(player =>
+                    player.id === data.id
+                        ? {
+                              ...player,
+                              ...data.data
+                          }
+                        : player
+                )
+            )
         })
 
         useEventHandler('Game-SessionStart', ({ lobbyId, session }) => {

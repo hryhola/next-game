@@ -1,6 +1,7 @@
-import { Menu, MenuItem } from '@mui/material'
+import { DialogContentText, Menu, MenuItem, TextField } from '@mui/material'
 import { useUser, useLobby, useWS } from 'client/context/list'
 import { useGlobalModal } from 'client/features/global-modal/GlobalModal'
+import { useRef } from 'react'
 import { PlayerData } from 'state'
 import { v4 } from 'uuid'
 import { useGame } from './GameFactory'
@@ -18,6 +19,8 @@ export const PlayerMenu: React.FC<Props> = props => {
     const lobby = useLobby()
     const ws = useWS()
     const game = useGame()
+
+    const scoreInputRef = useRef<HTMLInputElement | null>(null)
 
     const handleOptionClick = (event: React.MouseEvent<HTMLElement>) => {
         const option = event.currentTarget.id
@@ -42,6 +45,34 @@ export const PlayerMenu: React.FC<Props> = props => {
                 }
             })
         }
+
+        if (option === 'set-score') {
+            globalModal.confirm({
+                content: (
+                    <>
+                        <DialogContentText sx={{ pb: 2 }}>Set score for {props.player.nickname}</DialogContentText>
+                        <TextField inputRef={scoreInputRef} label="Score value" type="number" />
+                    </>
+                ),
+                onConfirm: () => {
+                    if (!scoreInputRef.current) {
+                        alert('Cannot find score input element!')
+                        return
+                    }
+
+                    ws.send('Game-SendAction', {
+                        lobbyId: lobby.lobbyId,
+                        actionName: '$SetScore',
+                        actionPayload: {
+                            score: scoreInputRef.current.value,
+                            playerID: props.player.id
+                        }
+                    })
+
+                    scoreInputRef.current.value = ''
+                }
+            })
+        }
     }
 
     let options: string[][] = []
@@ -53,10 +84,12 @@ export const PlayerMenu: React.FC<Props> = props => {
     const isMasterView = game.players.some(p => p.nickname === user.nickname && p.isMaster)
 
     if (isMasterView) {
-        options = [...options, ['set-score', 'Set score']]
-
         if (props.player.nickname !== user.nickname) {
             options = [...options, ['kick', 'Kick']]
+        }
+
+        if (game.isSessionStarted) {
+            options = [...options, ['set-score', 'Set score']]
         }
     }
 

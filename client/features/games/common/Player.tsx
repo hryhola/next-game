@@ -1,8 +1,8 @@
+import * as React from 'react'
 import { Box, Skeleton, SxProps, Theme, Typography } from '@mui/material'
 import { useLobby, useUser } from 'client/context/list'
 import { PlayerData } from 'state'
 import { ProfilePicture } from '../../profile-picture/ProfilePicture'
-import * as React from 'react'
 import { PlayerMenu } from './PlayerMenu'
 
 type Props = {

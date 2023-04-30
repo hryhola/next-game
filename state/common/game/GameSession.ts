@@ -1,6 +1,7 @@
 import logger from 'logger'
 import { Game, Player } from 'state'
-import { GeneralSuccess, GeneralFailure } from 'util/universalTypes'
+import { GeneralSuccess, GeneralFailure, R } from 'util/universalTypes'
+import { GameAndMasterOnlyActed } from './GameSession.decorators'
 
 export type GameActor = {
     type: 'player' | 'game'
@@ -95,6 +96,30 @@ export abstract class GameSession {
         }
     }
 
+    @GameAndMasterOnlyActed
+    $SetScore(_actor: A, payload: { playerID: string; score: number }, { complete }: E): R {
+        const player = this.game.players.find(p => p.member.user.id === payload.playerID)
+
+        if (!player) {
+            complete()
+
+            return {
+                success: false,
+                message: `Player with ID ${payload.playerID} not found in the game!`
+            }
+        }
+
+        player.update({
+            score: payload.score
+        })
+
+        complete()
+
+        return {
+            success: true
+        }
+    }
+
     abstract data(): object
 }
 
@@ -102,11 +127,7 @@ export type GameSessionActionHandlerEventOptions = {
     complete: () => any
 }
 
-export type GameSessionActionHandler = (
-    actor: Player | Game,
-    payload: any,
-    eventOptions: GameSessionActionHandlerEventOptions
-) => GeneralSuccess | GeneralFailure
+export type GameSessionActionHandler = (actor: Player | Game, payload: any, eventOptions: GameSessionActionHandlerEventOptions) => R
 
 export type A = Parameters<GameSessionActionHandler>[0]
 export type P = Parameters<GameSessionActionHandler>[1]

@@ -22,3 +22,5 @@ export type GeneralFailure = {
 export type GeneralSuccess = {
     success: true
 }
+
+export type R = GeneralFailure | GeneralSuccess
