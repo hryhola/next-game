@@ -33,7 +33,7 @@ export const handler: Handler<Request, Success | Failure> = (act, state, data) =
         })
     }
 
-    logger.info('New login: ' + user.state.nickname)
+    logger.info('New login: ' + user.state.userNickname)
 
     act.res({
         success: true,

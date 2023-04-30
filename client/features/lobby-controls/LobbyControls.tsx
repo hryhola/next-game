@@ -32,7 +32,7 @@ export const LobbyControls: React.FC = () => {
         setIsReadyCheckVisible(!game.isSessionStarted)
     }, [game.isSessionStarted])
 
-    const isCreatorView = user.nickname === lobby.members.find(m => m.isCreator)?.nickname
+    const isCreatorView = user.userNickname === lobby.members.find(m => m.memberIsCreator)?.userNickname
 
     let controlsHeight = 0
 

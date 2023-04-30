@@ -3,7 +3,7 @@ import { Handler } from 'uWebSockets/uws.types'
 
 export interface Request {
     lobbyId: string
-    memberNickname: string
+    userId: string
 }
 
 export const handler: Handler<Request, GeneralSuccess | GeneralFailure> = (act, state, data, token) => {
@@ -16,7 +16,7 @@ export const handler: Handler<Request, GeneralSuccess | GeneralFailure> = (act, 
         })
     }
 
-    const { lobbyId, memberNickname } = data
+    const { lobbyId, userId } = data
 
     const lobby = state.lobbies.get(lobbyId)
 
@@ -34,7 +34,7 @@ export const handler: Handler<Request, GeneralSuccess | GeneralFailure> = (act, 
         })
     }
 
-    var result = lobby.kick(memberNickname)
+    var result = lobby.kick(userId)
 
     return act.res(result)
 }

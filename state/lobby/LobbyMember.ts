@@ -6,24 +6,23 @@ export class LobbyMember {
     readonly lobby: Lobby
 
     readonly state: {
-        isCreator: boolean
-        isPlayer: boolean
-        position: number
-        role: LobbyMemberRole
+        readonly memberIsCreator: boolean
+        readonly memberIsPlayer: boolean
+        readonly memberPosition: number
+        readonly memberRole: LobbyMemberRole
     }
 
     constructor(lobby: Lobby, user: User) {
         this.user = user
         this.lobby = lobby
         this.state = {
-            isCreator: lobby.creator === user,
-            isPlayer: false,
-            position: lobby.members.length,
-            get role() {
-                return lobby.game.players.some(p => p.member.user === user) ? 'player' : 'spectator'
+            memberIsCreator: lobby.creator === user,
+            memberPosition: lobby.members.length,
+            get memberIsPlayer() {
+                return lobby.game.players.some(p => p.member.user === user)
             },
-            set role(_value: LobbyMemberRole) {
-                logger.error('Cannot set role directly')
+            get memberRole() {
+                return lobby.game.players.some(p => p.member.user === user) ? 'player' : 'spectator'
             }
         }
     }

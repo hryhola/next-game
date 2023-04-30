@@ -68,12 +68,12 @@ export class TicTacToe extends Game {
             }
         }
 
-        const char = this.players[0]?.state.char === 'o' ? 'x' : 'o'
+        const char = this.players[0]?.state.playerChar === 'o' ? 'x' : 'o'
 
         const player = new TicTacToePlayer(member, char)
 
-        if (member.state.isCreator) {
-            player.update({ isMaster: true })
+        if (member.state.memberIsCreator) {
+            player.update({ playerIsMaster: true })
         }
 
         this.players.push(player)

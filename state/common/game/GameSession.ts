@@ -110,7 +110,7 @@ export abstract class GameSession {
         }
 
         player.update({
-            score: payload.score
+            playerScore: payload.score
         })
 
         complete()

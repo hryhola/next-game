@@ -27,7 +27,7 @@ export const PlayersHeader: React.FC<HeaderProps> = props => {
                     </Grid>
                 ) : (
                     props.members
-                        .sort((a, b) => a.position - b.position)
+                        .sort((a, b) => a.memberPosition - b.memberPosition)
                         .map(p => (
                             <Grid key={p.id} item>
                                 <Player player={p} />

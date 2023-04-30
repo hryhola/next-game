@@ -1,13 +1,13 @@
 import { Handler } from '../uws.types'
 import logger from 'logger'
 export interface Request {
-    nickname: string
+    userNickname: string
 }
 
 export const handler: Handler<Request> = (act, state, data, token) => {
     const user = state.users.logout({
         token: token!,
-        nickname: data.nickname
+        userNickname: data.userNickname
     })
 
     if (!user) {
@@ -16,5 +16,5 @@ export const handler: Handler<Request> = (act, state, data, token) => {
         return
     }
 
-    logger.info(user.state.nickname + ' is offline')
+    logger.info(user.state.userNickname + ' is offline')
 }

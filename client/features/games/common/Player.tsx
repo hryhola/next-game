@@ -30,7 +30,7 @@ export const Player: React.FC<Props> = props => {
         filter: 'none'
     }
 
-    if (props.player?.isOnline === false) {
+    if (props.player?.userIsOnline === false) {
         sx.filter = 'grayscale(100%) brightness(0.5)'
     }
 
@@ -67,18 +67,18 @@ export const Player: React.FC<Props> = props => {
     return withBox(
         <>
             <ProfilePicture
-                clickable={user.nickname !== props.player.nickname && lobby.myRole === 'player'}
+                clickable={user.userNickname !== props.player.userNickname && lobby.myRole === 'player'}
                 onClick={handleClick}
                 size={sizes.width}
                 maxSize={sizes.maxWidth}
                 local={false}
-                url={props.player.avatarUrl}
-                color={props.player.nicknameColor}
+                url={props.player.userAvatarUrl}
+                color={props.player.userColor}
             />
-            <Typography overflow="auto" display="block" variant="h6" noWrap textOverflow="unset" color={props.player.nicknameColor}>
-                {props.player.nickname}
+            <Typography overflow="auto" display="block" variant="h6" noWrap textOverflow="unset" color={props.player.userColor}>
+                {props.player.userNickname}
             </Typography>
-            <Typography noWrap>{props.player.score}</Typography>
+            <Typography noWrap>{props.player.playerScore}</Typography>
             <PlayerMenu playerMenuAnchor={playerMenuAnchor} isPlayerMenuOpen={isPlayerMenuOpen} handleClose={handleClose} player={props.player} />
         </>
     )

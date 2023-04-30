@@ -73,7 +73,7 @@ export const LobbyPreview: React.FC<Props> = props => {
                     </Grid>
                     <Grid item>
                         <Typography color="secondary" variant="overline">
-                            by&nbsp;{props.lobby.creator.nickname}
+                            by&nbsp;{props.lobby.creator.userNickname}
                         </Typography>
                     </Grid>
                 </Grid>

@@ -5,7 +5,7 @@ import React, { useEffect, useState } from 'react'
 export const GlobalUsersList: React.FC = () => {
     const ws = useWS()
 
-    const [users, setUsers] = useState<{ nickname: string; id: string }[]>([])
+    const [users, setUsers] = useState<{ userNickname: string; id: string }[]>([])
 
     useRequestHandler('Users-Get', data => {
         if ('data' in data) {

@@ -1,28 +1,26 @@
 import { LobbyMember } from 'state'
 
-export abstract class Player {
+interface PlayerState {
+    readonly playerScore: number
+    readonly playerIsMaster: boolean
+}
+
+export abstract class Player<ExtendedState extends {} = {}> {
     member: LobbyMember
 
-    state = {
-        score: 0,
-        isMaster: false
-    }
+    readonly state: PlayerState & ExtendedState
 
     constructor(member: LobbyMember) {
         this.member = member
 
-        if (member.state.isCreator) {
-            this.state.isMaster = true
-        }
-
-        member.update({ isPlayer: true })
+        this.state = {
+            playerScore: 0,
+            playerIsMaster: member.state.memberIsCreator
+        } as PlayerState & ExtendedState
     }
 
     update(newState: Partial<typeof this.state>) {
-        this.state = {
-            ...this.state,
-            ...newState
-        }
+        Object.assign(this.state, newState)
 
         this.member.lobby.publish('Game-PlayerUpdate', {
             id: this.member.user.id,

@@ -1,21 +1,16 @@
-import { Player } from 'state'
+import { LobbyMember, Player } from 'state'
 
-export class ClickerPlayer extends Player {
-    state = {
-        score: 0,
-        isMaster: false,
-        isClickAllowed: true
-    }
+interface ClickerPlayerState {
+    readonly playerIsClickAllowed: boolean
+}
 
-    update(newState: Partial<typeof this.state>) {
-        super.update(newState)
-    }
+export class ClickerPlayer extends Player<ClickerPlayerState> {
+    constructor(member: LobbyMember) {
+        super(member)
 
-    data() {
-        return {
-            ...this.member.data(),
-            ...this.state
-        }
+        Object.assign(this.state, {
+            playerIsClickAllowed: true
+        } as ClickerPlayerState)
     }
 }
 

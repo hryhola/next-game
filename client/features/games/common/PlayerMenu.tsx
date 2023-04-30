@@ -29,18 +29,18 @@ export const PlayerMenu: React.FC<Props> = props => {
             ws.send('Lobby-Tip', {
                 id: v4(),
                 lobbyId: lobby.lobbyId,
-                from: user.nickname,
-                to: props.player.nickname
+                from: user.userNickname,
+                to: props.player.userNickname
             })
         }
 
         if (option === 'kick') {
             globalModal.confirm({
-                content: `Want to kick ${props.player.nickname}?`,
+                content: `Want to kick ${props.player.userNickname}?`,
                 onConfirm: () => {
                     ws.send('Lobby-Kick', {
                         lobbyId: lobby.lobbyId,
-                        memberNickname: props.player.nickname
+                        userId: props.player.id
                     })
                 }
             })
@@ -50,7 +50,7 @@ export const PlayerMenu: React.FC<Props> = props => {
             globalModal.confirm({
                 content: (
                     <>
-                        <DialogContentText sx={{ pb: 2 }}>Set score for {props.player.nickname}</DialogContentText>
+                        <DialogContentText sx={{ pb: 2 }}>Set score for {props.player.userNickname}</DialogContentText>
                         <TextField inputRef={scoreInputRef} label="Score value" type="number" />
                     </>
                 ),
@@ -77,14 +77,14 @@ export const PlayerMenu: React.FC<Props> = props => {
 
     let options: string[][] = []
 
-    if (props.player.nickname !== user.nickname && lobby.myRole !== 'spectator') {
+    if (props.player.userNickname !== user.userNickname && lobby.myRole !== 'spectator') {
         options = [...options, ['tip', 'Tip']]
     }
 
-    const isMasterView = game.players.some(p => p.nickname === user.nickname && p.isMaster)
+    const isMasterView = game.players.some(p => p.id === user.id && p.playerIsMaster)
 
     if (isMasterView) {
-        if (props.player.nickname !== user.nickname) {
+        if (props.player.userNickname !== user.userNickname) {
             options = [...options, ['kick', 'Kick']]
         }
 

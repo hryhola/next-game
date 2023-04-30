@@ -29,8 +29,6 @@ export const TicTacToeCanvas: React.FC<Props> = ({ isLoading }) => {
     const game = useTicTacToe()
     const gameRef = useRef(game)
 
-    console.log(game.session?.board)
-
     const winLineBoxRef = useRef<HTMLDivElement>(null)
     const boardRef = useRef<HTMLDivElement>(null)
 
@@ -75,7 +73,7 @@ export const TicTacToeCanvas: React.FC<Props> = ({ isLoading }) => {
         }
 
         setCellValues(value => {
-            value[x][y] = by.char
+            value[x][y] = by.playerChar
 
             return value.slice()
         })
@@ -115,12 +113,12 @@ export const TicTacToeCanvas: React.FC<Props> = ({ isLoading }) => {
                 line.setAttribute('x2', div2CenterX.toString())
                 line.setAttribute('y2', div2CenterY.toString())
                 line.setAttribute('stroke', 'black')
-                line.style.stroke = winner!.nicknameColor
+                line.style.stroke = winner!.userColor
 
                 svg.appendChild(line)
             }
 
-            enqueueSnackbar(`${winner?.nickname} won!`, {
+            enqueueSnackbar(`${winner?.userNickname} won!`, {
                 anchorOrigin: {
                     vertical: 'bottom',
                     horizontal: 'center'

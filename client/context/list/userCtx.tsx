@@ -6,11 +6,11 @@ export type RouteType = 'Login'
 export const UserContext = createContext({
     id: '',
     setId: (_val: string) => {},
-    nickname: '',
+    userNickname: '',
     setNickname: (_val: string) => {},
-    nicknameColor: '',
+    userColor: '',
     setNicknameColor: (_val: string) => {},
-    avatarUrl: '',
+    userAvatarUrl: '',
     setAvatarRes: (_val: string) => {}
 })
 
@@ -22,15 +22,15 @@ interface Props {
 export const UserProvider: React.FC<Props> = props => {
     const [user, setUser] = useState({
         id: props.user?.id || '',
-        nicknameColor: props.user?.nicknameColor || 'deeppink',
-        nickname: props.user?.nickname || '',
-        avatarUrl: props.user?.avatarUrl || ''
+        userColor: props.user?.userColor || 'deeppink',
+        userNickname: props.user?.userNickname || '',
+        userAvatarUrl: props.user?.userAvatarUrl || ''
     })
 
     const setId = (val: string) => setUser(u => ({ ...u, id: val }))
-    const setNickname = (val: string) => setUser(u => ({ ...u, nickname: val }))
-    const setNicknameColor = (val: string) => setUser(u => ({ ...u, nicknameColor: val }))
-    const setAvatarRes = (val: string) => setUser(u => ({ ...u, avatarUrl: val }))
+    const setNickname = (val: string) => setUser(u => ({ ...u, userNickname: val }))
+    const setNicknameColor = (val: string) => setUser(u => ({ ...u, userColor: val }))
+    const setAvatarRes = (val: string) => setUser(u => ({ ...u, userAvatarUrl: val }))
 
     return (
         <UserContext.Provider
