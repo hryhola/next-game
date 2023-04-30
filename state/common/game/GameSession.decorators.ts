@@ -1,20 +1,24 @@
 import { Game } from 'state'
 import { A, E, P } from 'state/common/game/GameSession'
 
-export function GameOnlyActed(_target: any, _propertyName: string, descriptor: PropertyDescriptor) {
+export const ActedBy = (actorPredicate: (actor: A) => boolean) => (_target: any, _propertyName: string, descriptor: PropertyDescriptor) => {
     const originalMethod = descriptor.value
 
     descriptor.value = function (actor: A, payload: P, { complete }: E) {
-        if (!(actor instanceof Game)) {
+        if (!actorPredicate(actor)) {
             return {
                 success: false,
-                message: 'Only game can start categories preview'
+                message: 'This actor have no permission to act this action!'
             }
         }
         return originalMethod.call(this, actor, payload, { complete })
     }
     return descriptor
 }
+
+export const GameOnlyActed = ActedBy(actor => actor instanceof Game)
+
+export const GameAndMasterOnlyActed = ActedBy(actor => actor instanceof Game || actor.state.isMaster)
 
 export function Hidden(_target: any, _propertyName: string, descriptor: PropertyDescriptor) {
     descriptor.value.hidden = true

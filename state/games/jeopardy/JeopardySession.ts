@@ -1,5 +1,5 @@
 import { Game } from 'state/common/game/Game'
-import { GameOnlyActed } from 'state/common/game/Game.decorators'
+import { GameOnlyActed } from 'state/common/game/GameSession.decorators'
 import { A, E, P, GameSession, GameSessionActionHandlerEventOptions, GameSessionActionsName } from 'state/common/game/GameSession'
 import { Player } from 'state/common/game/Player'
 import { Chronos, TimeHall } from 'util/chronos'

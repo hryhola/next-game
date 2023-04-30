@@ -50,17 +50,16 @@ export const LobbyFrame: React.FC = () => {
 
     useEventHandler('Lobby-MemberUpdate', data => {
         if (data.lobbyId === lobbyRef.current.lobbyId) {
-            lobby.setMembers(ms => {
-                const index = ms.findIndex(m => m.id === data.memberId)
-
-                if (index === -1) {
-                    return ms
-                }
-
-                Object.assign(ms[index], data.data)
-
-                return ms
-            })
+            lobby.setMembers(ms =>
+                ms.map(member =>
+                    member.id === data.memberId
+                        ? {
+                              ...member,
+                              ...data.data
+                          }
+                        : member
+                )
+            )
         }
     })
 
