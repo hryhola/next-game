@@ -39,4 +39,15 @@ export class JeopardyPack {
             logger.error({ error }, 'JeopardyPack.parse()')
         }
     }
+
+    getAllThemes() {
+        return this.declaration.package.rounds.round.reduce((acc, round) => [...acc, ...round.themes.theme.map(t => t._attributes.name)], [] as string[])
+    }
+
+    getNonFinalThemes() {
+        return this.declaration.package.rounds.round.reduce(
+            (acc, round) => (round._attributes.type === 'final' ? acc : [...acc, ...round.themes.theme.map(t => t._attributes.name)]),
+            [] as string[]
+        )
+    }
 }

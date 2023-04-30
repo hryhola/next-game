@@ -9,7 +9,10 @@ import { JeopardySessionState } from './JeopardySessionState'
 
 export class JeopardySession extends GameSession {
     state: JeopardySessionState
+
     timeHall: TimeHall
+
+    game!: Jeopardy
 
     constructor(game: Jeopardy) {
         super(game)
@@ -29,19 +32,17 @@ export class JeopardySession extends GameSession {
     }
 
     data() {
-        return {}
+        return this.state
     }
 
     start() {
-        this.action(this.game, '$PickQuestion', { playerID: '1', round: 1 }, { complete: () => null })
-
         this.game.publish('Game-SessionStart', {
             lobbyId: this.game.lobby.id,
             session: this.data()
         })
 
         this.actionSequence([
-            [this.game, '$AllThemesPreview', null],
+            [this.game, '$ThemesPreview', null],
             [this.game, '$RoundPreview', null],
             [this.game, '$PickQuestion', {}]
         ])
@@ -74,11 +75,14 @@ export class JeopardySession extends GameSession {
     }
 
     @GameOnlyActed
-    $AllThemesPreview(actor: A, payload: P, { complete }: E) {
-        this.timeHall.createAndStartEvent('AllThemesPreview', 5, complete)
+    $ThemesPreview(actor: A, payload: P, { complete }: E) {
+        this.timeHall.createAndStartEvent('ThemesPreview', this.state.AllThemesPreviewDuration, complete)
+
+        const themes = this.game.pack.getNonFinalThemes()
 
         return {
-            success: true
+            success: true,
+            themes: themes
         }
     }
 }
