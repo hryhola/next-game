@@ -3,13 +3,13 @@ import React, { useState } from 'react'
 import SearchIcon from '@mui/icons-material/Search'
 
 interface Props {
-    users: Array<{ nickname: string; id: string }>
+    users: Array<{ userNickname: string; id: string }>
 }
 
 export const UsersListBox: React.FC<Props> = props => {
     const [searchString, setSearchString] = useState('')
 
-    const renderedUsers = searchString.length ? props.users.filter(u => u.nickname.toLowerCase().includes(searchString.toLowerCase())) : props.users
+    const renderedUsers = searchString.length ? props.users.filter(u => u.userNickname.toLowerCase().includes(searchString.toLowerCase())) : props.users
 
     return (
         <>
@@ -32,7 +32,7 @@ export const UsersListBox: React.FC<Props> = props => {
             <List>
                 {renderedUsers.map(user => (
                     <ListItem key={user.id}>
-                        <ListItemText>{user.nickname}</ListItemText>
+                        <ListItemText>{user.userNickname}</ListItemText>
                     </ListItem>
                 ))}
             </List>

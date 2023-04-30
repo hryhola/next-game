@@ -89,7 +89,7 @@ export class Lobby<G extends GameName = GameName> {
             }
         }
 
-        if (member.state.isPlayer) {
+        if (member.state.memberIsPlayer) {
             const player = this.game.players.find(p => p.member.user === user)!
 
             this.game.leave(player)
@@ -129,8 +129,8 @@ export class Lobby<G extends GameName = GameName> {
         this.readyCheck = new ReadyCheck(this)
     }
 
-    kick(nickname: string): GeneralSuccess | GeneralFailure {
-        const member = this.members.find(m => m.user.state.nickname === nickname)
+    kick(userId: string): GeneralSuccess | GeneralFailure {
+        const member = this.members.find(m => m.user.id === userId)
 
         if (!member) {
             return {
@@ -146,7 +146,7 @@ export class Lobby<G extends GameName = GameName> {
             }
         }
 
-        if (member.state.isPlayer) {
+        if (member.state.memberIsPlayer) {
             const player = this.game.players.find(p => p.member.user === member.user)!
 
             this.game.leave(player)

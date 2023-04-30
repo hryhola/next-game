@@ -18,14 +18,14 @@ export const handler: Handler<Request, GeneralSuccess | GeneralFailure> = (act, 
         })
     }
 
-    if (!lobby.members.some(m => m.user.state.nickname === data.from)) {
+    if (!lobby.members.some(m => m.user.state.userNickname === data.from)) {
         return act.res({
             success: false,
             message: "User 'from' not in lobby"
         })
     }
 
-    if (!lobby.members.some(m => m.user.state.nickname === data.to)) {
+    if (!lobby.members.some(m => m.user.state.userNickname === data.to)) {
         return act.res({
             success: false,
             message: "User 'to' not in lobby"

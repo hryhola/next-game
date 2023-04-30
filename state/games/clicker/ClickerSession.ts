@@ -15,7 +15,7 @@ export class ClickerSession extends GameSession {
     data() {
         return {
             winner: this.state.winner?.data(),
-            isClickAllowed: this.state.isClickAllowed
+            playerIsClickAllowed: this.state.playerIsClickAllowed
         }
     }
 
@@ -26,31 +26,31 @@ export class ClickerSession extends GameSession {
             } as const
         }
 
-        if (!player.state.isClickAllowed) {
+        if (!player.state.playerIsClickAllowed) {
             return {
-                color: player.member.user.state.nicknameColor,
+                color: player.member.user.state.userColor,
                 status: 'Skipped'
             } as const
         }
 
-        if (!this.state.isClickAllowed) {
-            player.update({ isClickAllowed: false })
+        if (!this.state.playerIsClickAllowed) {
+            player.update({ playerIsClickAllowed: false })
 
             setTimeout(() => {
                 if (this.game.currentSession === this) {
-                    player.update({ isClickAllowed: true })
+                    player.update({ playerIsClickAllowed: true })
                 }
             }, 1000)
 
             return {
-                color: player.member.user.state.nicknameColor,
+                color: player.member.user.state.userColor,
                 status: 'Failure'
             } as const
         }
 
         if (this.state.winner) {
             return {
-                color: player.member.user.state.nicknameColor,
+                color: player.member.user.state.userColor,
                 status: 'NotWin'
             } as const
         }
@@ -59,22 +59,22 @@ export class ClickerSession extends GameSession {
 
         setTimeout(() => {
             if (this.game.currentSession === this) {
-                player.update({ score: player.state.score + 1 })
+                player.update({ playerScore: player.state.playerScore + 1 })
                 this.game.endSession()
             }
         }, 1000)
 
         return {
-            color: player.member.user.state.nicknameColor,
+            color: player.member.user.state.userColor,
             status: 'Ok'
         } as const
     }
 
     $ClickAllowed() {
-        this.state.isClickAllowed = true
+        this.state.playerIsClickAllowed = true
 
         return {
-            isClickAllowed: this.state.isClickAllowed
+            playerIsClickAllowed: this.state.playerIsClickAllowed
         }
     }
 }

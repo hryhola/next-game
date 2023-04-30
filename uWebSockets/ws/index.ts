@@ -150,7 +150,7 @@ export const WSHandlerRegister = (app: uws.TemplatedApp, state: State) => {
         close: (ws, code, message) => {
             const user = state.users.getByConnection(ws)
 
-            user?.update({ isOnline: false })
+            user?.update({ userIsOnline: false })
 
             const decodedMsg = new util.TextDecoder().decode(message)
 

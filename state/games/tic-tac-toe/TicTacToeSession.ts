@@ -37,7 +37,7 @@ export class TicTacToeSession extends GameSession {
             } as const
         }
 
-        this.state.board[x][y] = by.state.char
+        this.state.board[x][y] = by.state.playerChar
 
         const winCheck = this.findWinner(this.state.board)
 
@@ -46,7 +46,7 @@ export class TicTacToeSession extends GameSession {
         this.state.turn = winCheck.winner ? undefined : this.state.turn === players[0] ? players[1] : players[0]
 
         if (winCheck.winner) {
-            this.state.winner = (this.game as TicTacToe).players.find(p => p.state.char === winCheck.winner)
+            this.state.winner = (this.game as TicTacToe).players.find(p => p.state.playerChar === winCheck.winner)
 
             this.game.endSession()
         }

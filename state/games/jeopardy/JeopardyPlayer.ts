@@ -1,21 +1,7 @@
 import { Player } from 'state'
 
-export class JeopardyPlayer extends Player {
-    state = {
-        score: 0,
-        isMaster: false
-    }
+interface JeopardyPlayerState {}
 
-    update(newState: Partial<typeof this.state>) {
-        super.update(newState)
-    }
-
-    data() {
-        return {
-            ...this.member.data(),
-            ...this.state
-        }
-    }
-}
+export class JeopardyPlayer extends Player<JeopardyPlayerState> {}
 
 export type ClickerPlayerData = ReturnType<JeopardyPlayer['data']>

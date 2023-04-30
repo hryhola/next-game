@@ -3,7 +3,7 @@ import { UserData, User } from 'state'
 import logger from 'logger'
 
 export interface Request {
-    nickname: string
+    userNickname: string
 }
 
 export interface Success {
@@ -19,21 +19,21 @@ export interface Failure {
 }
 
 export const handler: Handler<Request, Success | Failure> = (act, state, data) => {
-    const existingUser = state.users.getByNickname(data.nickname)
+    const existingUser = state.users.getByNickname(data.userNickname)
 
-    if (existingUser?.state.isOnline) {
+    if (existingUser?.state.userIsOnline) {
         return act.res({
             success: false,
-            nickname: data.nickname,
+            nickname: data.userNickname,
             message: 'User exists'
         })
     } else if (existingUser) {
         state.users.destroy(existingUser.token)
     }
 
-    const user = state.users.register(data.nickname, act.ws)
+    const user = state.users.register(data.userNickname, act.ws)
 
-    logger.info('New login: ' + user.state.nickname)
+    logger.info('New login: ' + user.state.userNickname)
 
     act.res({
         success: true,

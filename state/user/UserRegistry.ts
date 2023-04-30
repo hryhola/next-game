@@ -6,14 +6,14 @@ export class UserRegistry {
     private list: User[] = []
 
     get onlineUsers() {
-        return this.list.filter(u => u.state.isOnline)
+        return this.list.filter(u => u.state.userIsOnline)
     }
 
     private publishOnlineUpdate() {
         State.act.publishTopicEvent('UserRegistry-OnlineUpdate', {
             scope: 'global',
             list: this.onlineUsers.map(u => ({
-                nickname: u.state.nickname,
+                userNickname: u.state.userNickname,
                 id: u.id
             }))
         })
@@ -42,19 +42,19 @@ export class UserRegistry {
             return null
         }
 
-        user.update({ isOnline: true })
+        user.update({ userIsOnline: true })
 
         return user
     }
 
-    logout(data: { token: string; nickname: string }) {
-        const user = data.token ? this.getByToken(data.token) : this.getByNickname(data.nickname)
+    logout(data: { token: string; userNickname: string }) {
+        const user = data.token ? this.getByToken(data.token) : this.getByNickname(data.userNickname)
 
         if (!user) {
             return null
         }
 
-        user.update({ isOnline: false })
+        user.update({ userIsOnline: false })
 
         // TODO tokenExpireTimeout
 
@@ -81,7 +81,7 @@ export class UserRegistry {
     }
 
     getByNickname(nickname: string) {
-        return this.list.find(u => u.state.nickname === nickname)
+        return this.list.find(u => u.state.userNickname === nickname)
     }
 
     getByConnection(ws: WebSocket<unknown>) {

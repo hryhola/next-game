@@ -20,7 +20,7 @@ export type LobbyCtxValue = {
     exit: () => void
     destroy: () => void
     reset: () => void
-    myRole: LobbyMemberData['role']
+    myRole: LobbyMemberData['memberRole']
 }
 
 export const LobbyContext = createContext<LobbyCtxValue | null>(null)
@@ -85,11 +85,11 @@ export const LobbyProvider: React.FC<Props> = ({ children, lobby }) => {
         get myRole() {
             const me = members.find(p => p.id === user.id)
 
-            if (!me || !me.role) {
+            if (!me || !me.memberRole) {
                 console.warn('Player role is not defined', me)
             }
 
-            return me?.role || 'spectator'
+            return me?.memberRole || 'spectator'
         }
     }
 

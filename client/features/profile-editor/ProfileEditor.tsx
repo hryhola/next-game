@@ -22,8 +22,8 @@ export const ProfileEditor: React.FC<Props> = props => {
     const user = useUser()
     const ws = useWS()
 
-    const [nickname, setNickname] = useState(user.nickname)
-    const [nicknameColor, setNicknameColor] = useState(user.nicknameColor)
+    const [nickname, setNickname] = useState(user.userNickname)
+    const [userColor, setNicknameColor] = useState(user.userColor)
     const [imageFile, setImageFile] = useState<File | null>(null)
 
     const [error, setError] = useState('')
@@ -36,7 +36,7 @@ export const ProfileEditor: React.FC<Props> = props => {
           }
         : {
               local: false,
-              url: user.avatarUrl
+              url: user.userAvatarUrl
           }
 
     const handleSubmit: React.FormEventHandler<HTMLFormElement> = async event => {
@@ -48,7 +48,7 @@ export const ProfileEditor: React.FC<Props> = props => {
             data.delete('image')
         }
 
-        data.set('nicknameColor', nicknameColor)
+        data.set('userColor', userColor)
 
         setIsLoading(true)
 
@@ -65,7 +65,7 @@ export const ProfileEditor: React.FC<Props> = props => {
         }
 
         user.setNickname(nickname)
-        user.setNicknameColor(nicknameColor)
+        user.setNicknameColor(userColor)
 
         if (response.avatarUrl) {
             user.setAvatarRes(response.avatarUrl)
@@ -78,7 +78,7 @@ export const ProfileEditor: React.FC<Props> = props => {
 
     const handleLogout = () => {
         ws.send('Auth-Logout', {
-            nickname: user.nickname
+            userNickname: user.userNickname
         })
 
         deleteCookie('token')
@@ -95,12 +95,12 @@ export const ProfileEditor: React.FC<Props> = props => {
                     </Grid>
                 )}
                 <Grid item alignSelf="center">
-                    <ProfilePicture editable {...displayedImage} color={nicknameColor} onChange={file => setImageFile(file)} />
+                    <ProfilePicture editable {...displayedImage} color={userColor} onChange={file => setImageFile(file)} />
                 </Grid>
                 <Grid item>
                     <Box sx={{ display: 'flex', alignItems: 'flex-end' }}>
                         <IconButton onClick={() => setNicknameColor(randomColor())} sx={{ mr: 2 }} size="small">
-                            <CircleIcon sx={{ color: nicknameColor }} />
+                            <CircleIcon sx={{ color: userColor }} />
                         </IconButton>
                         <TextField variant="standard" label="nickname" name="nickname" value={nickname} onChange={e => setNickname(e.target.value)} fullWidth />
                     </Box>

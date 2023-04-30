@@ -17,8 +17,8 @@ export const Login: React.FC = () => {
     useRequestHandler('Auth-Register', data => {
         if (data.success) {
             user.setId(data.user.id)
-            user.setNickname(data.user.nickname)
-            user.setNicknameColor(data.user.nicknameColor)
+            user.setNickname(data.user.userNickname)
+            user.setNicknameColor(data.user.userColor)
 
             setCookie('token', data.token, { maxAge: inSeconds90Days })
 
@@ -36,7 +36,7 @@ export const Login: React.FC = () => {
         if (nicknameTrimmed.length) {
             setError('')
 
-            ws.send('Auth-Register', { nickname: nicknameTrimmed })
+            ws.send('Auth-Register', { userNickname: nicknameTrimmed })
         } else {
             setError('nickname cannot be empty')
         }

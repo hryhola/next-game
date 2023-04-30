@@ -2,32 +2,17 @@ import { Player } from 'state/common/game/Player'
 import { LobbyMember } from 'state/lobby/LobbyMember'
 import { MoveChar } from './TicTacToe'
 
-export class TicTacToePlayer extends Player {
-    state: {
-        score: number
-        isMaster: boolean
-        char: MoveChar
-    }
+interface TicTacToePlayerState {
+    playerChar: MoveChar
+}
 
-    constructor(member: LobbyMember, char: MoveChar) {
+export class TicTacToePlayer extends Player<TicTacToePlayerState> {
+    constructor(member: LobbyMember, playerChar: MoveChar) {
         super(member)
 
-        this.state = {
-            score: 0,
-            isMaster: false,
-            char
-        }
-    }
-
-    update(newState: Partial<typeof this.state>) {
-        super.update(newState)
-    }
-
-    data() {
-        return {
-            ...this.member.data(),
-            ...this.state
-        }
+        Object.assign(this.state, {
+            playerChar
+        } as TicTacToePlayerState)
     }
 }
 

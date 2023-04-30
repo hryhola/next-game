@@ -12,16 +12,16 @@ export const ClickerCanvas: React.FC = () => {
     const { lobbyId } = useLobby()
     const canvasRef = useRef<HTMLDivElement>(null)
 
-    const [gameClickAllowed, setGameClickAllowed] = useState(game.session?.isClickAllowed ?? false)
+    const [gameClickAllowed, setGameClickAllowed] = useState(game.session?.playerIsClickAllowed ?? false)
     const [isCanvasClickable, setIsCanvasClickable] = useState(true)
 
     const sendAction = useActionSender()
 
     React.useEffect(() => {
         if (game.session) {
-            setGameClickAllowed(game.session.isClickAllowed)
+            setGameClickAllowed(game.session.playerIsClickAllowed)
         }
-    }, [game.session?.isClickAllowed])
+    }, [game.session?.playerIsClickAllowed])
 
     useClickerAction('$Click', action => {
         if (action.result.status && action.result.status !== 'Skipped') {
@@ -96,10 +96,10 @@ export const ClickerCanvas: React.FC = () => {
     }
 
     useEffect(() => {
-        const player = game.players.find(p => p.nickname === user.nickname) as ClickerPlayerData | undefined
+        const player = game.players.find(p => p.userNickname === user.userNickname) as ClickerPlayerData | undefined
 
         if (player) {
-            setIsCanvasClickable(player.isClickAllowed)
+            setIsCanvasClickable(player.playerIsClickAllowed)
         }
     }, [game.players])
 

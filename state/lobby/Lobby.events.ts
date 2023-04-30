@@ -12,7 +12,6 @@ export type Events = {
     }
     'Lobby-MemberUpdate': {
         lobbyId: string
-        memberId: string
         data: Partial<LobbyMemberData>
     }
     'Lobby-Destroy': {

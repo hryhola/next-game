@@ -5,7 +5,7 @@ export type Events = {
         members: LobbyMemberData[]
     }
     'ReadyCheck-PlayerStatus': {
-        nickname: string
+        userNickname: string
         ready: boolean
     }
     'ReadyCheck-End': {

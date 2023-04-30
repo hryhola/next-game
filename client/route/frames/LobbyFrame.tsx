@@ -25,17 +25,17 @@ export const LobbyFrame: React.FC = () => {
             return
         }
 
-        lobby.setMembers(ms => [...ms.filter(m => m.nickname !== data.member.nickname), data.member])
+        lobby.setMembers(ms => [...ms.filter(m => m.id !== data.member.id), data.member])
 
         enqueueSnackbar(
             <>
-                <span style={{ color: data.member?.nicknameColor }}>{data.member.nickname}</span> joined as{' '}
+                <span style={{ color: data.member?.userColor }}>{data.member.userNickname}</span> joined as{' '}
                 <span
                     style={{
-                        color: data.member.role === 'player' ? '#00ff00' : '#777777'
+                        color: data.member.memberRole === 'player' ? '#00ff00' : '#777777'
                     }}
                 >
-                    {data.member.role}
+                    {data.member.memberRole}
                 </span>
             </>,
             {
@@ -52,7 +52,7 @@ export const LobbyFrame: React.FC = () => {
         if (data.lobbyId === lobbyRef.current.lobbyId) {
             lobby.setMembers(ms =>
                 ms.map(member =>
-                    member.id === data.memberId
+                    member.id === data.data.id
                         ? {
                               ...member,
                               ...data.data
@@ -68,14 +68,14 @@ export const LobbyFrame: React.FC = () => {
             return
         }
 
-        const from = lobbyRef.current.members.find(member => member.nickname === data.from)
-        const to = lobbyRef.current.members.find(member => member.nickname === data.to)
+        const from = lobbyRef.current.members.find(member => member.userNickname === data.from)
+        const to = lobbyRef.current.members.find(member => member.userNickname === data.to)
 
         audio.play(Math.random() > 0.1 ? 'comp_coin.wav' : 'coins.wav')
 
         enqueueSnackbar(
             <>
-                <span style={{ color: to?.nicknameColor }}>{data.to}</span> tipped by <span style={{ color: from?.nicknameColor }}>{data.from}</span>
+                <span style={{ color: to?.userColor }}>{data.to}</span> tipped by <span style={{ color: from?.userColor }}>{data.from}</span>
             </>,
             {
                 content: (key, message) => (
@@ -117,7 +117,7 @@ export const LobbyFrame: React.FC = () => {
     useEventHandler('ReadyCheck-PlayerStatus', data => {
         lobby.setReadyCheckMembers(members =>
             members.map(m => {
-                if (m.nickname === data.nickname) {
+                if (m.userNickname === data.userNickname) {
                     return {
                         ...m,
                         ready: data.ready
@@ -136,7 +136,7 @@ export const LobbyFrame: React.FC = () => {
     })
 
     useEventHandler('Lobby-Kicked', data => {
-        enqueueSnackbar(`${data.member.nickname}` + ' has been kicked', {
+        enqueueSnackbar(`${data.member.userNickname}` + ' has been kicked', {
             anchorOrigin: {
                 horizontal: 'center',
                 vertical: 'top'
@@ -144,9 +144,9 @@ export const LobbyFrame: React.FC = () => {
             autoHideDuration: 3000
         })
 
-        lobby.setMembers(members => members.filter(m => m.nickname !== data.member.nickname))
+        lobby.setMembers(members => members.filter(m => m.id !== data.member.id))
 
-        if (data.member.nickname === user.nickname) {
+        if (data.member.id === user.id) {
             ws.send('Universal-Subscription', {
                 mode: 'unsubscribe',
                 lobbyId: lobby.lobbyId,
@@ -218,8 +218,8 @@ export const LobbyFrame: React.FC = () => {
                                 <Grid item key={m.id}>
                                     <ProfilePicture
                                         size={90}
-                                        color={m.nicknameColor}
-                                        url={m.avatarUrl}
+                                        color={m.userColor}
+                                        url={m.userAvatarUrl}
                                         {...(m.ready === true
                                             ? {
                                                   filter: "url('#teal-lightgreen')"

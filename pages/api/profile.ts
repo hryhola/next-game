@@ -63,10 +63,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponseU
         updatedInfo.avatarUrl = avatar
     }
 
-    updatedInfo.nickname = fields.nickname as string
+    updatedInfo.userNickname = fields.userNickname as string
 
-    if (fields.nicknameColor) {
-        updatedInfo.nicknameColor = fields.nicknameColor as string
+    if (fields.userColor) {
+        updatedInfo.userColor = fields.userColor as string
     }
 
     user.update(updatedInfo)

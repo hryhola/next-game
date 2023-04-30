@@ -19,10 +19,10 @@ export class User {
     readonly id: string
 
     readonly state: {
-        readonly nickname: string
-        readonly nicknameColor: string
-        readonly avatarUrl?: string
-        readonly isOnline: boolean
+        readonly userNickname: string
+        readonly userColor: string
+        readonly userAvatarUrl?: string
+        readonly userIsOnline: boolean
     }
 
     constructor(id: string, ws: WebSocket<unknown>) {
@@ -32,25 +32,25 @@ export class User {
         this.id = v4()
 
         this.state = {
-            nickname: id,
-            nicknameColor: randomColor(),
-            isOnline: true
+            userNickname: id,
+            userColor: randomColor(),
+            userIsOnline: true
         }
 
         this.logoutTimeout = setTimeout(() => {
-            this.update({ isOnline: false })
+            this.update({ userIsOnline: false })
         }, User.AutoLogoutMs)
     }
 
     refreshOnlineChecker() {
         clearTimeout(this.logoutTimeout)
 
-        if (!this.state.isOnline) {
-            this.update({ isOnline: true })
+        if (!this.state.userIsOnline) {
+            this.update({ userIsOnline: true })
         }
 
         this.logoutTimeout = setTimeout(() => {
-            this.update({ isOnline: false })
+            this.update({ userIsOnline: false })
         }, User.AutoLogoutMs)
     }
 
@@ -60,7 +60,6 @@ export class User {
         this.lobbies.forEach(l => {
             l.publish('Lobby-MemberUpdate', {
                 lobbyId: l.id,
-                memberId: this.id,
                 data: newData
             })
 

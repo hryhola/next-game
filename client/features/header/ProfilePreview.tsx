@@ -6,7 +6,7 @@ import { Typography } from '@mui/material'
 function ProfilePicture() {
     const user = useUser()
 
-    if (user.avatarUrl) {
+    if (user.userAvatarUrl) {
         return (
             <>
                 &nbsp;
@@ -15,14 +15,14 @@ function ProfilePicture() {
                         maxWidth: '40px',
                         maxHeight: '40px'
                     }}
-                    src={user.avatarUrl}
+                    src={user.userAvatarUrl}
                     alt="profile avatar"
                 />
             </>
         )
     }
 
-    return <PersonIcon sx={{ fontSize: 40, color: user.nicknameColor }} />
+    return <PersonIcon sx={{ fontSize: 40, color: user.userColor }} />
 }
 
 export const ProfilePreview: React.FC<ButtonProps> = props => {
@@ -30,8 +30,8 @@ export const ProfilePreview: React.FC<ButtonProps> = props => {
 
     return (
         <Button {...props}>
-            <Typography variant="body1" color={user.nicknameColor} textTransform="none">
-                {user.nickname}
+            <Typography variant="body1" color={user.userColor} textTransform="none">
+                {user.userNickname}
             </Typography>
             <ProfilePicture />
         </Button>

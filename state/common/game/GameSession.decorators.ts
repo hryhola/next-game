@@ -18,7 +18,7 @@ export const ActedBy = (actorPredicate: (actor: A) => boolean) => (_target: any,
 
 export const GameOnlyActed = ActedBy(actor => actor instanceof Game)
 
-export const GameAndMasterOnlyActed = ActedBy(actor => actor instanceof Game || actor.state.isMaster)
+export const GameAndMasterOnlyActed = ActedBy(actor => actor instanceof Game || actor.state.playerIsMaster)
 
 export function Hidden(_target: any, _propertyName: string, descriptor: PropertyDescriptor) {
     descriptor.value.hidden = true

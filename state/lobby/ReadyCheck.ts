@@ -21,7 +21,7 @@ export class ReadyCheck {
                 this.membersForCheck.forEach(member => {
                     if (!this.readyMembers.includes(member)) {
                         this.lobby.publish('ReadyCheck-PlayerStatus', {
-                            nickname: member.user.state.nickname,
+                            userNickname: member.user.state.userNickname,
                             ready: false
                         })
                     }
@@ -41,7 +41,7 @@ export class ReadyCheck {
             this[ready ? 'readyMembers' : 'notReadyMembers'].push(member)
 
             this.lobby.publish('ReadyCheck-PlayerStatus', {
-                nickname: member.user.state.nickname,
+                userNickname: member.user.state.userNickname,
                 ready
             })
 

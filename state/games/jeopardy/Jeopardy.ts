@@ -29,8 +29,8 @@ export class Jeopardy extends Game {
     join(member: LobbyMember): GeneralSuccess | GeneralFailure {
         const player = new JeopardyPlayer(member)
 
-        if (member.state.isCreator) {
-            player.update({ isMaster: true })
+        if (member.state.memberIsCreator) {
+            player.update({ playerIsMaster: true })
         }
 
         this.players.push(player)

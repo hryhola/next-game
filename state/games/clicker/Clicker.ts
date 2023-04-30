@@ -23,8 +23,8 @@ export class Clicker extends Game {
     join(member: LobbyMember): GeneralSuccess | GeneralFailure {
         const player = new ClickerPlayer(member)
 
-        if (member.state.isCreator) {
-            player.update({ isMaster: true })
+        if (member.state.memberIsCreator) {
+            player.update({ playerIsMaster: true })
         }
 
         this.players.push(player)
