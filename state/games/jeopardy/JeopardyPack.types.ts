@@ -85,16 +85,16 @@ export namespace JeopardyDeclaration {
                 logo: `@${string}.${string}`
                 xmlns: string
             }
-        }
-        info: {
-            authors: {
-                author: {
-                    _text: string
+            info: {
+                authors: {
+                    author: {
+                        _text: string
+                    }
                 }
             }
-        }
-        rounds: {
-            round: Round[]
+            rounds: {
+                round: Round[]
+            }
         }
     }
 }
