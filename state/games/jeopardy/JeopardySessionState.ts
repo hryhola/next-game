@@ -4,6 +4,9 @@ export namespace JeopardyState {
     }
 
     export interface PackThemesPreviewFrame extends AbstractFrame {
+        packName: string
+        author: string
+        dateCreated: string
         themes: string[]
     }
 

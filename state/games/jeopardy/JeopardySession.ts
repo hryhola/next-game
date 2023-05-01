@@ -6,6 +6,7 @@ import { Chronos, TimeHall } from 'util/chronos'
 import { GeneralSuccess, GeneralFailure, R } from 'util/universalTypes'
 import { Jeopardy } from './Jeopardy'
 import { JeopardySessionState } from './JeopardySessionState'
+import { shuffle } from 'util/array'
 
 export class JeopardySession extends GameSession {
     readonly state: JeopardySessionState
@@ -82,11 +83,14 @@ export class JeopardySession extends GameSession {
     $ThemesPreview(actor: A, payload: P, { complete }: E): R {
         this.timeHall.createAndStartEvent('ThemesPreview', 7, complete)
 
-        const themes = this.game.pack.getNonFinalThemes()
+        const themes = shuffle(this.game.pack.getNonFinalThemes())
 
         this.update({
             frame: {
                 id: 'pack-themes-preview',
+                packName: this.game.pack.declaration.package._attributes.name,
+                author: this.game.pack.declaration.package._attributes.name,
+                dateCreated: this.game.pack.declaration.package._attributes.date,
                 themes
             }
         })
