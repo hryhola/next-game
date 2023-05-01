@@ -1,5 +1,15 @@
-export class JeopardySessionState {
-    currentTheme = 0
+export namespace JeopardyState {
+    interface AbstractFrame {
+        id: string
+    }
 
-    readonly AllThemesPreviewDuration = 7
+    export interface PackThemesPreviewFrame extends AbstractFrame {
+        themes: string[]
+    }
+
+    export type Frame = { id: 'none' } | PackThemesPreviewFrame
+}
+
+export type JeopardySessionState = {
+    frame: JeopardyState.Frame
 }

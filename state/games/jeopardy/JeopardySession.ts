@@ -3,12 +3,12 @@ import { GameOnlyActed } from 'state/common/game/GameSession.decorators'
 import { A, E, P, GameSession, GameSessionActionHandlerEventOptions, GameSessionActionsName } from 'state/common/game/GameSession'
 import { Player } from 'state/common/game/Player'
 import { Chronos, TimeHall } from 'util/chronos'
-import { GeneralSuccess, GeneralFailure } from 'util/universalTypes'
+import { GeneralSuccess, GeneralFailure, R } from 'util/universalTypes'
 import { Jeopardy } from './Jeopardy'
 import { JeopardySessionState } from './JeopardySessionState'
 
 export class JeopardySession extends GameSession {
-    state: JeopardySessionState
+    readonly state: JeopardySessionState
 
     timeHall: TimeHall
 
@@ -17,7 +17,11 @@ export class JeopardySession extends GameSession {
     constructor(game: Jeopardy) {
         super(game)
 
-        this.state = new JeopardySessionState()
+        this.state = {
+            frame: {
+                id: 'none'
+            }
+        }
 
         this.timeHall = Chronos.createTimeHall()
     }
@@ -57,7 +61,7 @@ export class JeopardySession extends GameSession {
     }
 
     @GameOnlyActed
-    $PickQuestion(actor: A, payload: { round: number; playerID: string }, { complete }: E) {
+    $PickQuestion(actor: A, payload: { round: number; playerID: string }, { complete }: E): R {
         complete()
 
         return {
@@ -66,7 +70,7 @@ export class JeopardySession extends GameSession {
     }
 
     @GameOnlyActed
-    $RoundPreview(actor: A, payload: P, { complete }: E) {
+    $RoundPreview(actor: A, payload: P, { complete }: E): R {
         this.timeHall.createAndStartEvent('RoundPreview', 5, complete)
 
         return {
@@ -75,16 +79,22 @@ export class JeopardySession extends GameSession {
     }
 
     @GameOnlyActed
-    $ThemesPreview(actor: A, payload: P, { complete }: E) {
-        this.timeHall.createAndStartEvent('ThemesPreview', this.state.AllThemesPreviewDuration, complete)
+    $ThemesPreview(actor: A, payload: P, { complete }: E): R {
+        this.timeHall.createAndStartEvent('ThemesPreview', 7, complete)
 
         const themes = this.game.pack.getNonFinalThemes()
 
+        this.update({
+            frame: {
+                id: 'pack-themes-preview',
+                themes
+            }
+        })
+
         return {
-            success: true,
-            themes: themes
+            success: true
         }
     }
 }
 
-export type ClickerSessionData = ReturnType<JeopardySession['data']>
+export type JeopardySessionData = ReturnType<JeopardySession['data']>

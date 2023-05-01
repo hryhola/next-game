@@ -1,25 +1,24 @@
 import React, { useState } from 'react'
 import { Box } from '@mui/material'
-import { JeopardyThemesPreview } from './frames/JeopardyThemesPreview'
-import { useJeopardyAction } from './JeopardyView'
+import { PackThemesPreview } from './frames/JeopardyPackThemesPreview'
+import { useJeopardy, useJeopardyAction } from './JeopardyView'
 
 type JeopardyCanvasProps = {
     isPackLoading: boolean
 }
 
 export const JeopardyCanvas: React.FC<JeopardyCanvasProps> = props => {
-    const [currFrame, setCurrFrame] = useState(<></>)
+    const jeopardy = useJeopardy()
 
-    useJeopardyAction('$ThemesPreview', data => {
-        if (!data.result.success) return
-
-        setCurrFrame(<JeopardyThemesPreview themes={data.result.themes} />)
-    })
-
-    if (props.isPackLoading) {
+    if (props.isPackLoading || !jeopardy.session) {
         return <></>
     }
 
-    return currFrame
-    // return <JeopardyThemesPreview themes={[ "Literally me", "Вентелятори", "Стрімер по сміху", "Коти", "Мультфільм по пісні", "Гриби", "Що було далі?", "Конспірологія", "GeoGuesser", "Етимологія", "Чорна магія", "Гомосексуалізм", "Караоке", "Доктори", "Політика", "Математика", "Надлюди", "Мовознавство", "Міфологія", "Зброя середньовіччя", "Філософія", "Французький живопис 18 століття", "Давньогрецька філософія на мові оригіналу", "Квантова фізика", "Історія стародавнього Китаю", "Класична музикальна теорія", "Теорія кольору", "Математична логіка", "Аніме" ]} />
+    switch (jeopardy.session.frame.id) {
+        case 'pack-themes-preview':
+            return <PackThemesPreview {...jeopardy.session.frame} />
+        case 'none':
+        default:
+            return <></>
+    }
 }
