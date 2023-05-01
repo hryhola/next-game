@@ -1,17 +1,27 @@
 import React from 'react'
 import { JeopardyState } from 'state/games/jeopardy/JeopardySessionState'
-import { Grid, Typography } from '@mui/material'
+import { Box, Typography } from '@mui/material'
+import styles from './JeopardyPackThemesPreview.module.scss'
 
 export const PackThemesPreview: React.FC<JeopardyState.PackThemesPreviewFrame> = props => {
     return (
-        <Grid display="flex" width="100vw" height="100vh" justifyContent="center" alignItems="center">
-            <Grid item>
+        <Box width="100vw" height="var(--fullHeight)" overflow="hidden">
+            <Box className={styles.info}>
+                <Typography align="center" variant="h2" width="100%">
+                    {props.packName}
+                </Typography>
+                <Typography align="center" variant="overline" width="100%">
+                    {props.author}, {props.dateCreated}
+                </Typography>
+            </Box>
+
+            <Box className={styles.themes}>
                 {props.themes.map(t => (
-                    <Typography align="center" variant="h2">
+                    <Typography sx={{ wordBreak: 'break-word', mb: 4 }} align="center" variant="h4" width="100%">
                         {t}
                     </Typography>
                 ))}
-            </Grid>
-        </Grid>
+            </Box>
+        </Box>
     )
 }
