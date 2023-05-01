@@ -1,16 +1,19 @@
 export namespace JeopardyState {
-    interface AbstractFrame {
-        id: string
-    }
-
-    export interface PackThemesPreviewFrame extends AbstractFrame {
+    export interface PackThemesPreviewFrame {
+        id: 'pack-themes-preview'
         packName: string
         author: string
         dateCreated: string
         themes: string[]
     }
 
-    export type Frame = { id: 'none' } | PackThemesPreviewFrame
+    export interface RoundPreviewFrame {
+        id: 'rounds-preview'
+        text: string
+        isRoundName: boolean
+    }
+
+    export type Frame = { id: 'none' } | PackThemesPreviewFrame | RoundPreviewFrame
 }
 
 export type JeopardySessionState = {
