@@ -69,6 +69,12 @@ export const createGame = <Game extends AbstractGame>(Component: React.Component
             }
         })
 
+        useEventHandler('Game-SessionUpdate', ({ lobbyId, data }) => {
+            if (lobbyId === lobby.lobbyId) {
+                setSession(data)
+            }
+        })
+
         useEffect(() => {
             ;(async () => {
                 const [response, postError] = await api

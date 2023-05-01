@@ -1,3 +1,4 @@
+import { SessionState } from 'http2'
 import type { GameAction } from './GameSession'
 import type { PlayerData } from './Player'
 
@@ -25,5 +26,9 @@ export type Events = {
         lobbyId: string
         session: any
         players: PlayerData[]
+    }
+    'Game-SessionUpdate': {
+        lobbyId: string
+        data: any
     }
 }

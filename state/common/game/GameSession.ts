@@ -121,6 +121,15 @@ export abstract class GameSession {
     }
 
     abstract data(): object
+
+    update(data: Partial<this['state']>) {
+        Object.assign(this.state, data)
+
+        this.game.publish('Game-SessionUpdate', {
+            lobbyId: this.game.lobby.id,
+            data: this.state
+        })
+    }
 }
 
 export type GameSessionActionHandlerEventOptions = {
