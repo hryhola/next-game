@@ -81,7 +81,7 @@ export class JeopardySession extends GameSession {
 
     @GameOnlyActed
     $ThemesPreview(actor: A, payload: P, { complete }: E): R {
-        this.timeHall.createAndStartEvent('ThemesPreview', 7, complete)
+        this.timeHall.createAndStartEvent('ThemesPreview', 10, complete)
 
         const themes = shuffle(this.game.pack.getNonFinalThemes())
 
