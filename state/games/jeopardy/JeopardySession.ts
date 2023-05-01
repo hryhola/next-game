@@ -48,7 +48,7 @@ export class JeopardySession extends GameSession {
 
         this.actionSequence([
             [this.game, '$ThemesPreview', null],
-            [this.game, '$RoundPreview', null],
+            [this.game, '$RoundPreview', { roundId: 0 }],
             [this.game, '$PickQuestion', {}]
         ])
     }
@@ -71,8 +71,42 @@ export class JeopardySession extends GameSession {
     }
 
     @GameOnlyActed
-    $RoundPreview(actor: A, payload: P, { complete }: E): R {
-        this.timeHall.createAndStartEvent('RoundPreview', 5, complete)
+    $RoundPreview(actor: A, payload: { roundId: number }, { complete }: E): R {
+        const data = this.game.pack.getRoundThemes(payload.roundId)
+
+        if (!data) {
+            complete()
+            return {
+                success: false,
+                message: `Cannot find round with ID ${payload.roundId}`
+            }
+        }
+
+        this.update({
+            frame: {
+                id: 'rounds-preview',
+                isRoundName: true,
+                text: data.roundName
+            }
+        })
+
+        const roundNamePreviewDuration = 2
+        const themesDisplayDuration = 2
+        const roundThemesPreviewDuration = data.themeNames.length * themesDisplayDuration
+
+        data.themeNames.forEach((themeName, i) => {
+            this.timeHall.createAndStartEvent('RoundThemeNamePreview' + i, themesDisplayDuration * (i + 1), () => {
+                this.update({
+                    frame: {
+                        id: 'rounds-preview',
+                        isRoundName: false,
+                        text: themeName
+                    }
+                })
+            })
+        })
+
+        this.timeHall.createAndStartEvent('RoundPreviewEnd', roundNamePreviewDuration + roundThemesPreviewDuration, complete)
 
         return {
             success: true

@@ -16,8 +16,8 @@ export const PackThemesPreview: React.FC<JeopardyState.PackThemesPreviewFrame> =
             </Box>
 
             <Box className={styles.themes}>
-                {props.themes.map(t => (
-                    <Typography sx={{ wordBreak: 'break-word', mb: 4 }} align="center" variant="h4" width="100%">
+                {props.themes.map((t, i) => (
+                    <Typography key={i} sx={{ wordBreak: 'break-word', mb: 4 }} align="center" variant="h4" width="100%">
                         {t}
                     </Typography>
                 ))}

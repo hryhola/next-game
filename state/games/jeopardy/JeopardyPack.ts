@@ -50,4 +50,18 @@ export class JeopardyPack {
             [] as string[]
         )
     }
+
+    getRoundThemes(roundId: number) {
+        const round = this.declaration.package.rounds.round[roundId]
+
+        if (!round) {
+            throw null
+        }
+
+        return {
+            roundName: round._attributes.name,
+            isFinalRound: round._attributes.type === 'final',
+            themeNames: round.themes.theme.map(t => t._attributes.name)
+        }
+    }
 }
