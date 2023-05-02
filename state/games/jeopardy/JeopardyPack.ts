@@ -51,11 +51,11 @@ export class JeopardyPack {
         )
     }
 
-    getRoundThemes(roundId: number) {
+    getRoundThemeNames(roundId: number) {
         const round = this.declaration.package.rounds.round[roundId]
 
         if (!round) {
-            throw null
+            return null
         }
 
         return {
@@ -63,5 +63,31 @@ export class JeopardyPack {
             isFinalRound: round._attributes.type === 'final',
             themeNames: round.themes.theme.map(t => t._attributes.name)
         }
+    }
+
+    getRoundQuestionViewData(roundId: number):
+        | {
+              name: string
+              themeId: `${number}-${number}` // round index + theme index
+              question: {
+                  questionId: `${number}-${number}-${number}` // round index + theme index + question index
+                  price: string
+              }[]
+          }[]
+        | null {
+        const round = this.declaration.package.rounds.round[roundId]
+
+        if (!round) {
+            return null
+        }
+
+        return round.themes.theme.map((theme, tIndex) => ({
+            name: theme._attributes.name,
+            themeId: `${roundId}-${tIndex}`,
+            question: theme.questions.question.map((question, qIndex) => ({
+                price: question._attributes.price,
+                questionId: `${roundId}-${tIndex}-${qIndex}`
+            }))
+        }))
     }
 }

@@ -1,6 +1,6 @@
 import logger from 'logger'
 import { Game, Player } from 'state'
-import { GeneralSuccess, GeneralFailure, R } from 'util/universalTypes'
+import { GeneralSuccess, GeneralFailure, R, RecursivePartial } from 'util/universalTypes'
 import { GameAndMasterOnlyActed } from './GameSession.decorators'
 
 export type GameActor = {
@@ -122,7 +122,7 @@ export abstract class GameSession {
 
     abstract data(): object
 
-    update(data: Partial<this['state']>) {
+    update(data: RecursivePartial<this['state']>) {
         Object.assign(this.state, data)
 
         this.game.publish('Game-SessionUpdate', {

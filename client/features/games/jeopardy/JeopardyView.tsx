@@ -58,7 +58,7 @@ async function getMediaFilesFromPack(jeopardyPack: Uint8Array): Promise<Jeopardy
 }
 
 export const [JeopardyView, useJeopardy, useJeopardyAction, useActionSender] = createGame<Jeopardy>(() => {
-    const [isPackLoading, setIsPackLoading] = useState(false)
+    const [isPackLoading, setIsPackLoading] = useState(true)
 
     const Resources = useRef<JeopardyMedia>({
         Audio: {},
@@ -70,7 +70,6 @@ export const [JeopardyView, useJeopardy, useJeopardyAction, useActionSender] = c
 
     useEffect(() => {
         if (!game.initialData?.pack) return
-
         ;(async () => {
             setIsPackLoading(true)
 

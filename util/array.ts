@@ -14,3 +14,5 @@ export function shuffle<T extends any[]>(array: T): T {
 
     return array
 }
+
+export const random = <K extends any>(array: K[]) => array[Math.floor(Math.random() * array.length)]
