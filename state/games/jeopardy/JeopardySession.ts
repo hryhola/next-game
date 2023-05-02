@@ -5,8 +5,8 @@ import { Player } from 'state/common/game/Player'
 import { Chronos, TimeHall } from 'util/chronos'
 import { GeneralSuccess, GeneralFailure, R } from 'util/universalTypes'
 import { Jeopardy } from './Jeopardy'
-import { JeopardySessionState } from './JeopardySessionState'
-import { shuffle } from 'util/array'
+import { JeopardySessionState, JeopardyState } from './JeopardySessionState'
+import { random, shuffle } from 'util/array'
 
 export class JeopardySession extends GameSession {
     readonly state: JeopardySessionState
@@ -19,6 +19,9 @@ export class JeopardySession extends GameSession {
         super(game)
 
         this.state = {
+            internal: {
+                answeredQuestions: []
+            },
             frame: {
                 id: 'none'
             }
@@ -37,7 +40,9 @@ export class JeopardySession extends GameSession {
     }
 
     data() {
-        return this.state
+        const { internal, ...state } = this.state
+
+        return state
     }
 
     start() {
@@ -49,7 +54,8 @@ export class JeopardySession extends GameSession {
         this.actionSequence([
             [this.game, '$ThemesPreview', null],
             [this.game, '$RoundPreview', { roundId: 0 }],
-            [this.game, '$PickQuestion', {}]
+            // TODO random(this.game.answeringPlayers).data().id
+            [this.game, '$PickQuestion', { roundId: 0, playerId: random(this.game.players).data().id }]
         ])
     }
 
@@ -62,7 +68,44 @@ export class JeopardySession extends GameSession {
     }
 
     @GameOnlyActed
-    $PickQuestion(actor: A, payload: { round: number; playerID: string }, { complete }: E): R {
+    $PickQuestion(actor: A, payload: { roundId: number; playerId: string }, { complete }: E): R {
+        const player = this.game.players.find(p => p.member.user.id === payload.playerId)
+
+        if (!player) {
+            complete()
+            return {
+                success: false,
+                message: `Cannot find player with ID ${payload.playerId}`
+            }
+        }
+
+        const themesDeclaration = this.game.pack.getRoundQuestionViewData(payload.roundId)
+
+        if (!themesDeclaration) {
+            complete()
+            return {
+                success: false,
+                message: `Cannot find round with ID ${payload.roundId}`
+            }
+        }
+
+        const currentThemesData = themesDeclaration.map(t => ({
+            ...t,
+            question: t.question.map(q => ({
+                ...q,
+                isAnswered: this.state.internal.answeredQuestions.includes(q.questionId)
+            }))
+        }))
+
+        this.update({
+            frame: {
+                id: 'pick-question',
+                pickerId: payload.playerId,
+                roundId: payload.roundId,
+                themes: currentThemesData
+            } as JeopardyState.PickQuestionFrame
+        })
+
         complete()
 
         return {
@@ -72,7 +115,7 @@ export class JeopardySession extends GameSession {
 
     @GameOnlyActed
     $RoundPreview(actor: A, payload: { roundId: number }, { complete }: E): R {
-        const data = this.game.pack.getRoundThemes(payload.roundId)
+        const data = this.game.pack.getRoundThemeNames(payload.roundId)
 
         if (!data) {
             complete()

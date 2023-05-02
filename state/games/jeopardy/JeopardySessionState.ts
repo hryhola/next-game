@@ -13,9 +13,27 @@ export namespace JeopardyState {
         isRoundName: boolean
     }
 
-    export type Frame = { id: 'none' } | PackThemesPreviewFrame | RoundPreviewFrame
+    export interface PickQuestionFrame {
+        id: 'pick-question'
+        pickerId: string
+        roundId: number
+        themes: {
+            themeId: `${number}-${number}` // round index + theme index
+            name: string
+            question: {
+                questionId: `${number}-${number}-${number}` // round index + theme index + question index
+                price: string
+                isAnswered: boolean
+            }[]
+        }[]
+    }
+
+    export type Frame = { id: 'none' } | PackThemesPreviewFrame | RoundPreviewFrame | PickQuestionFrame
 }
 
 export type JeopardySessionState = {
+    internal: {
+        answeredQuestions: string[]
+    }
     frame: JeopardyState.Frame
 }

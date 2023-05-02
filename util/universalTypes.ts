@@ -24,3 +24,7 @@ export type GeneralSuccess = {
 }
 
 export type R = GeneralFailure | GeneralSuccess
+
+export type RecursivePartial<T> = {
+    [P in keyof T]?: RecursivePartial<T[P]>
+}
