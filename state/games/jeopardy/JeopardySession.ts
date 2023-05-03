@@ -7,6 +7,7 @@ import { GeneralSuccess, GeneralFailure, R } from 'util/universalTypes'
 import { Jeopardy } from './Jeopardy'
 import { JeopardySessionState, JeopardyState } from './JeopardySessionState'
 import { random, shuffle } from 'util/array'
+import { JeopardyPlayer } from './JeopardyPlayer'
 
 export class JeopardySession extends GameSession {
     readonly state: JeopardySessionState
@@ -52,10 +53,10 @@ export class JeopardySession extends GameSession {
         })
 
         this.actionSequence([
-            [this.game, '$ThemesPreview', null],
+            [this.game, '$PackPreview', null],
             [this.game, '$RoundPreview', { roundId: 0 }],
             // TODO random(this.game.answeringPlayers).data().id
-            [this.game, '$PickQuestion', { roundId: 0, playerId: random(this.game.players).data().id }]
+            [this.game, '$ShowQuestionBoard', { roundId: 0, playerId: random(this.game.players).data().id }]
         ])
     }
 
@@ -68,7 +69,88 @@ export class JeopardySession extends GameSession {
     }
 
     @GameOnlyActed
-    $PickQuestion(actor: A, payload: { roundId: number; playerId: string }, { complete }: E): R {
+    $ShowQuestion(actor: A, payload: { questionId: `${number}-${number}-${number}` }, { complete }: E): R {
+        complete()
+        return {
+            success: true
+        }
+    }
+
+    $PickQuestion(actor: A, payload: { questionId: `${number}-${number}-${number}` }, { complete }: E): R {
+        if (!(actor instanceof JeopardyPlayer)) {
+            complete()
+            return {
+                success: false,
+                message: 'Only JeopardyPlayer can pick question'
+            }
+        }
+
+        if (this.state.frame.id !== 'question-board') {
+            complete()
+            return {
+                success: false,
+                message: 'Cannot pick question during non question-board frame'
+            }
+        }
+
+        if (this.state.frame.pickerId !== actor.member.user.id) {
+            complete()
+            return {
+                success: false,
+                message: `Only user with ID ${this.state.frame.pickerId} can pick question!`
+            }
+        }
+
+        if (this.state.frame.pickedQuestion) {
+            return {
+                success: false,
+                message: `Already picked a question! (${this.state.frame.pickedQuestion})`
+            }
+        }
+
+        const question = this.game.pack.getQuestionById(payload.questionId)
+
+        if (!question) {
+            return {
+                success: false,
+                message: `Cannot find question with ID ${payload.questionId} !`
+            }
+        }
+
+        if (this.state.internal.answeredQuestions.includes(payload.questionId)) {
+            return {
+                success: false,
+                message: `Question with ID ${payload.questionId} have been answered already!`
+            }
+        }
+
+        this.update({
+            frame: {
+                ...this.state.frame,
+                pickedQuestion: payload.questionId
+            } as Partial<JeopardyState.ShowQuestionBoardFrame>
+        })
+
+        this.timeHall.createAndStartEvent('PickQuestion', 1, () => {
+            this.update({
+                frame: {
+                    ...this.state.frame,
+                    pickedQuestion: undefined
+                } as Partial<JeopardyState.ShowQuestionBoardFrame>
+            })
+
+            complete()
+
+            this.action(this.game, '$ShowQuestion', { questionId: payload.questionId }, { complete: () => {} })
+        })
+
+        return {
+            success: true
+        }
+    }
+
+    @GameOnlyActed
+    $ShowQuestionBoard(actor: A, payload: { roundId: number; playerId: string }, { complete }: E): R {
         const player = this.game.players.find(p => p.member.user.id === payload.playerId)
 
         if (!player) {
@@ -99,11 +181,11 @@ export class JeopardySession extends GameSession {
 
         this.update({
             frame: {
-                id: 'pick-question',
+                id: 'question-board',
                 pickerId: payload.playerId,
                 roundId: payload.roundId,
                 themes: currentThemesData
-            } as JeopardyState.PickQuestionFrame
+            } as JeopardyState.ShowQuestionBoardFrame
         })
 
         complete()
@@ -135,7 +217,7 @@ export class JeopardySession extends GameSession {
 
         const roundNamePreviewDuration = 2
         const themesDisplayDuration = 2
-        const roundThemesPreviewDuration = data.themeNames.length * themesDisplayDuration
+        const roundPackPreviewDuration = data.themeNames.length * themesDisplayDuration
 
         data.themeNames.forEach((themeName, i) => {
             this.timeHall.createAndStartEvent('RoundThemeNamePreview' + i, themesDisplayDuration * (i + 1), () => {
@@ -149,7 +231,7 @@ export class JeopardySession extends GameSession {
             })
         })
 
-        this.timeHall.createAndStartEvent('RoundPreviewEnd', roundNamePreviewDuration + roundThemesPreviewDuration, complete)
+        this.timeHall.createAndStartEvent('RoundPreviewEnd', roundNamePreviewDuration + roundPackPreviewDuration, complete)
 
         return {
             success: true
@@ -157,14 +239,14 @@ export class JeopardySession extends GameSession {
     }
 
     @GameOnlyActed
-    $ThemesPreview(actor: A, payload: P, { complete }: E): R {
-        this.timeHall.createAndStartEvent('ThemesPreview', 10, complete)
+    $PackPreview(actor: A, payload: P, { complete }: E): R {
+        this.timeHall.createAndStartEvent('PackPreview', 10, complete)
 
         const themes = shuffle(this.game.pack.getNonFinalThemes())
 
         this.update({
             frame: {
-                id: 'pack-themes-preview',
+                id: 'pack-preview',
                 packName: this.game.pack.declaration.package._attributes.name,
                 author: this.game.pack.declaration.package._attributes.name,
                 dateCreated: this.game.pack.declaration.package._attributes.date,

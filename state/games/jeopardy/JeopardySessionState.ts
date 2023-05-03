@@ -1,6 +1,6 @@
 export namespace JeopardyState {
-    export interface PackThemesPreviewFrame {
-        id: 'pack-themes-preview'
+    export interface PackPreviewFrame {
+        id: 'pack-preview'
         packName: string
         author: string
         dateCreated: string
@@ -13,9 +13,10 @@ export namespace JeopardyState {
         isRoundName: boolean
     }
 
-    export interface PickQuestionFrame {
-        id: 'pick-question'
+    export interface ShowQuestionBoardFrame {
+        id: 'question-board'
         pickerId: string
+        pickedQuestion?: `${number}-${number}-${number}`
         roundId: number
         themes: {
             themeId: `${number}-${number}` // round index + theme index
@@ -28,7 +29,7 @@ export namespace JeopardyState {
         }[]
     }
 
-    export type Frame = { id: 'none' } | PackThemesPreviewFrame | RoundPreviewFrame | PickQuestionFrame
+    export type Frame = { id: 'none' } | PackPreviewFrame | RoundPreviewFrame | ShowQuestionBoardFrame
 }
 
 export type JeopardySessionState = {

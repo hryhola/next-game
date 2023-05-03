@@ -81,9 +81,11 @@ export const [JeopardyView, useJeopardy, useJeopardyAction, useActionSender] = c
         })()
     }, [game.initialData])
 
+    const highlightedPlayedId = game.session?.frame.id === 'pick-question' ? game.session.frame.pickerId : undefined
+
     return (
         <>
-            <PlayersHeader members={game.players} isLoading={game.isLoading} />
+            <PlayersHeader members={game.players} isLoading={game.isLoading} highlightedPlayedId={highlightedPlayedId} />
             <JeopardyCanvas isPackLoading={isPackLoading} />
             {isPackLoading ? <LoadingOverlay isLoading={isPackLoading} text="Pack loading" zIndex="auto" /> : <NoSession game={game} />}
             <LobbyControls />
