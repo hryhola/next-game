@@ -1,5 +1,5 @@
 import React from 'react'
-import { PackThemesPreview } from './frames/JeopardyPackThemesPreview'
+import { PackPreview } from './frames/JeopardyPackPreview'
 import { QuestionBoard } from './frames/JeopardyQuestionBoard'
 import { RoundPreview } from './frames/JeopardyRoundPreview'
 import { useJeopardy } from './JeopardyView'
@@ -16,11 +16,11 @@ export const JeopardyCanvas: React.FC<JeopardyCanvasProps> = props => {
     }
 
     switch (jeopardy.session.frame.id) {
-        case 'pack-themes-preview':
-            return <PackThemesPreview {...jeopardy.session.frame} />
+        case 'pack-preview':
+            return <PackPreview {...jeopardy.session.frame} />
         case 'rounds-preview':
             return <RoundPreview {...jeopardy.session.frame} />
-        case 'pick-question':
+        case 'question-board':
             return <QuestionBoard {...jeopardy.session.frame} />
         case 'none':
         default:

@@ -6,6 +6,7 @@ import { ProfilePicture } from '../../profile-picture/ProfilePicture'
 import { PlayerMenu } from './PlayerMenu'
 
 type Props = {
+    isHighlighted?: boolean
     size?: 'medium' | 'small'
 } & (PlayerProps | LoadingData)
 
@@ -46,6 +47,10 @@ export const Player: React.FC<Props> = props => {
     }
     const handleClose = () => {
         setPlayerMenuAnchor(null)
+    }
+
+    if (props.isHighlighted) {
+        sx.background = 'linear-gradient(0deg, rgba(255,255,255,0) 1%, rgba(98,255,248,0.3) 100%);'
     }
 
     const withBox = (children: React.ReactNode) => (

@@ -1,11 +1,11 @@
-import { PackThemesPreview } from 'client/features/games/jeopardy/frames/JeopardyPackThemesPreview'
+import { PackPreview } from 'client/features/games/jeopardy/frames/JeopardyPackPreview'
 import { GetServerSideProps, NextPage } from 'next'
 
 type Props = {}
 
 const Test: NextPage<Props> = props => {
     return (
-        <PackThemesPreview
+        <PackPreview
             id="a"
             packName="Уберпак 1"
             author="Davy Jones"

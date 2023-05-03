@@ -90,4 +90,14 @@ export class JeopardyPack {
             }))
         }))
     }
+
+    getQuestionById(id: `${number}-${number}-${number}`) {
+        const [roundId, themeId, questionId] = id.split('-')
+
+        if (!roundId || !themeId || !questionId) {
+            return null
+        }
+
+        return this.declaration.package.rounds.round[+roundId]?.themes.theme[+themeId]?.questions.question[+questionId]
+    }
 }
