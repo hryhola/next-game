@@ -32,8 +32,6 @@ img {
 }
 
 .SnackbarProvider {
-    // &-root {}
-
     &-containerRoot {
         bottom: 60px !important;
     }
@@ -52,6 +50,7 @@ body[data-hide-tips='true'] {
 
 .noselect {
     pointer-events: none !important;
-    -webkit-touch-callout: none; /* iOS Safari */
+    -webkit-touch-callout: none;
+    /* iOS Safari */
     user-select: none;
 }

@@ -9,7 +9,7 @@ import { GeneralFailure, GeneralSuccess, NextApiResponseUWS } from 'util/univers
 export type Request = FormData
 
 type Success = GeneralSuccess & {
-    avatarUrl?: string
+    userAvatarUrl?: string
 }
 
 export type Response = Success | GeneralFailure
@@ -60,7 +60,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponseU
         const avatarFullPath = (files.image as formidable.File).filepath
         const parsedPath = path.parse(avatarFullPath)
         avatar = 'res/avatar/' + parsedPath.base
-        updatedInfo.avatarUrl = avatar
+        updatedInfo.userAvatarUrl = avatar
     }
 
     updatedInfo.userNickname = fields.userNickname as string
@@ -73,7 +73,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponseU
 
     res.status(200).json({
         success: true,
-        avatarUrl: avatar
+        userAvatarUrl: avatar
     })
 }
 

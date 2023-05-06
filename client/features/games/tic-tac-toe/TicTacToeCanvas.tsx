@@ -160,7 +160,7 @@ export const TicTacToeCanvas: React.FC<Props> = ({ isLoading }) => {
 
     return (
         <>
-            <Box sx={{ paddingTop: 20 }} ref={boardRef}>
+            <Box sx={{ pt: 'calc(var(--playersHeaderHeight) + 10px)' }} ref={boardRef}>
                 {cellValues.map((row, x) => (
                     <Grid key={x} justifyContent="center" wrap="nowrap" container>
                         {row.map((cell, y) => (
