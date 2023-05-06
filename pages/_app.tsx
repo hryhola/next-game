@@ -19,10 +19,12 @@ const darkTheme = createTheme({
                 body: {
                     scrollbarColor: '#6b6b6b rgba(0,0,0,0)',
                     '&::-webkit-scrollbar, & *::-webkit-scrollbar': {
+                        pointerEvents: 'all',
                         backgroundColor: 'rgba(0,0,0,0)',
                         height: '5px'
                     },
                     '&::-webkit-scrollbar-thumb, & *::-webkit-scrollbar-thumb': {
+                        pointerEvents: 'all',
                         borderRadius: 8,
                         backgroundColor: '#6b6b6b'
                     }

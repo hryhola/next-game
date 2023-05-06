@@ -67,8 +67,8 @@ export const ProfileEditor: React.FC<Props> = props => {
         user.setNickname(nickname)
         user.setNicknameColor(userColor)
 
-        if (response.avatarUrl) {
-            user.setAvatarRes(response.avatarUrl)
+        if (response.userAvatarUrl) {
+            user.setAvatarRes(response.userAvatarUrl)
         }
 
         if (props.onUpdated) {
@@ -88,7 +88,7 @@ export const ProfileEditor: React.FC<Props> = props => {
 
     return (
         <>
-            <Grid component="form" container direction="column" spacing={4} height="100%" onSubmit={handleSubmit} ref={formRef}>
+            <Grid component="form" container direction="column" spacing={4} minHeight="100%" onSubmit={handleSubmit} ref={formRef}>
                 {error && (
                     <Grid item>
                         <Alert severity="error">{error}</Alert>
@@ -102,7 +102,14 @@ export const ProfileEditor: React.FC<Props> = props => {
                         <IconButton onClick={() => setNicknameColor(randomColor())} sx={{ mr: 2 }} size="small">
                             <CircleIcon sx={{ color: userColor }} />
                         </IconButton>
-                        <TextField variant="standard" label="nickname" name="nickname" value={nickname} onChange={e => setNickname(e.target.value)} fullWidth />
+                        <TextField
+                            variant="standard"
+                            label="nickname"
+                            name="userNickname"
+                            value={nickname}
+                            onChange={e => setNickname(e.target.value)}
+                            fullWidth
+                        />
                     </Box>
                 </Grid>
                 <Grid item sx={{ mt: 'auto', mb: 1 }}>
