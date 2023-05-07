@@ -54,3 +54,7 @@ body[data-hide-tips='true'] {
     /* iOS Safari */
     user-select: none;
 }
+
+.MuiLinearProgress-bar {
+    transition: none;
+}

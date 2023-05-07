@@ -2,7 +2,7 @@ import logger from 'logger'
 import { random, shuffle } from 'util/array'
 import { Chronos, TimeHall } from 'util/chronos'
 import { Game } from 'state/common/game/Game'
-import { GameOnlyActed } from 'state/common/game/GameSession.decorators'
+import { GameOnlyActed, PlayersOnlyActed } from 'state/common/game/GameSession.decorators'
 import { A, E, P, GameSession, GameSessionActionHandlerEventOptions, GameSessionActionsName, GameSessionAction } from 'state/common/game/GameSession'
 import { Player } from 'state/common/game/Player'
 import { GeneralSuccess, GeneralFailure, R } from 'util/universalTypes'
@@ -23,7 +23,8 @@ export class JeopardySession extends GameSession {
 
         this.state = {
             internal: {
-                answeredQuestions: []
+                answeredQuestions: [],
+                currentRoundId: 0
             },
             frame: {
                 id: 'none'
@@ -66,6 +67,90 @@ export class JeopardySession extends GameSession {
         })()
     }
 
+    skip() {
+        const { frame } = this.state
+
+        switch (frame.id) {
+            case 'pack-preview': {
+                this.timeHall.resolveEvent('PackPreview')
+                return
+            }
+            case 'rounds-preview': {
+                const themesCount = this.game.pack.getRoundThemesCount(this.state.internal.currentRoundId)
+
+                if (!themesCount) {
+                    logger.error('Cannot get themesCount on round preview skip!')
+                    return
+                }
+
+                for (let i = 0; i < themesCount; i++) {
+                    this.timeHall.cancelEvent('RoundThemeNamePreview' + i)
+                }
+
+                this.timeHall.resolveEvent('RoundPreviewEnd')
+
+                return
+            }
+            case 'question-content': {
+                if (frame.answeringStatus !== 'allowed') {
+                    this.timeHall.resolveEvent('QuestionAtom')
+                    return
+                }
+
+                for (let i = 100; i >= 0; i--) {
+                    this.timeHall.cancelEvent('AwaitAnswerProgress' + i)
+                }
+
+                this.timeHall.resolveEvent('AwaitAnswer')
+
+                return
+            }
+            default: {
+                return
+            }
+        }
+    }
+
+    @PlayersOnlyActed
+    $SkipVote(actor: JeopardyPlayer, payload: P, { complete }: E): R {
+        if (!actor.state.playerIsMaster && this.state.frame.id !== 'question-content') {
+            return {
+                success: false,
+                message: 'Cannot wait skip question for non question-content frame'
+            }
+        }
+
+        if (actor.state.playerIsMaster) {
+            this.skip()
+        }
+
+        const { id: userId } = actor.member.user
+
+        const currFrame = this.state.frame as JeopardyState.QuestionContentFrame
+
+        if (currFrame.skipVoted.includes(userId)) {
+            return {
+                success: false,
+                message: 'You already voted!'
+            }
+        }
+
+        const frame: JeopardyState.QuestionContentFrame = {
+            ...currFrame,
+            skipVoted: [...currFrame.skipVoted, userId]
+        }
+
+        this.update({ frame })
+
+        if (frame.skipVoted.length === this.game.answeringPlayers.length) {
+            this.skip()
+        }
+
+        return {
+            success: true
+        }
+    }
+
     @GameOnlyActed
     $AwaitAnswer(actor: A, payload: P, { complete }: E): R {
         if (this.state.frame.id !== 'question-content') {
@@ -77,7 +162,33 @@ export class JeopardySession extends GameSession {
 
         const answerPossibilityDuration = 5
 
-        this.timeHall.createAndStartEvent('AwaitAnswer', answerPossibilityDuration, complete)
+        for (let i = 100; i >= 0; i--) {
+            this.timeHall.createAndStartEvent('AwaitAnswerProgress' + i, (100 - i) * (answerPossibilityDuration / 100), () => {
+                const frame: JeopardyState.QuestionContentFrame = {
+                    ...(this.state.frame as JeopardyState.QuestionContentFrame),
+                    answeringStatus: 'allowed',
+                    answerProgress: i
+                }
+
+                this.update({
+                    frame
+                })
+            })
+        }
+
+        this.timeHall.createAndStartEvent('AwaitAnswer', answerPossibilityDuration, () => {
+            const frame: JeopardyState.QuestionContentFrame = {
+                ...(this.state.frame as JeopardyState.QuestionContentFrame),
+                answeringStatus: 'too-late',
+                answerProgress: 0
+            }
+
+            this.update({
+                frame
+            })
+
+            complete()
+        })
 
         return {
             success: true
@@ -90,7 +201,8 @@ export class JeopardySession extends GameSession {
             content: atom._text,
             type: atom._attributes?.type || 'text',
             answeringStatus: beforeMarker ? 'too-early' : 'too-late',
-            answerProgress: null
+            answerProgress: null,
+            skipVoted: []
         }
 
         let contentDuration = 5

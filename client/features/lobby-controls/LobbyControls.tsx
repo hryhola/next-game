@@ -15,7 +15,11 @@ import { useClientRouter } from 'client/route/ClientRouter'
 import { useGlobalModal } from 'client/features/global-modal/GlobalModal'
 import { useGame } from '../games/common/GameFactory'
 
-export const LobbyControls: React.FC = () => {
+interface LobbyControlsProps {
+    buttons?: JSX.Element[]
+}
+
+export const LobbyControls: React.FC<LobbyControlsProps> = props => {
     const globalModal = useGlobalModal()
     const lobby = useLobby()
     const user = useUser()
@@ -163,6 +167,7 @@ export const LobbyControls: React.FC = () => {
                     )
                 }
             ]}
+            buttons={props.buttons}
             onViewOpen={() => (document.body.dataset.hideTips = 'true')}
             onViewClose={() => (document.body.dataset.hideTips = 'false')}
         />

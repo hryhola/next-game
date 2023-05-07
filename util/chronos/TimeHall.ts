@@ -23,8 +23,36 @@ export class TimeHall {
 
     createAndStartEvent(name: string, delayInSeconds: number, callback?: () => void): DelayedEvent {
         const event = this.createEvent(name, delayInSeconds, callback)
+
         event.start()
+
         return event
+    }
+
+    cancelEvent(name: string, throwNotFound = false) {
+        const event = this.events.get(name)
+
+        if (!event) {
+            if (!throwNotFound) {
+                return
+            } else {
+                throw new Error(`Event "${name}" not found`)
+            }
+        }
+
+        event.pause()
+
+        this.events.delete(name)
+    }
+
+    resolveEvent(name: string) {
+        const event = this.events.get(name)
+
+        if (!event) {
+            throw new Error(`Event "${name}" not found`)
+        }
+
+        event.resolve()
     }
 
     pauseEvent(name: string): void {

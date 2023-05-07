@@ -124,6 +124,16 @@ export class JeopardyPack {
         }
     }
 
+    getRoundThemesCount(roundId: number) {
+        const round = this.declaration.package.rounds.round[roundId]
+
+        if (!round) {
+            return null
+        }
+
+        return round.themes.theme.length
+    }
+
     getRoundQuestionViewData(roundId: number):
         | {
               name: string

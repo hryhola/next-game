@@ -20,7 +20,7 @@ export const QuestionBoard: React.FC<JeopardyState.ShowQuestionBoardFrame> = pro
     }
 
     return (
-        <Box sx={{ pt: 'calc(var(--playersHeaderHeight) + 10px)', paddingBottom: 7, transition: '0.5s' }} width="100vw">
+        <Box sx={{ pt: 'calc(var(--playersHeaderHeight) + 10px)', paddingBottom: 7, transition: '0.5s' }} width="100%">
             {props.themes.map(t => (
                 <Box key={t.themeId}>
                     <Divider>{t.name}</Divider>
