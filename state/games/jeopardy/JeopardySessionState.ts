@@ -29,7 +29,16 @@ export namespace JeopardyState {
         }[]
     }
 
-    export type Frame = { id: 'none' } | PackPreviewFrame | RoundPreviewFrame | ShowQuestionBoardFrame
+    export interface QuestionContentFrame {
+        id: 'question-content'
+        type: 'text' | 'voice' | 'video' | 'image'
+        content: string
+        answeringStatus: 'too-early' | 'allowed' | 'too-late'
+        answerProgress: number | null
+        // TODO: mode
+    }
+
+    export type Frame = { id: 'none' } | PackPreviewFrame | RoundPreviewFrame | ShowQuestionBoardFrame | QuestionContentFrame
 }
 
 export type JeopardySessionState = {

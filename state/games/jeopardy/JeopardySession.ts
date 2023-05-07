@@ -1,13 +1,15 @@
+import logger from 'logger'
+import { random, shuffle } from 'util/array'
+import { Chronos, TimeHall } from 'util/chronos'
 import { Game } from 'state/common/game/Game'
 import { GameOnlyActed } from 'state/common/game/GameSession.decorators'
-import { A, E, P, GameSession, GameSessionActionHandlerEventOptions, GameSessionActionsName } from 'state/common/game/GameSession'
+import { A, E, P, GameSession, GameSessionActionHandlerEventOptions, GameSessionActionsName, GameSessionAction } from 'state/common/game/GameSession'
 import { Player } from 'state/common/game/Player'
-import { Chronos, TimeHall } from 'util/chronos'
 import { GeneralSuccess, GeneralFailure, R } from 'util/universalTypes'
 import { Jeopardy } from './Jeopardy'
 import { JeopardySessionState, JeopardyState } from './JeopardySessionState'
-import { random, shuffle } from 'util/array'
 import { JeopardyPlayer } from './JeopardyPlayer'
+import { JeopardyDeclaration } from './JeopardyPack.types'
 
 export class JeopardySession extends GameSession {
     readonly state: JeopardySessionState
@@ -40,6 +42,12 @@ export class JeopardySession extends GameSession {
         return super.action(actor, String(type), payload, eventOptions)
     }
 
+    act<N extends GameSessionActionsName<JeopardySession>>(type: N, payload: Parameters<this[N]>[1]) {
+        return new Promise(res => {
+            this.action(this.game, type, payload, { complete: () => res(null) })
+        })
+    }
+
     data() {
         const { internal, ...state } = this.state
 
@@ -51,26 +59,94 @@ export class JeopardySession extends GameSession {
             lobbyId: this.game.lobby.id,
             session: this.data()
         })
-
-        this.actionSequence([
-            [this.game, '$PackPreview', null],
-            [this.game, '$RoundPreview', { roundId: 0 }],
-            // TODO random(this.game.answeringPlayers).data().id
-            [this.game, '$ShowQuestionBoard', { roundId: 0, playerId: random(this.game.players).data().id }]
-        ])
-    }
-
-    async actionSequence(actionData: [Parameters<this['action']>[0], Parameters<this['action']>[1], Parameters<this['action']>[2]][]) {
-        for (const [actor, action, payload] of actionData) {
-            await new Promise(resolve => {
-                this.action(actor, action, payload, { complete: () => resolve(null) })
-            })
-        }
+        ;(async () => {
+            await this.act('$PackPreview', null)
+            await this.act('$RoundPreview', { roundId: 0 })
+            await this.act('$ShowQuestionBoard', { roundId: 0, playerId: random(this.game.players).data().id })
+        })()
     }
 
     @GameOnlyActed
-    $ShowQuestion(actor: A, payload: { questionId: `${number}-${number}-${number}` }, { complete }: E): R {
-        complete()
+    $AwaitAnswer(actor: A, payload: P, { complete }: E): R {
+        if (this.state.frame.id !== 'question-content') {
+            return {
+                success: false,
+                message: 'Cannot wait answer for non question-content frame'
+            }
+        }
+
+        const answerPossibilityDuration = 5
+
+        this.timeHall.createAndStartEvent('AwaitAnswer', answerPossibilityDuration, complete)
+
+        return {
+            success: true
+        }
+    }
+
+    showAtom(atom: JeopardyDeclaration.QuestionScenarioContentAtom, beforeMarker: boolean) {
+        const frame: JeopardyState.QuestionContentFrame = {
+            id: 'question-content',
+            content: atom._text,
+            type: atom._attributes?.type || 'text',
+            answeringStatus: beforeMarker ? 'too-early' : 'too-late',
+            answerProgress: null
+        }
+
+        let contentDuration = 5
+
+        if (frame.type === 'video' || frame.type === 'voice') {
+            let prefix = frame.type === 'video' ? 'Video' : 'Audio'
+
+            const mediaDuration = this.game.pack.mediaDurationMap[`${prefix}/${frame.content.slice(1)}`]
+
+            if (mediaDuration) {
+                contentDuration = mediaDuration
+            } else {
+                contentDuration = 10
+                logger.error(frame, `Cannot get media duration for media!`)
+            }
+        }
+
+        this.update({
+            frame
+        })
+
+        return this.timeHall.createAndStartEvent('QuestionAtom', contentDuration).completion
+    }
+
+    @GameOnlyActed
+    $ShowQuestionContent(actor: A, payload: { questionId: `${number}-${number}-${number}` }, { complete }: E): R {
+        const scenario = this.game.pack.getQuestionScenarioById(payload.questionId)
+
+        if (!scenario) {
+            complete()
+            return {
+                success: false,
+                message: 'Question do not exist'
+            }
+        }
+
+        const [contentBeforeAnswer, contentAfterAnswer] = scenario
+
+        ;(async () => {
+            for (const atom of contentBeforeAnswer) {
+                await this.showAtom(atom, true)
+            }
+
+            await this.act('$AwaitAnswer', null)
+
+            for (const atom of contentAfterAnswer) {
+                await this.showAtom(atom, false)
+            }
+
+            this.state.internal.answeredQuestions.push(payload.questionId)
+
+            this.act('$ShowQuestionBoard', { roundId: 0, playerId: random(this.game.players).data().id })
+
+            complete()
+        })()
+
         return {
             success: true
         }
@@ -132,16 +208,9 @@ export class JeopardySession extends GameSession {
         })
 
         this.timeHall.createAndStartEvent('PickQuestion', 1, () => {
-            this.update({
-                frame: {
-                    ...this.state.frame,
-                    pickedQuestion: undefined
-                } as Partial<JeopardyState.ShowQuestionBoardFrame>
-            })
-
             complete()
 
-            this.action(this.game, '$ShowQuestion', { questionId: payload.questionId }, { complete: () => {} })
+            this.act('$ShowQuestionContent', { questionId: payload.questionId })
         })
 
         return {
@@ -239,7 +308,7 @@ export class JeopardySession extends GameSession {
     }
 
     @GameOnlyActed
-    $PackPreview(actor: A, payload: P, { complete }: E): R {
+    $PackPreview(actor: A, payload: null, { complete }: E): R {
         this.timeHall.createAndStartEvent('PackPreview', 10, complete)
 
         const themes = shuffle(this.game.pack.getNonFinalThemes())
@@ -248,7 +317,7 @@ export class JeopardySession extends GameSession {
             frame: {
                 id: 'pack-preview',
                 packName: this.game.pack.declaration.package._attributes.name,
-                author: this.game.pack.declaration.package._attributes.name,
+                author: this.game.pack.declaration.package.info.authors.author._text,
                 dateCreated: this.game.pack.declaration.package._attributes.date,
                 themes
             }

@@ -18,6 +18,8 @@
         "@mui/styled-engine-sc": "^5.11.0",
         "cookies-next": "^2.1.1",
         "cross-env": "^7.0.3",
+        "ffprobe-static": "^3.1.0",
+        "fluent-ffmpeg": "^2.1.2",
         "formidable": "^2.1.1",
         "jszip": "^3.10.1",
         "next": "^13.2.4",
@@ -40,6 +42,8 @@
         "xml-js": "^1.6.11"
     },
     "devDependencies": {
+        "@types/ffprobe-static": "^2.0.1",
+        "@types/fluent-ffmpeg": "^2.1.21",
         "@types/formidable": "^2.0.5",
         "@types/jest": "^29.5.1",
         "@types/node": "18.7.23",

@@ -8,7 +8,7 @@ let logger
 if (process.env.NODE_ENV === 'development') {
     logger = pino(
         {
-            level: 'debug',
+            level: 'warn',
             transport: {
                 target: 'pino-pretty',
                 options: {
