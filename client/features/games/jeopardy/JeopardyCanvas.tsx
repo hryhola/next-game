@@ -1,11 +1,13 @@
-import React from 'react'
+import React, { MutableRefObject } from 'react'
 import { PackPreview } from './frames/JeopardyPackPreview'
 import { QuestionBoard } from './frames/JeopardyQuestionBoard'
+import { QuestionContent } from './frames/JeopardyQuestionContent'
 import { RoundPreview } from './frames/JeopardyRoundPreview'
-import { useJeopardy } from './JeopardyView'
+import { JeopardyMedia, useJeopardy } from './JeopardyView'
 
 type JeopardyCanvasProps = {
     isPackLoading: boolean
+    Resources: MutableRefObject<JeopardyMedia>
 }
 
 export const JeopardyCanvas: React.FC<JeopardyCanvasProps> = props => {
@@ -22,6 +24,8 @@ export const JeopardyCanvas: React.FC<JeopardyCanvasProps> = props => {
             return <RoundPreview {...jeopardy.session.frame} />
         case 'question-board':
             return <QuestionBoard {...jeopardy.session.frame} />
+        case 'question-content':
+            return <QuestionContent {...jeopardy.session.frame} Resources={props.Resources} />
         case 'none':
         default:
             return <></>

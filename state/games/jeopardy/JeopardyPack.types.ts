@@ -26,10 +26,11 @@ export namespace JeopardyDeclaration {
         }
     }
 
-    export type QuestionScenarioAtom = QuestionScenarioAtomImage | QuestionScenarioAtomVoice | QuestionScenarioAtomVideo | QuestionScenarioAtomMarker
+    export type QuestionScenarioContentAtom = QuestionScenarioAtomImage | QuestionScenarioAtomVoice | QuestionScenarioAtomVideo
+    export type QuestionScenarioAtom = QuestionScenarioContentAtom | QuestionScenarioAtomMarker
 
     export interface QuestionScenario {
-        atom: QuestionScenarioAtom[]
+        atom: QuestionScenarioAtom | QuestionScenarioAtom[]
     }
 
     export interface Question {

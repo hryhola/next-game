@@ -125,9 +125,11 @@ export abstract class GameSession {
     update(data: RecursivePartial<this['state']>) {
         Object.assign(this.state, data)
 
+        const { internal, ...publicData } = data
+
         this.game.publish('Game-SessionUpdate', {
             lobbyId: this.game.lobby.id,
-            data: this.state
+            data: publicData
         })
     }
 }
