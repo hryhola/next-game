@@ -117,6 +117,7 @@ type Props = {
         onFullscreen?: (value: boolean) => void
         height?: string
     }[]
+    buttons?: JSX.Element[]
     onViewOpen?: () => void
     onViewClose?: () => void
     label: string
@@ -164,6 +165,7 @@ const OverlayedTabs: React.FC<Props> = props => {
                             <Tab key={key} label={header} {...a11yProps(key)} />
                         ))}
                     </Tabs>
+                    {props.buttons ? props.buttons.map(b => b) : <></>}
                     {popoverViews.map((p, key) => (
                         <PopoverView
                             sx={{ ml: key === 0 ? 'auto' : '' }}

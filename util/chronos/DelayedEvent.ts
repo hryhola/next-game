@@ -56,4 +56,19 @@ export class DelayedEvent {
         this.pauseTime = null
         return this
     }
+
+    resolve() {
+        if (!this.job) {
+            throw new Error('Cannot resolve a DelayedEvent that without job!')
+        }
+
+        this.job.cancel()
+
+        if (this.callback) {
+            this.callback()
+        }
+        this.resolvePromise(null)
+
+        this.pauseTime = null
+    }
 }

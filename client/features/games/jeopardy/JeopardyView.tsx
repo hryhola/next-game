@@ -7,6 +7,8 @@ import { createGame } from '../common/GameFactory'
 import { NoSession } from '../common/NoSession'
 import { JeopardyCanvas } from './JeopardyCanvas'
 import { LoadingOverlay } from 'client/ui/loading-overlay/LoadingOverlay'
+import { Button } from '@mui/material'
+import { useLobby, useUser } from 'client/context/list'
 
 export type JeopardyMedia = {
     Audio: Record<string, string>
@@ -58,6 +60,12 @@ async function getMediaFilesFromPack(jeopardyPack: Uint8Array): Promise<Jeopardy
 }
 
 export const [JeopardyView, useJeopardy, useJeopardyAction, useActionSender] = createGame<Jeopardy>(() => {
+    const lobby = useLobby()
+    const game = useJeopardy()
+    const user = useUser()
+
+    const actionSender = useActionSender()
+
     const [isPackLoading, setIsPackLoading] = useState(true)
 
     const Resources = useRef<JeopardyMedia>({
@@ -65,8 +73,6 @@ export const [JeopardyView, useJeopardy, useJeopardyAction, useActionSender] = c
         Images: {},
         Video: {}
     })
-
-    const game = useJeopardy()
 
     useEffect(() => {
         if (!game.initialData?.pack) return
@@ -83,12 +89,43 @@ export const [JeopardyView, useJeopardy, useJeopardyAction, useActionSender] = c
 
     const highlightedPlayedId = game.session?.frame.id === 'question-board' ? game.session.frame.pickerId : undefined
 
+    const gameControls: JSX.Element[] = []
+
+    if (lobby.myRole !== 'spectator') {
+        const isMasterView = game.players.some(p => p.id === user.id && p.playerIsMaster)
+
+        gameControls.push(
+            <Button
+                disabled={
+                    !game.session ||
+                    (isMasterView
+                        ? game.session?.frame.id === 'question-board'
+                        : game.session?.frame.id !== 'question-content' || game.session.frame.skipVoted.includes(user.id))
+                }
+                onClick={() => actionSender('$SkipVote', null)}
+                key="1"
+            >
+                Skip
+            </Button>
+        )
+
+        if (!isMasterView) {
+            const answerAllowed = game.session?.frame.id === 'question-content' && game.session.frame.answeringStatus === 'allowed'
+
+            gameControls.push(
+                <Button disabled={!answerAllowed} key="2" sx={{ minWidth: '50%' }}>
+                    THE BUTTON
+                </Button>
+            )
+        }
+    }
+
     return (
         <>
             <PlayersHeader members={game.players} isLoading={game.isLoading} highlightedPlayedId={highlightedPlayedId} />
             <JeopardyCanvas isPackLoading={isPackLoading} Resources={Resources} />
             {isPackLoading ? <LoadingOverlay isLoading={isPackLoading} text="Pack loading" zIndex="auto" /> : <NoSession game={game} />}
-            <LobbyControls />
+            <LobbyControls buttons={gameControls} />
         </>
     )
 })

@@ -1,4 +1,4 @@
-import { Game } from 'state'
+import { Game, Player } from 'state'
 import { A, E, P } from 'state/common/game/GameSession'
 
 export const ActedBy = (actorPredicate: (actor: A) => boolean) => (_target: any, _propertyName: string, descriptor: PropertyDescriptor) => {
@@ -19,6 +19,7 @@ export const ActedBy = (actorPredicate: (actor: A) => boolean) => (_target: any,
 export const GameOnlyActed = ActedBy(actor => actor instanceof Game)
 
 export const GameAndMasterOnlyActed = ActedBy(actor => actor instanceof Game || actor.state.playerIsMaster)
+export const PlayersOnlyActed = ActedBy(actor => actor instanceof Player)
 
 export function Hidden(_target: any, _propertyName: string, descriptor: PropertyDescriptor) {
     descriptor.value.hidden = true

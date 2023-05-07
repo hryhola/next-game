@@ -1,3 +1,5 @@
+import { Box, Grid, LinearProgress } from '@mui/material'
+import { overlayedTabsToolbarHeight } from 'client/ui/overlayed-tabs/OverlayedTabs'
 import React, { MutableRefObject } from 'react'
 import { JeopardyState } from 'state/games/jeopardy/JeopardySessionState'
 import { JeopardyMedia } from '../JeopardyView'
@@ -15,8 +17,6 @@ export const QuestionContent: React.FC<
             break
         }
         case 'video': {
-            const pageWidth = document.documentElement.clientWidth || document.body.clientWidth
-
             content = <video style={{ maxWidth: '100vw' }} autoPlay src={props.Resources.current.Video[props.content.slice(1)]}></video>
             break
         }
@@ -31,10 +31,17 @@ export const QuestionContent: React.FC<
     }
 
     return (
-        <Grid display="grid" justifyContent="center" alignContent="center" width="100vw" height="var(--fullHeight)" overflow="hidden">
-            <Grid sx={{ textAlign: 'center' }} item>
-                {content}
+        <>
+            <Grid display="grid" justifyContent="center" alignContent="center" width="100vw" height="var(--fullHeight)" overflow="hidden">
+                <Grid sx={{ textAlign: 'center' }} item>
+                    {content}
+                </Grid>
             </Grid>
-        </Grid>
+            {props.answeringStatus === 'allowed' && typeof props.answerProgress === 'number' && (
+                <Box sx={{ position: 'fixed', width: '100vw', bottom: overlayedTabsToolbarHeight }}>
+                    <LinearProgress variant="determinate" value={props.answerProgress} />
+                </Box>
+            )}
+        </>
     )
 }

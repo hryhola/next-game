@@ -35,6 +35,7 @@ export namespace JeopardyState {
         content: string
         answeringStatus: 'too-early' | 'allowed' | 'too-late'
         answerProgress: number | null
+        skipVoted: string[]
         // TODO: mode
     }
 
@@ -43,6 +44,7 @@ export namespace JeopardyState {
 
 export type JeopardySessionState = {
     internal: {
+        currentRoundId: number
         answeredQuestions: string[]
     }
     frame: JeopardyState.Frame
