@@ -1,31 +1,51 @@
-import React, { MutableRefObject } from 'react'
+import React, { useEffect, useRef } from 'react'
 import { PackPreview } from './frames/JeopardyPackPreview'
 import { QuestionBoard } from './frames/JeopardyQuestionBoard'
 import { QuestionContent } from './frames/JeopardyQuestionContent'
 import { RoundPreview } from './frames/JeopardyRoundPreview'
-import { JeopardyMedia, useJeopardy } from './JeopardyView'
+import { useJeopardy } from './JeopardyView'
+import { fetchPack, getMediaFilesFromPack, JeopardyMedia } from './utils/jeopardyPackLoading'
 
 type JeopardyCanvasProps = {
     isPackLoading: boolean
-    Resources: MutableRefObject<JeopardyMedia>
+    setIsPackLoading: (val: boolean) => void
 }
 
 export const JeopardyCanvas: React.FC<JeopardyCanvasProps> = props => {
-    const jeopardy = useJeopardy()
+    const game = useJeopardy()
 
-    if (props.isPackLoading || !jeopardy.session) {
+    const Resources = useRef<JeopardyMedia>({
+        Audio: {},
+        Images: {},
+        Video: {}
+    })
+
+    useEffect(() => {
+        if (!game.initialData?.pack) return
+        ;(async () => {
+            props.setIsPackLoading(true)
+
+            const packArchive = await fetchPack(game.initialData.pack.value)
+
+            Resources.current = await getMediaFilesFromPack(packArchive)
+
+            props.setIsPackLoading(false)
+        })()
+    }, [game.initialData])
+
+    if (props.isPackLoading || !game.session) {
         return <></>
     }
 
-    switch (jeopardy.session.frame.id) {
+    switch (game.session.frame.id) {
         case 'pack-preview':
-            return <PackPreview {...jeopardy.session.frame} />
+            return <PackPreview {...game.session.frame} />
         case 'rounds-preview':
-            return <RoundPreview {...jeopardy.session.frame} />
+            return <RoundPreview {...game.session.frame} />
         case 'question-board':
-            return <QuestionBoard {...jeopardy.session.frame} />
+            return <QuestionBoard {...game.session.frame} />
         case 'question-content':
-            return <QuestionContent {...jeopardy.session.frame} Resources={props.Resources} />
+            return <QuestionContent {...game.session.frame} Resources={Resources} />
         case 'none':
         default:
             return <></>

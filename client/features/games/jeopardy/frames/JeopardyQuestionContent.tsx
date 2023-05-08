@@ -2,7 +2,7 @@ import { Box, Grid, LinearProgress } from '@mui/material'
 import { overlayedTabsToolbarHeight } from 'client/ui/overlayed-tabs/OverlayedTabs'
 import React, { MutableRefObject } from 'react'
 import { JeopardyState } from 'state/games/jeopardy/JeopardySessionState'
-import { JeopardyMedia } from '../JeopardyView'
+import { JeopardyMedia } from '../utils/jeopardyPackLoading'
 
 export const QuestionContent: React.FC<
     JeopardyState.QuestionContentFrame & {
