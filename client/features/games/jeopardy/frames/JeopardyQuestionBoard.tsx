@@ -2,14 +2,16 @@ import React from 'react'
 import { JeopardyState } from 'state/games/jeopardy/JeopardySessionState'
 import { Box, Button, Divider } from '@mui/material'
 import { useLobby, useUser } from 'client/context/list'
-import { useActionSender } from '../JeopardyView'
+import { useActionSender, useJeopardy } from '../JeopardyView'
 
 export const QuestionBoard: React.FC<JeopardyState.ShowQuestionBoardFrame> = props => {
     const sendAction = useActionSender()
     const user = useUser()
     const lobby = useLobby()
+    const game = useJeopardy()
 
     const isMyTurn = props.pickerId === user.id
+    const isMasterView = game.players.some(p => p.id === user.id && p.playerIsMaster)
 
     const handleQuestionPick: React.MouseEventHandler<HTMLButtonElement> = event => {
         const questionId = event.currentTarget.id as `${number}-${number}-${number}`
@@ -36,7 +38,7 @@ export const QuestionBoard: React.FC<JeopardyState.ShowQuestionBoardFrame> = pro
                                     background: t => (props.pickedQuestion === q.questionId ? t.palette.success.main + '!important' : undefined),
                                     color: t => (props.pickedQuestion === q.questionId ? t.palette.success.contrastText + '!important' : undefined)
                                 }}
-                                disabled={lobby.myRole === 'spectator' || !isMyTurn || q.isAnswered}
+                                disabled={lobby.myRole === 'spectator' || (isMasterView ? false : !isMyTurn) || q.isAnswered}
                                 onClick={handleQuestionPick}
                             >
                                 {!q.isAnswered ? q.price : ''}

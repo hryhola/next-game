@@ -112,16 +112,88 @@ export class JeopardySession extends GameSession {
     }
 
     @PlayersOnlyActed
+    $AnswerRequest(actor: JeopardyPlayer, payload: P, { complete }: E) {
+        const { frame: currFrame } = this.state
+
+        if (currFrame.id !== 'question-content') {
+            complete()
+            return {
+                success: false,
+                message: 'Answering not allowed on non question-content frame'
+            }
+        }
+
+        if (currFrame.answerCooldownPlayerIds.includes(actor.member.user.id)) {
+            complete()
+            return {
+                success: false,
+                message: `Player ${actor.member.user.state.userNickname} is on cooldown!`
+            }
+        }
+
+        const frame = { ...currFrame }
+
+        const answerCooldown = 2
+
+        if (currFrame.answeringStatus !== 'allowed') {
+            frame.answerCooldownPlayerIds.push(actor.member.user.id)
+
+            this.timeHall.createAndStartEvent('Cooldown-' + actor.member.user.id, answerCooldown, () => {
+                if (this.state.frame.id !== 'question-content') return
+
+                const _frame = { ...this.state.frame }
+
+                _frame.answerCooldownPlayerIds = _frame.answerCooldownPlayerIds.filter(i => i !== actor.member.user.id)
+
+                this.update({ frame: _frame })
+            })
+
+            this.update({ frame })
+
+            complete()
+
+            return {
+                success: true,
+                isPlayerOnCooldown: true
+            }
+        }
+
+        if (!currFrame.answeringPlayerId) {
+            frame.answeringPlayerId = actor.member.user.id
+            frame.answeringStatus = 'too-late'
+        } else {
+            logger.warn('This code should be unreachable! If we have answeringPlayerId, then answeringStatus should be not-allowed')
+
+            frame.answerCooldownPlayerIds.push(actor.member.user.id)
+        }
+
+        this.update({ frame })
+
+        complete()
+
+        return {
+            success: true
+        }
+    }
+
+    @PlayersOnlyActed
     $SkipVote(actor: JeopardyPlayer, payload: P, { complete }: E): R {
+        if (actor.state.playerIsMaster) {
+            this.skip()
+
+            complete()
+
+            return {
+                success: true
+            }
+        }
+
         if (!actor.state.playerIsMaster && this.state.frame.id !== 'question-content') {
+            complete()
             return {
                 success: false,
                 message: 'Cannot wait skip question for non question-content frame'
             }
-        }
-
-        if (actor.state.playerIsMaster) {
-            this.skip()
         }
 
         const { id: userId } = actor.member.user
@@ -129,6 +201,7 @@ export class JeopardySession extends GameSession {
         const currFrame = this.state.frame as JeopardyState.QuestionContentFrame
 
         if (currFrame.skipVoted.includes(userId)) {
+            complete()
             return {
                 success: false,
                 message: 'You already voted!'
@@ -145,6 +218,8 @@ export class JeopardySession extends GameSession {
         if (frame.skipVoted.length === this.game.answeringPlayers.length) {
             this.skip()
         }
+
+        complete()
 
         return {
             success: true
@@ -195,14 +270,19 @@ export class JeopardySession extends GameSession {
         }
     }
 
-    showAtom(atom: JeopardyDeclaration.QuestionScenarioContentAtom, beforeMarker: boolean) {
+    showAtom(questionId: `${number}-${number}-${number}`, atom: JeopardyDeclaration.QuestionScenarioContentAtom, beforeMarker: boolean) {
+        const currFrame = this.state.frame as JeopardyState.QuestionContentFrame
+
         const frame: JeopardyState.QuestionContentFrame = {
+            ...currFrame,
+            questionId,
             id: 'question-content',
             content: atom._text,
             type: atom._attributes?.type || 'text',
             answeringStatus: beforeMarker ? 'too-early' : 'too-late',
             answerProgress: null,
-            skipVoted: []
+            skipVoted: [],
+            answerCooldownPlayerIds: currFrame.answerCooldownPlayerIds || []
         }
 
         let contentDuration = 5
@@ -243,13 +323,13 @@ export class JeopardySession extends GameSession {
 
         ;(async () => {
             for (const atom of contentBeforeAnswer) {
-                await this.showAtom(atom, true)
+                await this.showAtom(payload.questionId, atom, true)
             }
 
             await this.act('$AwaitAnswer', null)
 
             for (const atom of contentAfterAnswer) {
-                await this.showAtom(atom, false)
+                await this.showAtom(payload.questionId, atom, false)
             }
 
             this.state.internal.answeredQuestions.push(payload.questionId)
@@ -281,11 +361,11 @@ export class JeopardySession extends GameSession {
             }
         }
 
-        if (this.state.frame.pickerId !== actor.member.user.id) {
+        if (!actor.state.playerIsMaster && this.state.frame.pickerId !== actor.member.user.id) {
             complete()
             return {
                 success: false,
-                message: `Only user with ID ${this.state.frame.pickerId} can pick question!`
+                message: `Only user with ID ${this.state.frame.pickerId} or master can pick question!`
             }
         }
 
