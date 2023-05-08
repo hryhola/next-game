@@ -30,11 +30,14 @@ export namespace JeopardyState {
     }
 
     export interface QuestionContentFrame {
+        questionId: `${number}-${number}-${number}`
         id: 'question-content'
         type: 'text' | 'voice' | 'video' | 'image'
         content: string
         answeringStatus: 'too-early' | 'allowed' | 'too-late'
         answerProgress: number | null
+        answerCooldownPlayerIds: string[]
+        answeringPlayerId: string | null
         skipVoted: string[]
         // TODO: mode
     }

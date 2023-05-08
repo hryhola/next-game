@@ -5,7 +5,7 @@ import { Player } from './Player'
 
 interface HeaderProps {
     members: PlayerData[]
-    highlightedPlayedId?: string
+    highlightedPlayedIds?: string[]
     isLoading: boolean
 }
 
@@ -54,7 +54,7 @@ export const PlayersHeader: React.FC<HeaderProps> = props => {
                         .sort((a, b) => a.memberPosition - b.memberPosition)
                         .map(p => (
                             <Grid key={p.id} item>
-                                <Player player={p} isHighlighted={p.id === props.highlightedPlayedId} size="medium" />
+                                <Player player={p} isHighlighted={props.highlightedPlayedIds?.includes(p.id)} size="medium" />
                             </Grid>
                         ))
                 )}

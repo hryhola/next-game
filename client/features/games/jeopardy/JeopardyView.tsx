@@ -63,6 +63,7 @@ export const [JeopardyView, useJeopardy, useJeopardyAction, useActionSender] = c
     const lobby = useLobby()
     const game = useJeopardy()
     const user = useUser()
+    const [temporaryHighlightedPlayerIds, setTemporaryHighlightedPlayerIds] = useState<string[]>([])
 
     const actionSender = useActionSender()
 
@@ -87,7 +88,22 @@ export const [JeopardyView, useJeopardy, useJeopardyAction, useActionSender] = c
         })()
     }, [game.initialData])
 
-    const highlightedPlayedId = game.session?.frame.id === 'question-board' ? game.session.frame.pickerId : undefined
+    useJeopardyAction('$AnswerRequest', data => {
+        if (data.result.isPlayerOnCooldown) {
+            setTemporaryHighlightedPlayerIds(values => [...values, data.actor.id])
+            setTimeout(() => setTemporaryHighlightedPlayerIds(value => [...value.filter(v => v !== data.actor.id)]), 500)
+        }
+    })
+
+    const highlightedPlayedIds: string[] = []
+
+    if (game.session?.frame.id === 'question-board' && game.session.frame.pickerId) {
+        highlightedPlayedIds.push(game.session.frame.pickerId)
+    }
+
+    if (game.session?.frame.id === 'question-content' && game.session.frame.answeringPlayerId) {
+        highlightedPlayedIds.push(game.session.frame.answeringPlayerId)
+    }
 
     const gameControls: JSX.Element[] = []
 
@@ -110,10 +126,13 @@ export const [JeopardyView, useJeopardy, useJeopardyAction, useActionSender] = c
         )
 
         if (!isMasterView) {
-            const answerAllowed = game.session?.frame.id === 'question-content' && game.session.frame.answeringStatus === 'allowed'
+            const theButtonEnabled =
+                game.session?.frame.id === 'question-content' &&
+                !game.session.frame.answerCooldownPlayerIds.includes(user.id) &&
+                game.session.frame.answeringPlayerId !== user.id
 
             gameControls.push(
-                <Button disabled={!answerAllowed} key="2" sx={{ minWidth: '50%' }}>
+                <Button onClick={() => actionSender('$AnswerRequest', null)} disabled={!theButtonEnabled} key="2" fullWidth>
                     THE BUTTON
                 </Button>
             )
@@ -122,7 +141,11 @@ export const [JeopardyView, useJeopardy, useJeopardyAction, useActionSender] = c
 
     return (
         <>
-            <PlayersHeader members={game.players} isLoading={game.isLoading} highlightedPlayedId={highlightedPlayedId} />
+            <PlayersHeader
+                members={game.players}
+                isLoading={game.isLoading}
+                highlightedPlayedIds={[...highlightedPlayedIds, ...temporaryHighlightedPlayerIds]}
+            />
             <JeopardyCanvas isPackLoading={isPackLoading} Resources={Resources} />
             {isPackLoading ? <LoadingOverlay isLoading={isPackLoading} text="Pack loading" zIndex="auto" /> : <NoSession game={game} />}
             <LobbyControls buttons={gameControls} />

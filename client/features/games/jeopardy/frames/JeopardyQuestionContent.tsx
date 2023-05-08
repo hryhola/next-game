@@ -21,7 +21,12 @@ export const QuestionContent: React.FC<
             break
         }
         case 'voice': {
-            content = <audio autoPlay src={props.Resources.current.Audio[props.content.slice(1)]}></audio>
+            content = (
+                <>
+                    <audio autoPlay src={props.Resources.current.Audio[props.content.slice(1)]}></audio>
+                    <img src="/assets/jeopardy/audio.gif" alt="Audio question" />
+                </>
+            )
             break
         }
         case 'text':
@@ -37,7 +42,7 @@ export const QuestionContent: React.FC<
                     {content}
                 </Grid>
             </Grid>
-            {props.answeringStatus === 'allowed' && typeof props.answerProgress === 'number' && (
+            {props.answeringStatus === 'allowed' && props.answerProgress && (
                 <Box sx={{ position: 'fixed', width: '100vw', bottom: overlayedTabsToolbarHeight }}>
                     <LinearProgress variant="determinate" value={props.answerProgress} />
                 </Box>
