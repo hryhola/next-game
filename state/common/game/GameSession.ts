@@ -1,5 +1,6 @@
 import logger from 'logger'
-import { Game, Player } from 'state'
+import { Game, Player, User } from 'state'
+import { Events } from 'state/common/game/Game.events'
 import { GeneralSuccess, GeneralFailure, R, RecursivePartial } from 'util/universalTypes'
 import { GameAndMasterOnlyActed } from './GameSession.decorators'
 
@@ -86,10 +87,35 @@ export abstract class GameSession {
 
         this.log.push(action)
 
-        this.game.lobby.publish('Game-SessionAction', {
+        if (actionHandler.nonPublished === true) {
+            return {
+                success: true
+            }
+        }
+
+        const eventData: Events['Game-SessionAction'] = {
             ...action,
             lobbyId: this.game.lobby.id
-        })
+        }
+
+        if (actionHandler.publishingActorFilter) {
+            const actors = this.game.players.filter(actionHandler.publishingActorFilter)
+
+            actors.forEach(a =>
+                a.member.user.ws.send(
+                    JSON.stringify({
+                        ctx: 'Game-SessionAction',
+                        data: eventData
+                    })
+                )
+            )
+
+            return {
+                success: true
+            }
+        }
+
+        this.game.lobby.publish('Game-SessionAction', eventData)
 
         return {
             success: true
@@ -120,10 +146,14 @@ export abstract class GameSession {
         }
     }
 
-    abstract data(): object
+    abstract data(user: User | Game): object
 
     update(data: RecursivePartial<this['state']>) {
         Object.assign(this.state, data)
+
+        if (Object.keys(data).length === 1 && 'internal' in data) {
+            return
+        }
 
         const { internal, ...publicData } = data
 
@@ -138,7 +168,10 @@ export type GameSessionActionHandlerEventOptions = {
     complete: () => any
 }
 
-export type GameSessionActionHandler = (actor: Player | Game, payload: any, eventOptions: GameSessionActionHandlerEventOptions) => R
+export type GameSessionActionHandler = {
+    nonPublished?: boolean
+    publishingActorFilter?: (actor: A) => boolean
+} & ((actor: Player | Game, payload: any, eventOptions: GameSessionActionHandlerEventOptions) => R)
 
 export type A = Parameters<GameSessionActionHandler>[0]
 export type P = Parameters<GameSessionActionHandler>[1]

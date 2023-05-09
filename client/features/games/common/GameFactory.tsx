@@ -25,6 +25,7 @@ export const createGame = <Game extends AbstractGame>(Component: React.Component
         isLoading: boolean
         isSessionStarted: boolean
         session: ThisSessionData | null
+        _updateSession: (value: ThisSessionData) => void | ((setSession: (prev: ThisSessionData) => ThisSessionData) => void)
         initialData: ThisInitialData
     }
 
@@ -71,7 +72,7 @@ export const createGame = <Game extends AbstractGame>(Component: React.Component
 
         useEventHandler('Game-SessionUpdate', ({ lobbyId, data }) => {
             if (lobbyId === lobby.lobbyId) {
-                setSession(data)
+                setSession(prev => ({ ...prev, ...data }))
             }
         })
 
@@ -102,6 +103,7 @@ export const createGame = <Game extends AbstractGame>(Component: React.Component
             isLoading,
             isSessionStarted: session !== null,
             session,
+            _updateSession: setSession,
             initialData
         }
 

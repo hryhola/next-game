@@ -1,5 +1,5 @@
 import logger from 'logger'
-import { Lobby, LobbyMember, GameSession, Player } from 'state'
+import { Lobby, LobbyMember, GameSession, Player, User } from 'state'
 import { GeneralFailure, GeneralSuccess } from 'util/universalTypes'
 import { InitialGameData, InitialGameDataSchema } from './GameInitialData'
 
@@ -49,7 +49,7 @@ export abstract class Game {
 
         this.publish('Game-SessionEnd', {
             lobbyId: this.lobby.id,
-            session: this.currentSession.data(),
+            session: this.currentSession.data(this),
             players: this.players.map(p => p.data())
         })
 
@@ -58,7 +58,7 @@ export abstract class Game {
         delete this.currentSession
     }
 
-    data() {
+    data(user: User | Game) {
         const publicInitialData = Object.entries(this.initialData).reduce((acc, [key, value]) => {
             if (value.public) {
                 acc[key] = {
@@ -73,7 +73,7 @@ export abstract class Game {
         return {
             name: (this.constructor as typeof Game).gameName,
             players: this.players.map(p => p.data()),
-            session: this.currentSession?.data(),
+            session: this.currentSession?.data(user),
             initialData: publicInitialData
         }
     }
