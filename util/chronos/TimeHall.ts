@@ -1,4 +1,3 @@
-import logger from 'logger'
 import { DelayedEvent } from './DelayedEvent'
 
 export class TimeHall {
@@ -9,7 +8,7 @@ export class TimeHall {
         this.events = {}
     }
 
-    get nonPausedEvents() {
+    get nonPausedEvents(): [string[], DelayedEvent[]] {
         return Object.entries(this.events).reduce(
             (acc, [key, event]) => {
                 if (!event.isPaused) {
@@ -24,7 +23,9 @@ export class TimeHall {
 
     createEvent(name: string, delayInSeconds: number, callback?: () => void): DelayedEvent {
         const event = new DelayedEvent(delayInSeconds, () => {
-            delete this.events[name]
+            if (this.events[name]) {
+                delete this.events[name]
+            }
 
             if (callback) {
                 callback()
@@ -48,26 +49,18 @@ export class TimeHall {
 
     createAndStartEvent(name: string, delayInSeconds: number, callback?: () => void): DelayedEvent {
         const event = this.createEvent(name, delayInSeconds, callback)
-
         event.start()
-
         return event
     }
 
     cancelEvent(name: string, throwNotFound = false) {
-        const event = this.events[name]
+        if (this.events[name]) {
+            this.events[name].pause()
 
-        if (!event) {
-            if (!throwNotFound) {
-                return
-            } else {
-                throw new Error(`Event "${name}" not found`)
-            }
+            delete this.events[name]
+        } else if (throwNotFound) {
+            throw new Error(`Event "${name}" not found`)
         }
-
-        event.pause()
-
-        delete this.events[name]
     }
 
     resolveEvent(name: string) {
@@ -107,24 +100,12 @@ export class TimeHall {
 
         this.hallPausedEvents = [...this.hallPausedEvents, ...eventNames]
 
-        for (let i = 0; i < events.length; i++) {
-            try {
-                events[i].pause()
-            } catch (e) {
-                logger.warn(e)
-            }
-        }
+        for (let i = 0; i < events.length; i++) events[i].pause()
     }
 
     resume() {
         this.hallPausedEvents.forEach(eventName => {
-            if (this.events[eventName]) {
-                try {
-                    this.events[eventName].resume()
-                } catch (e) {
-                    logger.warn(e)
-                }
-            }
+            if (this.events[eventName]) this.events[eventName].resume()
         })
         this.hallPausedEvents = []
     }
