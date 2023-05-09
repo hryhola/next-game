@@ -2,7 +2,7 @@ import logger from 'logger'
 import { random, shuffle } from 'util/array'
 import { Chronos, TimeHall } from 'util/chronos'
 import { Game } from 'state/common/game/Game'
-import { GameOnlyActed, NonPublished, MasterOnlyActed, PlayersOnlyActed, PublishedForMasterOnly } from 'state/common/game/GameSession.decorators'
+import { GameOnlyActed, NonPublished, MasterOnlyActed, PlayersOnlyActed, PublishedForMasterOnly, ActedBy } from 'state/common/game/GameSession.decorators'
 import { A, E, P, GameSession, GameSessionActionHandlerEventOptions, GameSessionActionsName, GameSessionAction } from 'state/common/game/GameSession'
 import { Player } from 'state/common/game/Player'
 import { GeneralSuccess, GeneralFailure, R } from 'util/universalTypes'
@@ -11,6 +11,7 @@ import { JeopardySessionState, JeopardyState } from './JeopardySessionState'
 import { JeopardyPlayer } from './JeopardyPlayer'
 import { JeopardyDeclaration } from './JeopardyPack.types'
 import { User } from 'state/user/User'
+import { ActedByPlayers, OnFrame } from './JeopardySession.decorators'
 
 export class JeopardySession extends GameSession {
     readonly state: JeopardySessionState
@@ -131,31 +132,23 @@ export class JeopardySession extends GameSession {
 
     pauseAwaitAnswerRequest() {
         for (let i = 100; i >= 0; i--) {
-            this.timeHall.pauseEvent('AwaitAnswerRequestProgress' + i)
+            this.timeHall.pauseIfRunning('AwaitAnswerRequestProgress' + i)
         }
 
-        this.timeHall.pauseEvent('AwaitAnswerRequest')
+        this.timeHall.pauseIfRunning('AwaitAnswerRequest')
     }
 
     resumeAwaitAnswerRequest() {
         for (let i = 100; i >= 0; i--) {
-            try {
-                this.timeHall.resumeEvent('AwaitAnswerRequestProgress' + i)
-            } catch (e) {
-                logger.warn(e)
-            }
+            this.timeHall.resumeEventIfPaused('AwaitAnswerRequestProgress' + i)
         }
 
-        this.timeHall.resumeEvent('AwaitAnswerRequest')
+        this.timeHall.resumeEventIfPaused('AwaitAnswerRequest')
     }
 
     resolveAwaitAnswerRequest() {
         for (let i = 100; i >= 0; i--) {
-            try {
-                this.timeHall.cancelEvent('AwaitAnswerRequestProgress' + i)
-            } catch (e) {
-                logger.warn(e)
-            }
+            this.timeHall.cancelEvent('AwaitAnswerRequestProgress' + i)
         }
 
         this.timeHall.resolveEvent('AwaitAnswerRequest')
@@ -170,16 +163,14 @@ export class JeopardySession extends GameSession {
     }
 
     @NonPublished
-    @PlayersOnlyActed
+    @OnFrame(
+        'question-content',
+        ({ state }) =>
+            (actor: JeopardyPlayer) =>
+                state.frame.answeringPlayerId === actor.member.user.id,
+        'Not your turn!'
+    )
     $GiveAnswer(actor: JeopardyPlayer, payload: { text?: string }, { complete }: E): R {
-        if (this.state.internal.currentAnsweringPlayerId && actor.member.user.id !== this.state.internal.currentAnsweringPlayerId) {
-            complete()
-            return {
-                success: false,
-                message: `Not your turn! It\'s turn of ${actor.member.user.state.userNickname}`
-            }
-        }
-
         this.state.internal.currentAnsweringPlayerAnswerText = payload.text
         this.state.internal.currentAnsweringPlayerId = actor.member.user.id
 
@@ -193,32 +184,17 @@ export class JeopardySession extends GameSession {
     }
 
     @GameOnlyActed
+    @OnFrame('question-content', session => actor => session.state.internal.currentAnsweringPlayerId !== null)
     @PublishedForMasterOnly
     $AnswerVerifying(actor: A, payload: P, { complete }: E) {
-        if (this.state.frame.id !== 'question-content') {
-            complete()
+        const frame = this.state.frame as JeopardyState.QuestionContentFrame
 
-            return {
-                success: false,
-                message: 'Cannot start verifying process on non question-content frame!'
-            }
-        }
-
-        if (!this.state.internal.currentAnsweringPlayerId) {
-            complete()
-
-            return {
-                success: false,
-                message: 'Cannot start verifying process if there is no currentAnsweringPlayerId!'
-            }
-        }
-
-        const answers = this.game.pack.getAnswers(this.state.frame.questionId)
+        const answers = this.game.pack.getAnswers(frame.questionId)
 
         if (!answers) {
             return {
                 success: false,
-                message: `Cannot find such question! ${this.state.frame.questionId}`
+                message: `Cannot find such question! ${frame.questionId}`
             }
         }
 
@@ -245,7 +221,7 @@ export class JeopardySession extends GameSession {
                 }
 
                 this.update({
-                    frame: frame
+                    frame
                 })
             })
 
@@ -268,32 +244,14 @@ export class JeopardySession extends GameSession {
     }
 
     @PlayersOnlyActed
+    @OnFrame(
+        'question-content',
+        ({ state }) =>
+            (actor: JeopardyPlayer) =>
+                !state.frame.playersOnCooldown.includes(actor.member.user.id) && !state.frame.playersWhoAnswered.includes(actor.member.user.id)
+    )
     $AnswerRequest(actor: JeopardyPlayer, payload: P, { complete }: E) {
-        const { frame: currFrame } = this.state
-
-        if (currFrame.id !== 'question-content') {
-            complete()
-            return {
-                success: false,
-                message: 'Answering not allowed on non question-content frame'
-            }
-        }
-
-        if (currFrame.playersOnCooldown.includes(actor.member.user.id)) {
-            complete()
-            return {
-                success: false,
-                message: `Player ${actor.member.user.state.userNickname} is on cooldown!`
-            }
-        }
-
-        if (currFrame.playersWhoAnswered.includes(actor.member.user.id)) {
-            complete()
-            return {
-                success: false,
-                message: `Player ${actor.member.user.state.userNickname} is already gave the answer!`
-            }
-        }
+        const currFrame = this.state.frame as JeopardyState.QuestionContentFrame
 
         const frame = { ...currFrame }
 
@@ -382,7 +340,10 @@ export class JeopardySession extends GameSession {
         }
     }
 
-    @PlayersOnlyActed
+    @ActedByPlayers(
+        session => actor => actor.state.playerIsMaster || session.state.frame.id !== 'question-content',
+        'Cannot wait skip question for non question-content frame'
+    )
     $SkipVote(actor: JeopardyPlayer, payload: P, { complete }: E): R {
         if (actor.state.playerIsMaster) {
             this.skip()
@@ -391,14 +352,6 @@ export class JeopardySession extends GameSession {
 
             return {
                 success: true
-            }
-        }
-
-        if (!actor.state.playerIsMaster && this.state.frame.id !== 'question-content') {
-            complete()
-            return {
-                success: false,
-                message: 'Cannot wait skip question for non question-content frame'
             }
         }
 
@@ -433,14 +386,8 @@ export class JeopardySession extends GameSession {
     }
 
     @GameOnlyActed
+    @OnFrame('question-content')
     $AwaitAnswerRequest(actor: A, payload: P, { complete }: E): R {
-        if (this.state.frame.id !== 'question-content') {
-            return {
-                success: false,
-                message: 'Cannot wait answer for non question-content frame'
-            }
-        }
-
         const answerPossibilityDuration = 5
 
         for (let i = 100; i >= 0; i--) {
@@ -552,35 +499,15 @@ export class JeopardySession extends GameSession {
         }
     }
 
-    $PickQuestion(actor: A, payload: { questionId: `${number}-${number}-${number}` }, { complete }: E): R {
-        if (!(actor instanceof JeopardyPlayer)) {
-            complete()
-            return {
-                success: false,
-                message: 'Only JeopardyPlayer can pick question'
-            }
-        }
+    @PlayersOnlyActed
+    @OnFrame('question-board', session => (actor: JeopardyPlayer) => actor.state.playerIsMaster || session.state.frame.pickerId === actor.member.user.id)
+    $PickQuestion(actor: JeopardyPlayer, payload: { questionId: `${number}-${number}-${number}` }, { complete }: E): R {
+        const currFrame = this.state.frame as JeopardyState.ShowQuestionBoardFrame
 
-        if (this.state.frame.id !== 'question-board') {
-            complete()
+        if (currFrame.pickedQuestion) {
             return {
                 success: false,
-                message: 'Cannot pick question during non question-board frame'
-            }
-        }
-
-        if (!actor.state.playerIsMaster && this.state.frame.pickerId !== actor.member.user.id) {
-            complete()
-            return {
-                success: false,
-                message: `Only user with ID ${this.state.frame.pickerId} or master can pick question!`
-            }
-        }
-
-        if (this.state.frame.pickedQuestion) {
-            return {
-                success: false,
-                message: `Already picked a question! (${this.state.frame.pickedQuestion})`
+                message: `Already picked a question! (${currFrame.pickedQuestion})`
             }
         }
 
@@ -600,12 +527,12 @@ export class JeopardySession extends GameSession {
             }
         }
 
-        this.update({
-            frame: {
-                ...this.state.frame,
-                pickedQuestion: payload.questionId
-            } as Partial<JeopardyState.ShowQuestionBoardFrame>
-        })
+        const frame = {
+            ...currFrame,
+            pickedQuestion: payload.questionId
+        }
+
+        this.update({ frame })
 
         this.timeHall.createAndStartEvent('PickQuestion', 1, () => {
             complete()

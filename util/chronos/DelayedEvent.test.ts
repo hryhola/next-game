@@ -24,7 +24,7 @@ describe('DelayedEvent E2E', () => {
 
     it('should throw an error when trying to pause a non-started event', () => {
         const event = new DelayedEvent(2)
-        expect(() => event.pause()).toThrowError('Cannot pause a DelayedEvent that has not been started')
+        expect(() => event.pause()).toThrowError('Cannot pause a DelayedEvent that has is not running')
     })
 
     it('should throw an error when trying to resume a non-paused event', () => {

@@ -1,4 +1,4 @@
-import { Box, DialogContentText, Grid, LinearProgress, TextField } from '@mui/material'
+import { Box, DialogContentText, Grid, LinearProgress, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from '@mui/material'
 import { useUser } from 'client/context/list'
 import { useGlobalModal } from 'client/features/global-modal/GlobalModal'
 import { overlayedTabsToolbarHeight } from 'client/ui/overlayed-tabs/OverlayedTabs'
@@ -51,33 +51,43 @@ export const QuestionContent: React.FC<
         correctAnswers?: string[] | null
         incorrectAnswers?: string[] | null
     }) => {
+        const correctAnswers = data.correctAnswers || []
+        const incorrectAnswers = data.incorrectAnswers || []
+
+        const mostAnswersList: string[] = correctAnswers.length > incorrectAnswers.length ? correctAnswers : incorrectAnswers
+
         closeVerifyModal.current.close = globalModal.confirm({
             header: 'Verify answer',
             actionRequired: true,
+            inContainer: false,
             content: (
-                <DialogContentText>
-                    Answer: {data.currentAnsweringPlayerAnswerText ? data.currentAnsweringPlayerAnswerText : <i>no answer</i>}
-                    {data.correctAnswers?.length && (
-                        <Box>
-                            Correct answers{' '}
-                            <ul>
-                                {data.correctAnswers.map((a, i) => (
-                                    <li key={i}>{a}</li>
+                <Box>
+                    <Typography sx={{ pt: 2, pb: 3, pl: 2, pr: 2 }}>
+                        Answer: {data.currentAnsweringPlayerAnswerText ? data.currentAnsweringPlayerAnswerText : <i>no answer</i>}
+                    </Typography>
+                    {mostAnswersList.length ? (
+                        <Table aria-label="Answers" size="small">
+                            <TableHead>
+                                <TableRow>
+                                    <TableCell>Correct</TableCell>
+                                    <TableCell>Wrong</TableCell>
+                                </TableRow>
+                            </TableHead>
+                            <TableBody>
+                                {mostAnswersList.map((_, i) => (
+                                    <TableRow key={i}>
+                                        <TableCell sx={{ color: theme => theme.palette.success.light }}>{correctAnswers[i] ? correctAnswers[i] : ''}</TableCell>
+                                        <TableCell sx={{ color: theme => theme.palette.error.light }}>
+                                            {incorrectAnswers[i] ? incorrectAnswers[i] : ''}
+                                        </TableCell>
+                                    </TableRow>
                                 ))}
-                            </ul>
-                        </Box>
+                            </TableBody>
+                        </Table>
+                    ) : (
+                        <></>
                     )}
-                    {data.incorrectAnswers?.length && (
-                        <Box>
-                            Wrong answers{' '}
-                            <ul>
-                                {data.incorrectAnswers.map((a, i) => (
-                                    <li key={i}>{a}</li>
-                                ))}
-                            </ul>
-                        </Box>
-                    )}
-                </DialogContentText>
+                </Box>
             ),
             onConfirm: () => {},
             onCancel: () => {}
