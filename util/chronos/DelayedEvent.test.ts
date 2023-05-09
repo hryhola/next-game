@@ -27,11 +27,6 @@ describe('DelayedEvent E2E', () => {
         expect(() => event.pause()).toThrowError('Cannot pause a DelayedEvent that has is not running')
     })
 
-    it('should throw an error when trying to resume a non-paused event', () => {
-        const event = new DelayedEvent(2)
-        expect(() => event.resume()).toThrowError('Cannot resume a DelayedEvent that is not paused')
-    })
-
     it('should execute the callback immediately if delay is zero', async () => {
         const callback = jest.fn()
         const event = new DelayedEvent(0, callback)

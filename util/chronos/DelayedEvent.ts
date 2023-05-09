@@ -75,6 +75,10 @@ export class DelayedEvent {
             throw new Error('Cannot resume a DelayedEvent that is not paused')
         }
 
+        if (this.elapsedTime === 0) {
+            return this.start()
+        }
+
         this.startTimestamp = Date.now()
         const timeLeft = this.calculateTimeLeft()
         this.createJob(timeLeft)
