@@ -35,12 +35,21 @@ const JeopardyControls = (props: Props) => {
         if (!isMasterView) {
             const theButtonEnabled =
                 game.session?.frame.id === 'question-content' &&
-                !game.session.frame.answerCooldownPlayerIds.includes(user.id) &&
+                game.session.frame.answeringStatus !== 'answering' &&
+                game.session.frame.answeringStatus !== 'answer-verifying' &&
+                !game.session.frame.playersOnCooldown.includes(user.id) &&
+                !game.session.frame.playersWhoAnswered.includes(user.id) &&
                 game.session.frame.answeringPlayerId !== user.id
 
             gameControls.push(
                 <Button onClick={() => actionSender('$AnswerRequest', null)} disabled={!theButtonEnabled} key="2" fullWidth>
                     THE BUTTON
+                </Button>
+            )
+        } else {
+            gameControls.push(
+                <Button onClick={() => actionSender(game.session?.isPaused ? '$Resume' : '$Pause', null)} key="3">
+                    {game.session?.isPaused ? 'Resume' : 'Pause'}
                 </Button>
             )
         }

@@ -34,9 +34,12 @@ export namespace JeopardyState {
         id: 'question-content'
         type: 'text' | 'voice' | 'video' | 'image'
         content: string
-        answeringStatus: 'too-early' | 'allowed' | 'too-late'
-        answerProgress: number | null
-        answerCooldownPlayerIds: string[]
+        answeringStatus: 'too-early' | 'allowed' | 'answering' | 'answer-verifying' | 'too-late'
+        answerRequestTimeLeft: number | null // percentage
+        answerGivingTimeLeft: number | null // percentage
+        answerVerifyingTimeLeft: number | null // percentage
+        playersOnCooldown: string[]
+        playersWhoAnswered: string[]
         answeringPlayerId: string | null
         skipVoted: string[]
         // TODO: mode
@@ -49,6 +52,12 @@ export type JeopardySessionState = {
     internal: {
         currentRoundId: number
         answeredQuestions: string[]
+        currentAnsweringPlayerId: string | null
+        currentAnsweringPlayerAnswerText?: string | null
+        answerIsApproved?: boolean
+        correctAnswers?: string[] | null
+        incorrectAnswers?: string[] | null
     }
     frame: JeopardyState.Frame
+    isPaused: boolean
 }

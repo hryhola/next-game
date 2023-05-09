@@ -1,7 +1,10 @@
-import { Box, Grid, LinearProgress } from '@mui/material'
+import { Box, DialogContentText, Grid, LinearProgress, TextField } from '@mui/material'
+import { useUser } from 'client/context/list'
+import { useGlobalModal } from 'client/features/global-modal/GlobalModal'
 import { overlayedTabsToolbarHeight } from 'client/ui/overlayed-tabs/OverlayedTabs'
-import React, { MutableRefObject } from 'react'
-import { JeopardyState } from 'state/games/jeopardy/JeopardySessionState'
+import React, { MutableRefObject, useEffect, useRef } from 'react'
+import { JeopardySessionState, JeopardyState } from 'state/games/jeopardy/JeopardySessionState'
+import { useActionSender, useJeopardy, useJeopardyAction } from '../JeopardyView'
 import { JeopardyMedia } from '../utils/jeopardyPackLoading'
 
 export const QuestionContent: React.FC<
@@ -9,6 +12,95 @@ export const QuestionContent: React.FC<
         Resources: MutableRefObject<JeopardyMedia>
     }
 > = props => {
+    const user = useUser()
+    const game = useJeopardy()
+    const globalModal = useGlobalModal()
+    const actionSender = useActionSender()
+
+    const answerInputRef = useRef<HTMLInputElement>(null)
+    const closeAnswerModal = useRef<{ close: (() => void) | null }>({ close: null })
+    const closeVerifyModal = useRef<{ close: (() => void) | null }>({ close: null })
+
+    useEffect(() => {
+        if (props.answeringPlayerId === user.id) {
+            closeAnswerModal.current.close = globalModal.confirm({
+                header: 'Your answer',
+                actionRequired: true,
+                content: <TextField multiline inputRef={answerInputRef} />,
+                onConfirm: () =>
+                    actionSender('$GiveAnswer', {
+                        text: answerInputRef.current?.value
+                    })
+            })
+        } else if (closeAnswerModal.current.close) {
+            closeAnswerModal.current.close()
+        }
+    }, [props.answeringPlayerId])
+
+    useEffect(() => {
+        const session = game.session as JeopardySessionState
+
+        if (session?.internal?.currentAnsweringPlayerId) {
+            showVerifyModal(session.internal)
+        }
+    }, [(game.session as JeopardySessionState)?.internal?.currentAnsweringPlayerId])
+
+    const showVerifyModal = (data: {
+        currentAnsweringPlayerId: string | null
+        currentAnsweringPlayerAnswerText?: string | null
+        correctAnswers?: string[] | null
+        incorrectAnswers?: string[] | null
+    }) => {
+        closeVerifyModal.current.close = globalModal.confirm({
+            header: 'Verify answer',
+            actionRequired: true,
+            content: (
+                <DialogContentText>
+                    Answer: {data.currentAnsweringPlayerAnswerText ? data.currentAnsweringPlayerAnswerText : <i>no answer</i>}
+                    {data.correctAnswers?.length && (
+                        <Box>
+                            Correct answers{' '}
+                            <ul>
+                                {data.correctAnswers.map((a, i) => (
+                                    <li key={i}>{a}</li>
+                                ))}
+                            </ul>
+                        </Box>
+                    )}
+                    {data.incorrectAnswers?.length && (
+                        <Box>
+                            Wrong answers{' '}
+                            <ul>
+                                {data.incorrectAnswers.map((a, i) => (
+                                    <li key={i}>{a}</li>
+                                ))}
+                            </ul>
+                        </Box>
+                    )}
+                </DialogContentText>
+            ),
+            onConfirm: () => {},
+            onCancel: () => {}
+        })
+    }
+
+    useJeopardyAction('$AnswerVerifying', data => {
+        if (!data.result.success) return
+
+        const isMasterView = game.players.some(p => p.id === user.id && p.playerIsMaster)
+
+        if (isMasterView) {
+            // @ts-ignore
+            game._updateSession((s: JeopardySessionState) => ({
+                ...s,
+                internal: {
+                    ...(s.internal ? s.internal : {}),
+                    ...data.result.internal
+                }
+            }))
+        }
+    })
+
     let content!: JSX.Element
 
     switch (props.type) {
@@ -42,9 +134,19 @@ export const QuestionContent: React.FC<
                     {content}
                 </Grid>
             </Grid>
-            {props.answeringStatus === 'allowed' && props.answerProgress && (
+            {props.answeringStatus === 'answer-verifying' && props.answerVerifyingTimeLeft && (
                 <Box sx={{ position: 'fixed', width: '100vw', bottom: overlayedTabsToolbarHeight }}>
-                    <LinearProgress variant="determinate" value={props.answerProgress} />
+                    <LinearProgress variant="determinate" value={props.answerVerifyingTimeLeft} color="success" />
+                </Box>
+            )}
+            {props.answeringStatus === 'answering' && props.answerGivingTimeLeft && (
+                <Box sx={{ position: 'fixed', width: '100vw', bottom: overlayedTabsToolbarHeight }}>
+                    <LinearProgress variant="determinate" value={props.answerGivingTimeLeft} color="secondary" />
+                </Box>
+            )}
+            {props.answeringStatus === 'allowed' && props.answerRequestTimeLeft && (
+                <Box sx={{ position: 'fixed', width: '100vw', bottom: overlayedTabsToolbarHeight }}>
+                    <LinearProgress variant="determinate" value={props.answerRequestTimeLeft} />
                 </Box>
             )}
         </>

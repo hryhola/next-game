@@ -207,4 +207,26 @@ export class JeopardyPack {
 
         return [beforeMarker, afterMarker]
     }
+
+    getAnswers(questionId: `${number}-${number}-${number}`): [string[], string[]] | null {
+        const question = this.getQuestionById(questionId)
+
+        if (!question) {
+            return null
+        }
+
+        if (!question.right.answer) {
+            return [[], []]
+        }
+
+        const correct: string[] = Array.isArray(question.right.answer) ? question.right.answer.map(a => a._text) : [question.right.answer._text]
+
+        if (!question.wrong) {
+            return [correct, []]
+        }
+
+        const incorrect: string[] = Array.isArray(question.wrong.answer) ? question.wrong.answer.map(a => a._text) : [question.wrong.answer._text]
+
+        return [correct, incorrect]
+    }
 }

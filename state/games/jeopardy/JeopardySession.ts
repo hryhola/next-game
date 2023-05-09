@@ -2,7 +2,7 @@ import logger from 'logger'
 import { random, shuffle } from 'util/array'
 import { Chronos, TimeHall } from 'util/chronos'
 import { Game } from 'state/common/game/Game'
-import { GameOnlyActed, PlayersOnlyActed } from 'state/common/game/GameSession.decorators'
+import { GameOnlyActed, NonPublished, MasterOnlyActed, PlayersOnlyActed, PublishedForMasterOnly } from 'state/common/game/GameSession.decorators'
 import { A, E, P, GameSession, GameSessionActionHandlerEventOptions, GameSessionActionsName, GameSessionAction } from 'state/common/game/GameSession'
 import { Player } from 'state/common/game/Player'
 import { GeneralSuccess, GeneralFailure, R } from 'util/universalTypes'
@@ -10,6 +10,7 @@ import { Jeopardy } from './Jeopardy'
 import { JeopardySessionState, JeopardyState } from './JeopardySessionState'
 import { JeopardyPlayer } from './JeopardyPlayer'
 import { JeopardyDeclaration } from './JeopardyPack.types'
+import { User } from 'state/user/User'
 
 export class JeopardySession extends GameSession {
     readonly state: JeopardySessionState
@@ -24,11 +25,14 @@ export class JeopardySession extends GameSession {
         this.state = {
             internal: {
                 answeredQuestions: [],
-                currentRoundId: 0
+                currentRoundId: 0,
+                currentAnsweringPlayerId: null,
+                currentAnsweringPlayerAnswerText: null
             },
             frame: {
                 id: 'none'
-            }
+            },
+            isPaused: false
         }
 
         this.timeHall = Chronos.createTimeHall()
@@ -49,7 +53,11 @@ export class JeopardySession extends GameSession {
         })
     }
 
-    data() {
+    data(user: User | Game): JeopardySessionState | Omit<JeopardySessionState, 'internal'> {
+        if (user instanceof User && this.game.players.some(p => p.member.user === user && p.state.playerIsMaster)) {
+            return this.state
+        }
+
         const { internal, ...state } = this.state
 
         return state
@@ -58,7 +66,7 @@ export class JeopardySession extends GameSession {
     start() {
         this.game.publish('Game-SessionStart', {
             lobbyId: this.game.lobby.id,
-            session: this.data()
+            session: this.data(this.game)
         })
         ;(async () => {
             await this.act('$PackPreview', null)
@@ -92,22 +100,170 @@ export class JeopardySession extends GameSession {
                 return
             }
             case 'question-content': {
-                if (frame.answeringStatus !== 'allowed') {
-                    this.timeHall.resolveEvent('QuestionAtom')
-                    return
+                switch (frame.answeringStatus) {
+                    case 'allowed':
+                        for (let i = 100; i >= 0; i--) this.timeHall.cancelEvent('AwaitAnswerRequestProgress' + i)
+
+                        this.timeHall.resolveEvent('AwaitAnswerRequest')
+                        return
+                    case 'answering':
+                        for (let i = 100; i >= 0; i--) this.timeHall.cancelEvent('AnswerGivingProgress' + i)
+
+                        this.timeHall.resolveEvent('AnswerGiving')
+                        return
+                    case 'answer-verifying':
+                        for (let i = 100; i >= 0; i--) this.timeHall.cancelEvent('AnswerVerifyingProgress' + i)
+
+                        this.timeHall.resolveEvent('AnswerVerifying')
+                        return
+                    case 'too-early':
+                    case 'too-late':
+                        this.timeHall.resolveEvent('QuestionAtom')
+                    default:
+                        return
                 }
-
-                for (let i = 100; i >= 0; i--) {
-                    this.timeHall.cancelEvent('AwaitAnswerProgress' + i)
-                }
-
-                this.timeHall.resolveEvent('AwaitAnswer')
-
-                return
             }
             default: {
                 return
             }
+        }
+    }
+
+    pauseAwaitAnswerRequest() {
+        for (let i = 100; i >= 0; i--) {
+            this.timeHall.pauseEvent('AwaitAnswerRequestProgress' + i)
+        }
+
+        this.timeHall.pauseEvent('AwaitAnswerRequest')
+    }
+
+    resumeAwaitAnswerRequest() {
+        for (let i = 100; i >= 0; i--) {
+            try {
+                this.timeHall.resumeEvent('AwaitAnswerRequestProgress' + i)
+            } catch (e) {
+                logger.warn(e)
+            }
+        }
+
+        this.timeHall.resumeEvent('AwaitAnswerRequest')
+    }
+
+    resolveAwaitAnswerRequest() {
+        for (let i = 100; i >= 0; i--) {
+            try {
+                this.timeHall.cancelEvent('AwaitAnswerRequestProgress' + i)
+            } catch (e) {
+                logger.warn(e)
+            }
+        }
+
+        this.timeHall.resolveEvent('AwaitAnswerRequest')
+    }
+
+    resolveAnswerGiving() {
+        for (let i = 100; i >= 0; i--) {
+            this.timeHall.cancelEvent('AnswerGivingProgress' + i)
+        }
+
+        this.timeHall.resolveEvent('AnswerGiving')
+    }
+
+    @NonPublished
+    @PlayersOnlyActed
+    $GiveAnswer(actor: JeopardyPlayer, payload: { text?: string }, { complete }: E): R {
+        if (this.state.internal.currentAnsweringPlayerId && actor.member.user.id !== this.state.internal.currentAnsweringPlayerId) {
+            complete()
+            return {
+                success: false,
+                message: `Not your turn! It\'s turn of ${actor.member.user.state.userNickname}`
+            }
+        }
+
+        this.state.internal.currentAnsweringPlayerAnswerText = payload.text
+        this.state.internal.currentAnsweringPlayerId = actor.member.user.id
+
+        this.resolveAnswerGiving()
+
+        complete()
+
+        return {
+            success: true
+        }
+    }
+
+    @GameOnlyActed
+    @PublishedForMasterOnly
+    $AnswerVerifying(actor: A, payload: P, { complete }: E) {
+        if (this.state.frame.id !== 'question-content') {
+            complete()
+
+            return {
+                success: false,
+                message: 'Cannot start verifying process on non question-content frame!'
+            }
+        }
+
+        if (!this.state.internal.currentAnsweringPlayerId) {
+            complete()
+
+            return {
+                success: false,
+                message: 'Cannot start verifying process if there is no currentAnsweringPlayerId!'
+            }
+        }
+
+        const answers = this.game.pack.getAnswers(this.state.frame.questionId)
+
+        if (!answers) {
+            return {
+                success: false,
+                message: `Cannot find such question! ${this.state.frame.questionId}`
+            }
+        }
+
+        const internal = {
+            correctAnswers: answers[0],
+            incorrectAnswers: answers[1],
+            currentAnsweringPlayerId: this.state.internal.currentAnsweringPlayerId,
+            currentAnsweringPlayerAnswerText: this.state.internal.currentAnsweringPlayerAnswerText
+        }
+
+        this.state.internal = {
+            ...this.state.internal,
+            ...internal
+        }
+
+        const verifyingDuration = 10
+
+        for (let i = 100; i >= 0; i--)
+            this.timeHall.createAndStartEvent('AnswerVerifyingProgress' + i, (100 - i) * (verifyingDuration / 100), () => {
+                const frame: JeopardyState.QuestionContentFrame = {
+                    ...(this.state.frame as JeopardyState.QuestionContentFrame),
+                    answeringStatus: 'answer-verifying',
+                    answerVerifyingTimeLeft: i
+                }
+
+                this.update({
+                    frame: frame
+                })
+            })
+
+        this.timeHall.createAndStartEvent('AnswerVerifying', verifyingDuration, async () => {
+            this.state.internal = {
+                ...this.state.internal,
+                correctAnswers: null,
+                incorrectAnswers: null,
+                currentAnsweringPlayerId: null,
+                currentAnsweringPlayerAnswerText: null
+            }
+
+            complete()
+        })
+
+        return {
+            success: true,
+            internal
         }
     }
 
@@ -123,11 +279,19 @@ export class JeopardySession extends GameSession {
             }
         }
 
-        if (currFrame.answerCooldownPlayerIds.includes(actor.member.user.id)) {
+        if (currFrame.playersOnCooldown.includes(actor.member.user.id)) {
             complete()
             return {
                 success: false,
                 message: `Player ${actor.member.user.state.userNickname} is on cooldown!`
+            }
+        }
+
+        if (currFrame.playersWhoAnswered.includes(actor.member.user.id)) {
+            complete()
+            return {
+                success: false,
+                message: `Player ${actor.member.user.state.userNickname} is already gave the answer!`
             }
         }
 
@@ -136,14 +300,14 @@ export class JeopardySession extends GameSession {
         const answerCooldown = 2
 
         if (currFrame.answeringStatus !== 'allowed') {
-            frame.answerCooldownPlayerIds.push(actor.member.user.id)
+            frame.playersOnCooldown.push(actor.member.user.id)
 
             this.timeHall.createAndStartEvent('Cooldown-' + actor.member.user.id, answerCooldown, () => {
                 if (this.state.frame.id !== 'question-content') return
 
                 const _frame = { ...this.state.frame }
 
-                _frame.answerCooldownPlayerIds = _frame.answerCooldownPlayerIds.filter(i => i !== actor.member.user.id)
+                _frame.playersOnCooldown = _frame.playersOnCooldown.filter(i => i !== actor.member.user.id)
 
                 this.update({ frame: _frame })
             })
@@ -158,18 +322,60 @@ export class JeopardySession extends GameSession {
             }
         }
 
-        if (!currFrame.answeringPlayerId) {
-            frame.answeringPlayerId = actor.member.user.id
-            frame.answeringStatus = 'too-late'
-        } else {
+        if (currFrame.answeringPlayerId) {
             logger.warn('This code should be unreachable! If we have answeringPlayerId, then answeringStatus should be not-allowed')
 
-            frame.answerCooldownPlayerIds.push(actor.member.user.id)
+            frame.playersOnCooldown.push(actor.member.user.id)
+
+            this.update({ frame })
+
+            complete()
+
+            return {
+                success: true
+            }
         }
+
+        frame.answeringPlayerId = actor.member.user.id
+        frame.answeringStatus = 'answering'
+        frame.answerGivingTimeLeft = 100
+        frame.playersWhoAnswered.push(actor.member.user.id)
+
+        this.pauseAwaitAnswerRequest()
 
         this.update({ frame })
 
-        complete()
+        const answeringDuration = 10
+
+        for (let i = 100; i >= 0; i--) {
+            this.timeHall.createAndStartEvent('AnswerGivingProgress' + i, (100 - i) * (answeringDuration / 100), () => {
+                const _frame: JeopardyState.QuestionContentFrame = {
+                    ...(this.state.frame as JeopardyState.QuestionContentFrame),
+                    answeringStatus: 'answering',
+                    answerGivingTimeLeft: i
+                }
+
+                this.update({
+                    frame: _frame
+                })
+            })
+        }
+
+        this.timeHall.createAndStartEvent('AnswerGiving', answeringDuration, async () => {
+            const frame = { ...this.state.frame, answeringPlayerId: null }
+
+            this.update({ frame })
+
+            await this.act('$AnswerVerifying', null)
+
+            if (this.state.internal.answerIsApproved) {
+                this.resolveAwaitAnswerRequest()
+            } else {
+                this.resumeAwaitAnswerRequest()
+            }
+
+            complete()
+        })
 
         return {
             success: true
@@ -227,7 +433,7 @@ export class JeopardySession extends GameSession {
     }
 
     @GameOnlyActed
-    $AwaitAnswer(actor: A, payload: P, { complete }: E): R {
+    $AwaitAnswerRequest(actor: A, payload: P, { complete }: E): R {
         if (this.state.frame.id !== 'question-content') {
             return {
                 success: false,
@@ -238,11 +444,11 @@ export class JeopardySession extends GameSession {
         const answerPossibilityDuration = 5
 
         for (let i = 100; i >= 0; i--) {
-            this.timeHall.createAndStartEvent('AwaitAnswerProgress' + i, (100 - i) * (answerPossibilityDuration / 100), () => {
+            this.timeHall.createAndStartEvent('AwaitAnswerRequestProgress' + i, (100 - i) * (answerPossibilityDuration / 100), () => {
                 const frame: JeopardyState.QuestionContentFrame = {
                     ...(this.state.frame as JeopardyState.QuestionContentFrame),
                     answeringStatus: 'allowed',
-                    answerProgress: i
+                    answerRequestTimeLeft: i
                 }
 
                 this.update({
@@ -251,11 +457,11 @@ export class JeopardySession extends GameSession {
             })
         }
 
-        this.timeHall.createAndStartEvent('AwaitAnswer', answerPossibilityDuration, () => {
+        this.timeHall.createAndStartEvent('AwaitAnswerRequest', answerPossibilityDuration, () => {
             const frame: JeopardyState.QuestionContentFrame = {
                 ...(this.state.frame as JeopardyState.QuestionContentFrame),
                 answeringStatus: 'too-late',
-                answerProgress: 0
+                answerRequestTimeLeft: 0
             }
 
             this.update({
@@ -280,9 +486,11 @@ export class JeopardySession extends GameSession {
             content: atom._text,
             type: atom._attributes?.type || 'text',
             answeringStatus: beforeMarker ? 'too-early' : 'too-late',
-            answerProgress: null,
+            answerRequestTimeLeft: null,
+            answerGivingTimeLeft: null,
             skipVoted: [],
-            answerCooldownPlayerIds: currFrame.answerCooldownPlayerIds || []
+            playersOnCooldown: currFrame.playersOnCooldown || [],
+            playersWhoAnswered: currFrame.playersWhoAnswered || []
         }
 
         let contentDuration = 5
@@ -326,7 +534,7 @@ export class JeopardySession extends GameSession {
                 await this.showAtom(payload.questionId, atom, true)
             }
 
-            await this.act('$AwaitAnswer', null)
+            await this.act('$AwaitAnswerRequest', null)
 
             for (const atom of contentAfterAnswer) {
                 await this.showAtom(payload.questionId, atom, false)
@@ -514,6 +722,31 @@ export class JeopardySession extends GameSession {
                 themes
             }
         })
+
+        return {
+            success: true
+        }
+    }
+
+    @MasterOnlyActed
+    $Pause(actor: A, payload: null, { complete }: E): R {
+        this.timeHall.pause()
+
+        this.update({ ...this.state, isPaused: true })
+
+        complete()
+        return {
+            success: true
+        }
+    }
+
+    @MasterOnlyActed
+    $Resume(actor: A, payload: null, { complete }: E): R {
+        this.timeHall.resume()
+
+        this.update({ ...this.state, isPaused: false })
+
+        complete()
 
         return {
             success: true

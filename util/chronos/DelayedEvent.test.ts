@@ -13,9 +13,9 @@ describe('DelayedEvent E2E', () => {
         const callback = jest.fn()
         const event = new DelayedEvent(2, callback)
         event.start()
-        await new Promise(r => setTimeout(r, 1000))
+        await new Promise(resolve => setTimeout(resolve, 1000))
         event.pause()
-        await new Promise(r => setTimeout(r, 1000))
+        await new Promise(resolve => setTimeout(resolve, 1000))
         expect(callback).not.toBeCalled()
         event.resume()
         await event.completion
@@ -30,5 +30,30 @@ describe('DelayedEvent E2E', () => {
     it('should throw an error when trying to resume a non-paused event', () => {
         const event = new DelayedEvent(2)
         expect(() => event.resume()).toThrowError('Cannot resume a DelayedEvent that is not paused')
+    })
+
+    it('should execute the callback immediately if delay is zero', async () => {
+        const callback = jest.fn()
+        const event = new DelayedEvent(0, callback)
+        event.start()
+        await event.completion
+        expect(callback).toBeCalled()
+    })
+
+    it('should execute the callback immediately when resolved without starting', () => {
+        const callback = jest.fn()
+        const event = new DelayedEvent(2, callback)
+        event.resolve()
+        expect(callback).toBeCalled()
+    })
+
+    it('should execute the callback only once when resolved after starting', async () => {
+        const callback = jest.fn()
+        const event = new DelayedEvent(2, callback)
+        event.start()
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        event.resolve()
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        expect(callback).toBeCalledTimes(1)
     })
 })

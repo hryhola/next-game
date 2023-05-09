@@ -62,6 +62,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponseU
     res.json({
         success: true,
         lobby: lobby.data(),
-        game: lobby.game.data()
+        game: lobby.game.data(user)
     })
 }

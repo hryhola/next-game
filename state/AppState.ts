@@ -1,4 +1,4 @@
-import { UserRegistry, LobbiesRegistry, Chat } from 'state'
+import { UserRegistry, LobbiesRegistry, Chat, User } from 'state'
 import Publisher from 'uWebSockets/utils/ws/Publisher'
 
 export class State {
@@ -17,7 +17,7 @@ export class State {
             globalChat: this.globalChat.data(),
             lobbies: this.lobbies.data(),
             users: this.users.data(),
-            games: Object.values(this.lobbies.container).map(lobby => lobby.game.data())
+            games: Object.values(this.lobbies.container).map(lobby => lobby.game.data(lobby.game))
         }
 
         return data

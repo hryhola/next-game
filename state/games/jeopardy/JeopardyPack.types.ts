@@ -39,14 +39,22 @@ export namespace JeopardyDeclaration {
         }
         scenario: QuestionScenario
         right: {
-            answer: {
-                _text: string
-            }
+            answer:
+                | {
+                      _text: string
+                  }
+                | {
+                      _text: string
+                  }[]
         }
         wrong?: {
-            answer: {
-                _text: string
-            }
+            answer:
+                | {
+                      _text: string
+                  }
+                | {
+                      _text: string
+                  }[]
         }
     }
 
