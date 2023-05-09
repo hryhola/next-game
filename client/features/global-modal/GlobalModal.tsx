@@ -46,7 +46,7 @@ export const GlobalModalProvider: React.FC<Props> = props => {
         setActions(options?.actions || null)
         setIsModalOpen(true)
         setIsActionRequired(options?.actionRequired || false)
-        setZIndex(options.zIndex)
+        setZIndex(options?.zIndex)
 
         return () => setIsModalOpen(false)
     }
