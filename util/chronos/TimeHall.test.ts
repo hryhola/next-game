@@ -71,16 +71,16 @@ describe('TimeHall', () => {
     })
 
     describe('cancelEvent', () => {
-        it('should pause and delete the specified event', () => {
+        it('should stop and delete the specified event', () => {
             const timeHall = new TimeHall()
             const event = {
-                pause: jest.fn()
+                stop: jest.fn()
             }
             timeHall['events']['event1'] = event as any
 
             timeHall.cancelEvent('event1')
 
-            expect(event.pause).toHaveBeenCalledTimes(1)
+            expect(event.stop).toHaveBeenCalledTimes(1)
             expect(timeHall['events']).not.toHaveProperty('event1')
         })
 

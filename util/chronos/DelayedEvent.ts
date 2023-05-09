@@ -9,8 +9,8 @@ export class DelayedEvent {
     private startTimestamp: number
     private elapsedTime: number
 
-    get isPaused() {
-        return this.job === null
+    get isRunning() {
+        return this.job !== null
     }
 
     constructor(delayInSeconds: number, callback?: () => void) {
@@ -49,9 +49,19 @@ export class DelayedEvent {
         return this
     }
 
+    stop() {
+        if (this.job) {
+            this.job.cancel()
+        }
+
+        this.job = null
+        this.startTimestamp = 0
+        this.elapsedTime = 0
+    }
+
     pause(): this {
         if (!this.job) {
-            throw new Error('Cannot pause a DelayedEvent that has not been started')
+            throw new Error('Cannot pause a DelayedEvent that has is not running')
         }
 
         this.elapsedTime += Date.now() - this.startTimestamp
@@ -61,7 +71,7 @@ export class DelayedEvent {
     }
 
     resume(): this {
-        if (this.job || this.elapsedTime === 0) {
+        if (this.job) {
             throw new Error('Cannot resume a DelayedEvent that is not paused')
         }
 

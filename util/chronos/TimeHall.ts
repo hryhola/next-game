@@ -11,7 +11,7 @@ export class TimeHall {
     get nonPausedEvents(): [string[], DelayedEvent[]] {
         return Object.entries(this.events).reduce(
             (acc, [key, event]) => {
-                if (!event.isPaused) {
+                if (event.isRunning) {
                     acc[0].push(key)
                     acc[1].push(event)
                 }
@@ -55,7 +55,7 @@ export class TimeHall {
 
     cancelEvent(name: string, throwNotFound = false) {
         if (this.events[name]) {
-            this.events[name].pause()
+            this.events[name].stop()
 
             delete this.events[name]
         } else if (throwNotFound) {
@@ -73,7 +73,7 @@ export class TimeHall {
         event.resolve()
     }
 
-    pauseEvent(name: string, throwNotFound = false): void {
+    pauseIfRunning(name: string, throwNotFound = false): void {
         const event = this.events[name]
 
         if (!event) {
@@ -81,10 +81,10 @@ export class TimeHall {
             else return
         }
 
-        event.pause()
+        if (event.isRunning) event.pause()
     }
 
-    resumeEvent(name: string, throwNotFound = false): void {
+    resumeEventIfPaused(name: string, throwNotFound = false): void {
         const event = this.events[name]
 
         if (!event) {
@@ -92,7 +92,7 @@ export class TimeHall {
             else return
         }
 
-        event.resume()
+        if (!event.isRunning) event.resume()
     }
 
     pause() {
