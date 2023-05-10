@@ -94,23 +94,6 @@ export const QuestionContent: React.FC<
         })
     }
 
-    useJeopardyAction('$AnswerVerifying', data => {
-        if (!data.result.success) return
-
-        const isMasterView = game.players.some(p => p.id === user.id && p.playerIsMaster)
-
-        if (isMasterView) {
-            // @ts-ignore
-            game._updateSession((s: JeopardySessionState) => ({
-                ...s,
-                internal: {
-                    ...(s.internal ? s.internal : {}),
-                    ...data.result.internal
-                }
-            }))
-        }
-    })
-
     let content!: JSX.Element
 
     switch (props.type) {
