@@ -5,13 +5,14 @@ import { Game } from 'state/common/game/Game'
 import { GameOnlyActed, NonPublished, MasterOnlyActed, PlayersOnlyActed, PublishedForMasterOnly, ActedBy } from 'state/common/game/GameSession.decorators'
 import { A, E, P, GameSession, GameSessionActionHandlerEventOptions, GameSessionActionsName, GameSessionAction } from 'state/common/game/GameSession'
 import { Player } from 'state/common/game/Player'
-import { GeneralSuccess, GeneralFailure, R } from 'util/universalTypes'
+import { GeneralSuccess, GeneralFailure, R, RecursivePartial } from 'util/universalTypes'
 import { Jeopardy } from './Jeopardy'
 import { JeopardySessionState, JeopardyState } from './JeopardySessionState'
 import { JeopardyPlayer } from './JeopardyPlayer'
 import { JeopardyDeclaration } from './JeopardyPack.types'
 import { User } from 'state/user/User'
 import { ActedByPlayers, OnFrame } from './JeopardySession.decorators'
+import { Events } from 'state/common/game/Game.events'
 
 export class JeopardySession extends GameSession {
     readonly state: JeopardySessionState
@@ -62,6 +63,38 @@ export class JeopardySession extends GameSession {
         const { internal, ...state } = this.state
 
         return state
+    }
+
+    updateInternal(internal: RecursivePartial<this['state']['internal']>) {
+        this.state.internal = {
+            ...this.state.internal,
+            ...internal
+        }
+
+        const master = this.game.players.find(p => p.state.playerIsMaster)
+
+        if (!master) {
+            logger.error("There is no Jeopardy master! Can't send internal session update message")
+            return
+        }
+
+        const sessionData: Partial<JeopardySession['state']> = {
+            internal: this.state.internal
+        }
+
+        const data: Events['Game-SessionUpdate'] & {
+            data: Partial<JeopardySession['state']>
+        } = {
+            lobbyId: this.game.lobby.id,
+            data: sessionData
+        }
+
+        master.member.user.ws.send(
+            JSON.stringify({
+                ctx: 'Game-SessionUpdate',
+                data
+            })
+        )
     }
 
     start() {
@@ -184,7 +217,7 @@ export class JeopardySession extends GameSession {
     }
 
     @GameOnlyActed
-    @OnFrame('question-content', session => actor => session.state.internal.currentAnsweringPlayerId !== null)
+    @OnFrame('question-content', session => () => session.state.internal.currentAnsweringPlayerId !== null)
     @PublishedForMasterOnly
     $AnswerVerifying(actor: A, payload: P, { complete }: E) {
         const frame = this.state.frame as JeopardyState.QuestionContentFrame
@@ -198,17 +231,10 @@ export class JeopardySession extends GameSession {
             }
         }
 
-        const internal = {
+        this.updateInternal({
             correctAnswers: answers[0],
-            incorrectAnswers: answers[1],
-            currentAnsweringPlayerId: this.state.internal.currentAnsweringPlayerId,
-            currentAnsweringPlayerAnswerText: this.state.internal.currentAnsweringPlayerAnswerText
-        }
-
-        this.state.internal = {
-            ...this.state.internal,
-            ...internal
-        }
+            incorrectAnswers: answers[1]
+        })
 
         const verifyingDuration = 10
 
@@ -226,20 +252,18 @@ export class JeopardySession extends GameSession {
             })
 
         this.timeHall.createAndStartEvent('AnswerVerifying', verifyingDuration, async () => {
-            this.state.internal = {
-                ...this.state.internal,
+            this.updateInternal({
                 correctAnswers: null,
                 incorrectAnswers: null,
                 currentAnsweringPlayerId: null,
                 currentAnsweringPlayerAnswerText: null
-            }
+            })
 
             complete()
         })
 
         return {
-            success: true,
-            internal
+            success: true
         }
     }
 
@@ -409,11 +433,14 @@ export class JeopardySession extends GameSession {
 
         if (beforeMarker) {
             frame.answeringPlayerId = null
-            this.state.internal.answerIsApproved = null
-            this.state.internal.correctAnswers = null
-            this.state.internal.incorrectAnswers = null
-            this.state.internal.currentAnsweringPlayerAnswerText = null
-            this.state.internal.currentAnsweringPlayerId = null
+
+            this.updateInternal({
+                answerIsApproved: null,
+                correctAnswers: null,
+                incorrectAnswers: null,
+                currentAnsweringPlayerAnswerText: null,
+                currentAnsweringPlayerId: null
+            })
         }
 
         let contentDuration = 5
@@ -463,7 +490,9 @@ export class JeopardySession extends GameSession {
                 await this.showAtom(payload.questionId, atom, false)
             }
 
-            this.state.internal.answeredQuestions.push(payload.questionId)
+            this.updateInternal({
+                answeredQuestions: [this.state.internal.answeredQuestions, payload.questionId]
+            })
 
             this.act('$ShowQuestionBoard', { roundId: 0, playerId: random(this.game.players).data().id })
 
