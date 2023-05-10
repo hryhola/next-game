@@ -340,43 +340,10 @@ export class JeopardySession extends GameSession {
         }
     }
 
-    @ActedByPlayers(
-        session => actor => actor.state.playerIsMaster || session.state.frame.id !== 'question-content',
-        'Cannot wait skip question for non question-content frame'
-    )
+    // TODO: Skip by players voting
+    @MasterOnlyActed
     $SkipVote(actor: JeopardyPlayer, payload: P, { complete }: E): R {
-        if (actor.state.playerIsMaster) {
-            this.skip()
-
-            complete()
-
-            return {
-                success: true
-            }
-        }
-
-        const { id: userId } = actor.member.user
-
-        const currFrame = this.state.frame as JeopardyState.QuestionContentFrame
-
-        if (currFrame.skipVoted.includes(userId)) {
-            complete()
-            return {
-                success: false,
-                message: 'You already voted!'
-            }
-        }
-
-        const frame: JeopardyState.QuestionContentFrame = {
-            ...currFrame,
-            skipVoted: [...currFrame.skipVoted, userId]
-        }
-
-        this.update({ frame })
-
-        if (frame.skipVoted.length === this.game.answeringPlayers.length) {
-            this.skip()
-        }
+        this.skip()
 
         complete()
 
@@ -438,6 +405,15 @@ export class JeopardySession extends GameSession {
             skipVoted: [],
             playersOnCooldown: currFrame.playersOnCooldown || [],
             playersWhoAnswered: currFrame.playersWhoAnswered || []
+        }
+
+        if (beforeMarker) {
+            frame.answeringPlayerId = null
+            this.state.internal.answerIsApproved = null
+            this.state.internal.correctAnswers = null
+            this.state.internal.incorrectAnswers = null
+            this.state.internal.currentAnsweringPlayerAnswerText = null
+            this.state.internal.currentAnsweringPlayerId = null
         }
 
         let contentDuration = 5

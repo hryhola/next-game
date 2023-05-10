@@ -17,21 +17,6 @@ const JeopardyControls = (props: Props) => {
     if (lobby.myRole !== 'spectator') {
         const isMasterView = game.players.some(p => p.id === user.id && p.playerIsMaster)
 
-        gameControls.push(
-            <Button
-                disabled={
-                    !game.session ||
-                    (isMasterView
-                        ? game.session?.frame.id === 'question-board'
-                        : game.session?.frame.id !== 'question-content' || game.session.frame.skipVoted.includes(user.id))
-                }
-                onClick={() => actionSender('$SkipVote', null)}
-                key="1"
-            >
-                Skip
-            </Button>
-        )
-
         if (!isMasterView) {
             const theButtonEnabled =
                 game.session?.frame.id === 'question-content' &&
@@ -47,6 +32,11 @@ const JeopardyControls = (props: Props) => {
                 </Button>
             )
         } else {
+            gameControls.push(
+                <Button disabled={!game.session || game.session?.frame.id === 'question-board'} onClick={() => actionSender('$SkipVote', null)} key="1">
+                    Skip
+                </Button>
+            )
             gameControls.push(
                 <Button onClick={() => actionSender(game.session?.isPaused ? '$Resume' : '$Pause', null)} key="3">
                     {game.session?.isPaused ? 'Resume' : 'Pause'}
