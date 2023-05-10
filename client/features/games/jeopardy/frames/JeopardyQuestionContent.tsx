@@ -1,5 +1,5 @@
 import { Box, DialogContentText, Grid, LinearProgress, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from '@mui/material'
-import { useUser } from 'client/context/list'
+import { useAudio, useUser } from 'client/context/list'
 import { useGlobalModal } from 'client/features/global-modal/GlobalModal'
 import { overlayedTabsToolbarHeight } from 'client/ui/overlayed-tabs/OverlayedTabs'
 import React, { MutableRefObject, useEffect, useRef } from 'react'
@@ -17,10 +17,17 @@ export const QuestionContent: React.FC<
     const globalModal = useGlobalModal()
     const actionSender = useActionSender()
     const playerRef = useRef<HTMLAudioElement | HTMLVideoElement | null>(null)
+    const audio = useAudio()
 
     const answerInputRef = useRef<HTMLInputElement>(null)
     const closeAnswerModal = useRef<{ close: (() => void) | null }>({ close: null })
     const closeVerifyModal = useRef<{ close: (() => void) | null }>({ close: null })
+
+    useEffect(() => {
+        if (!playerRef.current) return
+
+        playerRef.current.volume = audio.volume / 100
+    }, [audio.volume, playerRef.current])
 
     useEffect(() => {
         if (props.answeringPlayerId === user.id) {
