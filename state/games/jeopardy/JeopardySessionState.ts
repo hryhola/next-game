@@ -33,6 +33,7 @@ export namespace JeopardyState {
         questionId: `${number}-${number}-${number}`
         id: 'question-content'
         type: 'text' | 'voice' | 'video' | 'image'
+        elapsedMediaTimeMs?: number
         content: string
         answeringStatus: 'too-early' | 'allowed' | 'answering' | 'answer-verifying' | 'too-late'
         answerRequestTimeLeft: number | null // percentage
