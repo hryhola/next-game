@@ -16,6 +16,7 @@ export const QuestionContent: React.FC<
     const game = useJeopardy()
     const globalModal = useGlobalModal()
     const actionSender = useActionSender()
+    const playerRef = useRef<HTMLAudioElement | HTMLVideoElement | null>(null)
 
     const answerInputRef = useRef<HTMLInputElement>(null)
     const closeAnswerModal = useRef<{ close: (() => void) | null }>({ close: null })
@@ -94,6 +95,18 @@ export const QuestionContent: React.FC<
         })
     }
 
+    useJeopardyAction('$Pause', data => {
+        if (!data.result.success) return
+
+        playerRef.current?.pause()
+    })
+
+    useJeopardyAction('$Resume', data => {
+        if (!data.result.success) return
+
+        playerRef.current?.play()
+    })
+
     let content!: JSX.Element
 
     switch (props.type) {
@@ -102,13 +115,20 @@ export const QuestionContent: React.FC<
             break
         }
         case 'video': {
-            content = <video style={{ maxWidth: '100vw' }} autoPlay src={props.Resources.current.Video[props.content.slice(1)]}></video>
+            content = (
+                <video
+                    ref={playerRef as React.MutableRefObject<HTMLVideoElement | null>}
+                    style={{ maxWidth: '100vw' }}
+                    autoPlay
+                    src={props.Resources.current.Video[props.content.slice(1)]}
+                ></video>
+            )
             break
         }
         case 'voice': {
             content = (
                 <>
-                    <audio autoPlay src={props.Resources.current.Audio[props.content.slice(1)]}></audio>
+                    <audio ref={playerRef} autoPlay src={props.Resources.current.Audio[props.content.slice(1)]}></audio>
                     <img src="/assets/jeopardy/audio.gif" alt="Audio question" />
                 </>
             )
