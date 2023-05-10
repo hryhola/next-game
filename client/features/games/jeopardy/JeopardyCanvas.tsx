@@ -63,15 +63,6 @@ export const JeopardyCanvas: React.FC<JeopardyCanvasProps> = props => {
         (firstShownQuestionType.current === 'voice' || firstShownQuestionType.current === 'video') &&
         game.session.frame.questionId === firstShownQuestionId.current
 
-    console.log({
-        useMediaTimestamp,
-        'firstShownFrameId.current': firstShownFrameId.current,
-        'game.session.frame.id': game.session.frame.id,
-        'firstShownQuestionType.current': firstShownQuestionType.current,
-        'firstShownQuestionId.current': firstShownQuestionId.current,
-        'game.session.frame.questionId': game.session.frame.questionId
-    })
-
     switch (game.session.frame.id) {
         case 'pack-preview':
             return <PackPreview {...game.session.frame} />
