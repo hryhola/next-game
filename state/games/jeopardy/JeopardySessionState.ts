@@ -54,7 +54,7 @@ export type JeopardySessionState = {
         answeredQuestions: string[]
         currentAnsweringPlayerId: string | null
         currentAnsweringPlayerAnswerText?: string | null
-        answerIsApproved?: boolean
+        answerIsApproved?: boolean | null
         correctAnswers?: string[] | null
         incorrectAnswers?: string[] | null
     }
