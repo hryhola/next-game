@@ -8,6 +8,7 @@ import { PlayerMenu } from './PlayerMenu'
 type Props = {
     isHighlighted?: boolean
     size?: 'medium' | 'small'
+    subtitle: 'score' | 'role'
 } & (PlayerProps | LoadingData)
 
 type PlayerProps = {
@@ -83,7 +84,7 @@ export const Player: React.FC<Props> = props => {
             <Typography overflow="auto" display="block" variant="h6" noWrap textOverflow="unset" color={props.player.userColor}>
                 {props.player.userNickname}
             </Typography>
-            <Typography noWrap>{props.player.playerScore}</Typography>
+            <Typography noWrap>{props.subtitle === 'role' ? (props.player.playerIsMaster ? 'Master' : 'Player') : props.player.playerScore}</Typography>
             <PlayerMenu playerMenuAnchor={playerMenuAnchor} isPlayerMenuOpen={isPlayerMenuOpen} handleClose={handleClose} player={props.player} />
         </>
     )

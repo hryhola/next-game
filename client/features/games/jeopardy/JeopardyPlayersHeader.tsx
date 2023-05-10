@@ -27,7 +27,12 @@ const JeopardyPlayersHeader = (props: Props) => {
     }
 
     return (
-        <PlayersHeader members={game.players} isLoading={game.isLoading} highlightedPlayedIds={[...highlightedPlayedIds, ...temporaryHighlightedPlayerIds]} />
+        <PlayersHeader
+            members={game.players}
+            isLoading={game.isLoading}
+            highlightedPlayedIds={[...highlightedPlayedIds, ...temporaryHighlightedPlayerIds]}
+            masterLabel="role"
+        />
     )
 }
 

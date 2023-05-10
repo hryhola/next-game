@@ -7,6 +7,7 @@ interface HeaderProps {
     members: PlayerData[]
     highlightedPlayedIds?: string[]
     isLoading: boolean
+    masterLabel: 'role' | 'score'
 }
 
 export const PlayersHeader: React.FC<HeaderProps> = props => {
@@ -54,7 +55,12 @@ export const PlayersHeader: React.FC<HeaderProps> = props => {
                         .sort((a, b) => a.memberPosition - b.memberPosition)
                         .map(p => (
                             <Grid key={p.id} item>
-                                <Player player={p} isHighlighted={props.highlightedPlayedIds?.includes(p.id)} size="medium" />
+                                <Player
+                                    player={p}
+                                    isHighlighted={props.highlightedPlayedIds?.includes(p.id)}
+                                    size="medium"
+                                    subtitle={p.playerIsMaster ? props.masterLabel : 'score'}
+                                />
                             </Grid>
                         ))
                 )}
