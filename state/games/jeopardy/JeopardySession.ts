@@ -14,7 +14,7 @@ import { User } from 'state/user/User'
 import { ActedByPlayers, OnFrame } from './JeopardySession.decorators'
 import { Events } from 'state/common/game/Game.events'
 
-export class JeopardySession extends GameSession {
+export class JeopardySession extends GameSession<JeopardySessionState> {
     readonly state: JeopardySessionState
 
     timeHall: TimeHall
@@ -352,7 +352,10 @@ export class JeopardySession extends GameSession {
         }
 
         this.timeHall.createAndStartEvent('AnswerGiving', answeringDuration, async () => {
-            const frame = { ...this.state.frame, answeringPlayerId: null }
+            const frame: JeopardyState.QuestionContentFrame = {
+                ...(this.state.frame as JeopardyState.QuestionContentFrame),
+                answeringPlayerId: null
+            }
 
             this.update({ frame })
 
@@ -393,7 +396,7 @@ export class JeopardySession extends GameSession {
             this.timeHall.createAndStartEvent('AwaitAnswerRequestProgress' + i, (100 - i) * (answerPossibilityDuration / 100), () => {
                 const frame: JeopardyState.QuestionContentFrame = {
                     ...(this.state.frame as JeopardyState.QuestionContentFrame),
-                    answeringStatus: 'allowed',
+                    answeringStatus: i === 0 ? 'too-late' : 'allowed',
                     answerRequestTimeLeft: i
                 }
 
@@ -407,7 +410,7 @@ export class JeopardySession extends GameSession {
             const frame: JeopardyState.QuestionContentFrame = {
                 ...(this.state.frame as JeopardyState.QuestionContentFrame),
                 answeringStatus: 'too-late',
-                answerRequestTimeLeft: 0
+                answerRequestTimeLeft: null
             }
 
             this.update({
@@ -499,8 +502,10 @@ export class JeopardySession extends GameSession {
                 await this.showAtom(payload.questionId, atom, false)
             }
 
+            const answeredQuestions = [...this.state.internal.answeredQuestions, payload.questionId]
+
             this.updateInternal({
-                answeredQuestions: [this.state.internal.answeredQuestions, payload.questionId]
+                answeredQuestions
             })
 
             this.act('$ShowQuestionBoard', { roundId: 0, playerId: random(this.game.players).data().id })
@@ -673,7 +678,7 @@ export class JeopardySession extends GameSession {
     $Pause(actor: A, payload: null, { complete }: E): R {
         this.timeHall.pause()
 
-        this.update({ ...this.state, isPaused: true })
+        this.update({ isPaused: true })
 
         complete()
         return {
@@ -685,7 +690,7 @@ export class JeopardySession extends GameSession {
     $Resume(actor: A, payload: null, { complete }: E): R {
         this.timeHall.resume()
 
-        this.update({ ...this.state, isPaused: false })
+        this.update({ isPaused: false })
 
         complete()
 

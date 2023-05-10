@@ -16,11 +16,11 @@ export type GameAction<T extends string | number | symbol = string, P = any, R =
     actor: GameActor
 }
 
-export abstract class GameSession {
+export abstract class GameSession<State extends { internal: any } = any> {
     game: Game
     log: GameAction[] = []
 
-    abstract state: any
+    abstract state: State
 
     constructor(game: Game) {
         this.game = game
@@ -148,7 +148,7 @@ export abstract class GameSession {
 
     abstract data(user: User | Game): object
 
-    update(data: RecursivePartial<this['state']>) {
+    update(data: Partial<State>) {
         Object.assign(this.state, data)
 
         if (Object.keys(data).length === 1 && 'internal' in data) {
