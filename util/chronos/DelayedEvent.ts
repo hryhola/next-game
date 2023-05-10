@@ -9,6 +9,10 @@ export class DelayedEvent {
     private startTimestamp: number
     private elapsedTime: number
 
+    get currentElapsedTimeMs(): number {
+        return this.elapsedTime + Date.now() - this.startTimestamp
+    }
+
     get isRunning() {
         return this.job !== null
     }

@@ -56,6 +56,14 @@ export class JeopardySession extends GameSession {
     }
 
     data(user: User | Game): JeopardySessionState | Omit<JeopardySessionState, 'internal'> {
+        if (this.state.frame.id === 'question-content' && (this.state.frame.type === 'video' || this.state.frame.type === 'voice')) {
+            const elapsedMediaTimeMs = this.timeHall.get('QuestionAtom')?.currentElapsedTimeMs
+
+            if (typeof elapsedMediaTimeMs === 'number') {
+                this.state.frame.elapsedMediaTimeMs = elapsedMediaTimeMs
+            }
+        }
+
         if (user instanceof User && this.game.players.some(p => p.member.user === user && p.state.playerIsMaster)) {
             return this.state
         }
@@ -426,6 +434,7 @@ export class JeopardySession extends GameSession {
             answeringStatus: beforeMarker ? 'too-early' : 'too-late',
             answerRequestTimeLeft: null,
             answerGivingTimeLeft: null,
+            elapsedMediaTimeMs: undefined,
             skipVoted: [],
             playersOnCooldown: currFrame.playersOnCooldown || [],
             playersWhoAnswered: currFrame.playersWhoAnswered || []

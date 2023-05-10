@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { PackPreview } from './frames/JeopardyPackPreview'
 import { QuestionBoard } from './frames/JeopardyQuestionBoard'
 import { QuestionContent } from './frames/JeopardyQuestionContent'
@@ -12,6 +12,11 @@ type JeopardyCanvasProps = {
 }
 
 export const JeopardyCanvas: React.FC<JeopardyCanvasProps> = props => {
+    const [packFetchingTimeMs, setPackFetchingTimeMs] = useState(null as number | null)
+    const firstShownFrameId = useRef('')
+    const firstShownQuestionType = useRef('')
+    const firstShownQuestionId = useRef('')
+
     const game = useJeopardy()
 
     const Resources = useRef<JeopardyMedia>({
@@ -23,6 +28,8 @@ export const JeopardyCanvas: React.FC<JeopardyCanvasProps> = props => {
     useEffect(() => {
         if (!game.initialData?.pack) return
         ;(async () => {
+            const startTime = Date.now()
+
             props.setIsPackLoading(true)
 
             const packArchive = await fetchPack(game.initialData.pack.value)
@@ -30,12 +37,40 @@ export const JeopardyCanvas: React.FC<JeopardyCanvasProps> = props => {
             Resources.current = await getMediaFilesFromPack(packArchive)
 
             props.setIsPackLoading(false)
+
+            const endTime = Date.now()
+
+            setPackFetchingTimeMs(endTime - startTime)
         })()
     }, [game.initialData])
 
     if (props.isPackLoading || !game.session) {
         return <></>
     }
+
+    if (!firstShownFrameId.current) {
+        firstShownFrameId.current = game.session.frame.id
+
+        if (game.session.frame.id === 'question-content') {
+            firstShownQuestionId.current = game.session.frame.questionId
+            firstShownQuestionType.current = game.session.frame.type
+        }
+    }
+
+    const useMediaTimestamp =
+        firstShownFrameId.current === 'question-content' &&
+        game.session.frame.id === 'question-content' &&
+        (firstShownQuestionType.current === 'voice' || firstShownQuestionType.current === 'video') &&
+        game.session.frame.questionId === firstShownQuestionId.current
+
+    console.log({
+        useMediaTimestamp,
+        'firstShownFrameId.current': firstShownFrameId.current,
+        'game.session.frame.id': game.session.frame.id,
+        'firstShownQuestionType.current': firstShownQuestionType.current,
+        'firstShownQuestionId.current': firstShownQuestionId.current,
+        'game.session.frame.questionId': game.session.frame.questionId
+    })
 
     switch (game.session.frame.id) {
         case 'pack-preview':
@@ -45,7 +80,9 @@ export const JeopardyCanvas: React.FC<JeopardyCanvasProps> = props => {
         case 'question-board':
             return <QuestionBoard {...game.session.frame} />
         case 'question-content':
-            return <QuestionContent {...game.session.frame} Resources={Resources} />
+            return (
+                <QuestionContent {...game.session.frame} Resources={Resources} packFetchingTimeMs={packFetchingTimeMs!} useMediaTimestamp={useMediaTimestamp} />
+            )
         case 'none':
         default:
             return <></>

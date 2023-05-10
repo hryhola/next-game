@@ -21,6 +21,10 @@ export class TimeHall {
         )
     }
 
+    get(name: string) {
+        return this.events[name] || null
+    }
+
     createEvent(name: string, delayInSeconds: number, callback?: () => void): DelayedEvent {
         const event = new DelayedEvent(delayInSeconds, () => {
             if (this.events[name]) {

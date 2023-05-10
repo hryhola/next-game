@@ -10,6 +10,8 @@ import { JeopardyMedia } from '../utils/jeopardyPackLoading'
 export const QuestionContent: React.FC<
     JeopardyState.QuestionContentFrame & {
         Resources: MutableRefObject<JeopardyMedia>
+        packFetchingTimeMs: number
+        useMediaTimestamp: boolean
     }
 > = props => {
     const user = useUser()
@@ -28,6 +30,13 @@ export const QuestionContent: React.FC<
 
         playerRef.current.volume = audio.volume / 100
     }, [audio.volume, playerRef.current])
+
+    useEffect(() => {
+        if (!props.useMediaTimestamp || typeof props.packFetchingTimeMs !== 'number' || typeof props.elapsedMediaTimeMs !== 'number' || !playerRef.current)
+            return
+
+        playerRef.current.currentTime = (props.packFetchingTimeMs + props.elapsedMediaTimeMs) / 1000
+    }, [props.useMediaTimestamp])
 
     useEffect(() => {
         if (props.answeringPlayerId === user.id) {
