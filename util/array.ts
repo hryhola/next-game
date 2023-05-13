@@ -16,3 +16,5 @@ export function shuffle<T extends any[]>(array: T): T {
 }
 
 export const random = <K extends any>(array: K[]) => array[Math.floor(Math.random() * array.length)]
+
+export const arrayed = <T>(value: T | T[]): T[] => (Array.isArray(value) ? value : [value])

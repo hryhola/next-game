@@ -6,6 +6,7 @@ import xml2js from 'xml-js'
 import { JeopardyDeclaration } from './JeopardyPack.types'
 import ffprobe from 'ffprobe-static'
 import ffmpeg from 'fluent-ffmpeg'
+import { arrayed } from 'util/array'
 
 function getMediaFileDuration(filePath: string): Promise<number> {
     return new Promise((resolve, reject) => {
@@ -100,18 +101,20 @@ export class JeopardyPack {
     }
 
     getAllThemes() {
-        return this.declaration.package.rounds.round.reduce((acc, round) => [...acc, ...round.themes.theme.map(t => t._attributes.name)], [] as string[])
+        const rounds = arrayed(this.declaration.package.rounds.round)
+
+        return rounds.reduce((acc, round) => [...acc, ...arrayed(round.themes.theme).map(t => t._attributes.name)], [] as string[])
     }
 
     getNonFinalThemes() {
-        return this.declaration.package.rounds.round.reduce(
-            (acc, round) => (round._attributes.type === 'final' ? acc : [...acc, ...round.themes.theme.map(t => t._attributes.name)]),
+        return arrayed(this.declaration.package.rounds.round).reduce(
+            (acc, round) => (round._attributes.type === 'final' ? acc : [...acc, ...arrayed(round.themes.theme).map(t => t._attributes.name)]),
             [] as string[]
         )
     }
 
     getRoundThemeNames(roundId: number) {
-        const round = this.declaration.package.rounds.round[roundId]
+        const round = arrayed(this.declaration.package.rounds.round)[roundId]
 
         if (!round) {
             return null
@@ -120,35 +123,35 @@ export class JeopardyPack {
         return {
             roundName: round._attributes.name,
             isFinalRound: round._attributes.type === 'final',
-            themeNames: round.themes.theme.map(t => t._attributes.name)
+            themeNames: arrayed(round.themes.theme).map(t => t._attributes.name)
         }
     }
 
     getRoundThemesCount(roundId: number) {
-        const round = this.declaration.package.rounds.round[roundId]
+        const round = arrayed(this.declaration.package.rounds.round)[roundId]
 
         if (!round) {
             return null
         }
 
-        return round.themes.theme.length
+        return arrayed(round.themes.theme).length
     }
 
     getRoundsCount() {
-        return this.declaration.package.rounds.round.length
+        return arrayed(this.declaration.package.rounds.round).length
     }
 
     getRoundQuestions(roundId: number) {
-        const round = this.declaration.package.rounds.round[roundId]
+        const round = arrayed(this.declaration.package.rounds.round)[roundId]
 
         if (!round) {
             return null
         }
 
-        return round.themes.theme.reduce(
+        return arrayed(round.themes.theme).reduce(
             (questions, theme, themeIndex) => [
                 ...questions,
-                ...theme.questions.question.map((_, questionIndex) => `${roundId}-${themeIndex}-${questionIndex}`)
+                ...arrayed(theme.questions.question).map((_, questionIndex) => `${roundId}-${themeIndex}-${questionIndex}`)
             ],
             [] as string[]
         )
@@ -164,16 +167,16 @@ export class JeopardyPack {
               }[]
           }[]
         | null {
-        const round = this.declaration.package.rounds.round[roundId]
+        const round = arrayed(this.declaration.package.rounds.round)[roundId]
 
         if (!round) {
             return null
         }
 
-        return round.themes.theme.map((theme, tIndex) => ({
+        return arrayed(round.themes.theme).map((theme, tIndex) => ({
             name: theme._attributes.name,
             themeId: `${roundId}-${tIndex}`,
-            question: theme.questions.question.map((question, qIndex) => ({
+            question: arrayed(theme.questions.question).map((question, qIndex) => ({
                 price: question._attributes.price,
                 questionId: `${roundId}-${tIndex}-${qIndex}`
             }))
@@ -187,7 +190,7 @@ export class JeopardyPack {
             return null
         }
 
-        return this.declaration.package.rounds.round[+roundId]?.themes.theme[+themeId]?.questions.question[+questionId]
+        return arrayed(arrayed(arrayed(this.declaration.package.rounds.round)[+roundId]?.themes.theme)[+themeId]?.questions.question)[+questionId]
     }
 
     getQuestionScenarioById(
@@ -239,13 +242,13 @@ export class JeopardyPack {
             return [[], []]
         }
 
-        const correct: string[] = Array.isArray(question.right.answer) ? question.right.answer.map(a => a._text) : [question.right.answer._text]
+        const correct: string[] = arrayed(question.right.answer).map(a => a._text)
 
         if (!question.wrong) {
             return [correct, []]
         }
 
-        const incorrect: string[] = Array.isArray(question.wrong.answer) ? question.wrong.answer.map(a => a._text) : [question.wrong.answer._text]
+        const incorrect: string[] = arrayed(question.wrong.answer).map(a => a._text)
 
         return [correct, incorrect]
     }
