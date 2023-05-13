@@ -113,6 +113,17 @@ export class JeopardyPack {
         )
     }
 
+    isFinalRound(roundId: number) {
+        return arrayed(this.declaration.package.rounds.round)[roundId]?._attributes.type === 'final'
+    }
+
+    getFinalThemes() {
+        return arrayed(this.declaration.package.rounds.round).reduce(
+            (acc, round) => (round._attributes.type !== 'final' ? acc : [...acc, ...arrayed(round.themes.theme).map(t => t._attributes.name)]),
+            [] as string[]
+        )
+    }
+
     getRoundThemeNames(roundId: number) {
         const round = arrayed(this.declaration.package.rounds.round)[roundId]
 

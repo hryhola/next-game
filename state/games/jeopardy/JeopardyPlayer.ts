@@ -4,4 +4,4 @@ interface JeopardyPlayerState {}
 
 export class JeopardyPlayer extends Player<JeopardyPlayerState> {}
 
-export type ClickerPlayerData = ReturnType<JeopardyPlayer['data']>
+export type JeopardyPlayerData = ReturnType<JeopardyPlayer['data']>
