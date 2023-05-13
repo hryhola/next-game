@@ -63,7 +63,7 @@ export namespace JeopardyDeclaration {
             name: string
         }
         questions: {
-            question: Question[]
+            question: Question[] | Question
         }
     }
 
@@ -73,7 +73,7 @@ export namespace JeopardyDeclaration {
             type?: 'final'
         }
         themes: {
-            theme: Theme[]
+            theme: Theme[] | Theme
         }
     }
 
@@ -102,7 +102,7 @@ export namespace JeopardyDeclaration {
                 }
             }
             rounds: {
-                round: Round[]
+                round: Round[] | Round
             }
         }
     }
