@@ -112,8 +112,8 @@ export class JeopardySession extends GameSession<JeopardySessionState> {
         })
         ;(async () => {
             await this.act('$PackPreview', null)
-            await this.act('$RoundPreview', { roundId: 0 })
-            await this.act('$ShowQuestionBoard', { roundId: 0, playerId: random(this.game.players).data().id })
+            await this.act('$RoundPreview', { roundId: this.state.internal.currentRoundId })
+            await this.act('$ShowQuestionBoard', { roundId: this.state.internal.currentRoundId, playerId: random(this.game.players).data().id })
         })()
     }
 
@@ -590,7 +590,7 @@ export class JeopardySession extends GameSession<JeopardySessionState> {
                 contentDuration = mediaDuration
             } else {
                 contentDuration = 10
-                logger.error(frame, `Cannot get media duration for media!`)
+                logger.error(`Cannot get media duration for media ${prefix}/${frame.content}!`)
             }
         }
 
@@ -632,7 +632,26 @@ export class JeopardySession extends GameSession<JeopardySessionState> {
                 answeredQuestions
             })
 
-            this.act('$ShowQuestionBoard', { roundId: 0, playerId: random(this.game.players).data().id })
+            const isAllQuestionAnswers = this.game.pack
+                .getRoundQuestions(this.state.internal.currentRoundId)!
+                .every(questionId => this.state.internal.answeredQuestions.includes(questionId))
+
+            let roundId: number | null = null
+
+            if (isAllQuestionAnswers) {
+                const nextRoundId = this.state.internal.currentRoundId + 1
+
+                if (nextRoundId <= this.game.pack.getRoundsCount()) {
+                    roundId = nextRoundId
+                    this.state.internal.currentRoundId = nextRoundId
+
+                    this.act('$RoundPreview', { roundId: this.state.internal.currentRoundId }).then(() =>
+                        this.act('$ShowQuestionBoard', { roundId: this.state.internal.currentRoundId, playerId: random(this.game.players).data().id })
+                    )
+                }
+            } else {
+                this.act('$ShowQuestionBoard', { roundId: this.state.internal.currentRoundId, playerId: random(this.game.players).data().id })
+            }
 
             complete()
         })()
