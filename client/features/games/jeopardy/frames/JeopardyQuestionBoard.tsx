@@ -4,7 +4,7 @@ import { Box, Button, Divider } from '@mui/material'
 import { useLobby, useUser } from 'client/context/list'
 import { useActionSender, useJeopardy } from '../JeopardyView'
 
-export const QuestionBoard: React.FC<JeopardyState.ShowQuestionBoardFrame> = props => {
+export const QuestionBoard: React.FC<JeopardyState.QuestionBoardFrame> = props => {
     const sendAction = useActionSender()
     const user = useUser()
     const lobby = useLobby()

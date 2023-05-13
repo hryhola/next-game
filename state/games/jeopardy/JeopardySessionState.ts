@@ -1,3 +1,5 @@
+import { JeopardyPlayerData } from './JeopardyPlayer'
+
 export namespace JeopardyState {
     export interface PackPreviewFrame {
         id: 'pack-preview'
@@ -13,7 +15,7 @@ export namespace JeopardyState {
         isRoundName: boolean
     }
 
-    export interface ShowQuestionBoardFrame {
+    export interface QuestionBoardFrame {
         id: 'question-board'
         pickerId: string
         pickedQuestion?: `${number}-${number}-${number}`
@@ -47,7 +49,24 @@ export namespace JeopardyState {
         // TODO: mode
     }
 
-    export type Frame = { id: 'none' } | PackPreviewFrame | RoundPreviewFrame | ShowQuestionBoardFrame | QuestionContentFrame
+    export interface FinalScoreFrame {
+        id: 'final-score'
+        winner: JeopardyPlayerData
+    }
+
+    export interface FinalRoundBoardFrame {
+        id: 'final-round-board'
+        themes: { name: string; skipped: boolean }[]
+    }
+
+    export type Frame =
+        | { id: 'none' }
+        | PackPreviewFrame
+        | RoundPreviewFrame
+        | QuestionBoardFrame
+        | QuestionContentFrame
+        | FinalRoundBoardFrame
+        | FinalScoreFrame
 }
 
 export type JeopardySessionState = {

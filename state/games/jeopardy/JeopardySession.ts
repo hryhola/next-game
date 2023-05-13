@@ -632,22 +632,25 @@ export class JeopardySession extends GameSession<JeopardySessionState> {
                 answeredQuestions
             })
 
-            const isAllQuestionAnswers = this.game.pack
+            const isCurrentRoundQuestionAnswers = this.game.pack
                 .getRoundQuestions(this.state.internal.currentRoundId)!
                 .every(questionId => this.state.internal.answeredQuestions.includes(questionId))
 
-            let roundId: number | null = null
-
-            if (isAllQuestionAnswers) {
+            if (isCurrentRoundQuestionAnswers) {
                 const nextRoundId = this.state.internal.currentRoundId + 1
 
-                if (nextRoundId <= this.game.pack.getRoundsCount()) {
-                    roundId = nextRoundId
+                if (nextRoundId <= this.game.pack.getRoundsCount() - 1) {
                     this.state.internal.currentRoundId = nextRoundId
 
-                    this.act('$RoundPreview', { roundId: this.state.internal.currentRoundId }).then(() =>
-                        this.act('$ShowQuestionBoard', { roundId: this.state.internal.currentRoundId, playerId: random(this.game.players).data().id })
-                    )
+                    if (this.game.pack.isFinalRound(nextRoundId)) {
+                        this.act('$RoundPreview', { roundId: this.state.internal.currentRoundId }).then(() => this.act('$ShowFinalRoundBoard', null))
+                    } else {
+                        this.act('$RoundPreview', { roundId: this.state.internal.currentRoundId }).then(() =>
+                            this.act('$ShowQuestionBoard', { roundId: this.state.internal.currentRoundId, playerId: random(this.game.players).data().id })
+                        )
+                    }
+                } else {
+                    this.act('$ShowFinalScores', null)
                 }
             } else {
                 this.act('$ShowQuestionBoard', { roundId: this.state.internal.currentRoundId, playerId: random(this.game.players).data().id })
@@ -661,10 +664,44 @@ export class JeopardySession extends GameSession<JeopardySessionState> {
         }
     }
 
+    @GameOnlyActed
+    $ShowFinalScores(actor: A, payload: P, { complete }: E): R {
+        this.update({
+            frame: {
+                id: 'final-score',
+                winner: this.game.players
+                    .reduce((prev, curr) => (prev ? (curr.state.playerScore > prev.state.playerScore ? curr : prev) : curr), null as JeopardyPlayer | null)!
+                    .data()
+            }
+        })
+
+        complete()
+
+        return {
+            success: true
+        }
+    }
+
+    @GameOnlyActed
+    $ShowFinalRoundBoard(actor: A, payload: P, { complete }: E): R {
+        const finalThemes = this.game.pack.getNonFinalThemes()
+
+        this.update({
+            frame: {
+                id: 'final-round-board',
+                themes: finalThemes.map(t => ({ name: t, skipped: false }))
+            }
+        })
+
+        return {
+            success: true
+        }
+    }
+
     @PlayersOnlyActed
     @OnFrame('question-board', session => (actor: JeopardyPlayer) => actor.state.playerIsMaster || session.state.frame.pickerId === actor.member.user.id)
     $PickQuestion(actor: JeopardyPlayer, payload: { questionId: `${number}-${number}-${number}` }, { complete }: E): R {
-        const currFrame = this.state.frame as JeopardyState.ShowQuestionBoardFrame
+        const currFrame = this.state.frame as JeopardyState.QuestionBoardFrame
 
         if (currFrame.pickedQuestion) {
             return {
@@ -743,7 +780,7 @@ export class JeopardySession extends GameSession<JeopardySessionState> {
                 pickerId: payload.playerId,
                 roundId: payload.roundId,
                 themes: currentThemesData
-            } as JeopardyState.ShowQuestionBoardFrame
+            } as JeopardyState.QuestionBoardFrame
         })
 
         complete()
