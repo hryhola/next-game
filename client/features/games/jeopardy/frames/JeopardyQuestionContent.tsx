@@ -20,6 +20,7 @@ export const QuestionContent: React.FC<
     const actionSender = useActionSender()
     const playerRef = useRef<HTMLAudioElement | HTMLVideoElement | null>(null)
     const audio = useAudio()
+    const sendAction = useActionSender()
 
     const answerInputRef = useRef<HTMLInputElement>(null)
     const closeAnswerModal = useRef<{ close: (() => void) | null }>({ close: null })
@@ -106,8 +107,8 @@ export const QuestionContent: React.FC<
                     )}
                 </Box>
             ),
-            onConfirm: () => {},
-            onCancel: () => {}
+            onConfirm: () => sendAction('$RateAnswer', { rating: 'approved' }),
+            onCancel: () => sendAction('$RateAnswer', { rating: 'declined' })
         })
     }
 

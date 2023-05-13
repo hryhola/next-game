@@ -203,6 +203,113 @@ export class JeopardySession extends GameSession<JeopardySessionState> {
         this.timeHall.resolveEvent('AnswerGiving')
     }
 
+    resolveAnswerVerifying() {
+        for (let i = 100; i >= 0; i--) {
+            this.timeHall.cancelEvent('AnswerVerifyingProgress' + i)
+        }
+
+        this.timeHall.resolveEvent('AnswerVerifying')
+    }
+
+    @GameOnlyActed
+    $IncrementScore(actor: A, payload: { playerId: string; value: number }, { complete }: E): R {
+        const player = this.game.players.find(p => p.member.user.id === payload.playerId)
+
+        if (!player) {
+            complete()
+            return {
+                success: false,
+                message: "Can't get player for IncrementScore!"
+            }
+        }
+
+        const newScore = Number(player.state.playerScore) + Number(payload.value)
+
+        this.act('$SetScore', { playerID: payload.playerId, score: newScore })
+
+        complete()
+        return {
+            success: true
+        }
+    }
+
+    @GameOnlyActed
+    $DecrementScore(actor: A, payload: { playerId: string; value: number }, { complete }: E): R {
+        const player = this.game.players.find(p => p.member.user.id === payload.playerId)
+
+        if (!player) {
+            complete()
+            return {
+                success: false,
+                message: "Can't get player for DecrementScore!"
+            }
+        }
+
+        const newScore = Number(player.state.playerScore) - Number(payload.value)
+
+        this.act('$SetScore', { playerID: payload.playerId, score: newScore })
+
+        complete()
+        return {
+            success: true
+        }
+    }
+
+    @MasterOnlyActed
+    @OnFrame(
+        'question-content',
+        ({ state }) =>
+            () =>
+                state.internal.currentAnsweringPlayerId !== null,
+        'No answering player!'
+    )
+    $RateAnswer(actor: A, payload: { rating: 'approved' | 'declined' }, { complete }: E): R {
+        const frame = this.state.frame as JeopardyState.QuestionContentFrame
+
+        const answeringPlayer = this.game.players.find(p => p.member.user.id === this.state.internal.currentAnsweringPlayerId)
+
+        if (!answeringPlayer) {
+            complete()
+            return {
+                success: false,
+                message: 'Invalid answering player ID!'
+            }
+        }
+
+        const question = this.game.pack.getQuestionById(frame.questionId)
+
+        if (!question) {
+            complete()
+            return {
+                success: false,
+                message: 'Invalid question ID!'
+            }
+        }
+
+        const price = parseInt(question._attributes.price, 10)
+
+        this.act(payload.rating === 'approved' ? '$IncrementScore' : '$DecrementScore', {
+            playerId: answeringPlayer.member.user.id,
+            value: price
+        })
+
+        frame.result = payload.rating
+
+        this.update({ frame })
+
+        this.resolveAnswerVerifying()
+
+        if (payload.rating === 'approved') {
+            this.resolveAwaitAnswerRequest()
+        }
+
+        complete()
+
+        return {
+            success: true
+        }
+    }
+
     @NonPublished
     @OnFrame(
         'question-content',
@@ -260,6 +367,23 @@ export class JeopardySession extends GameSession<JeopardySessionState> {
             })
 
         this.timeHall.createAndStartEvent('AnswerVerifying', verifyingDuration, async () => {
+            const frame = this.state.frame as JeopardyState.QuestionContentFrame
+
+            if (!frame.result) {
+                const player = this.game.players.find(p => p.member.user.id === this.state.internal.currentAnsweringPlayerId)
+                const priceString = this.game.pack.getQuestionById(frame.questionId)?._attributes.price
+                const price = priceString ? parseInt(priceString, 10) : null
+
+                if (this.state.internal.currentAnsweringPlayerId && price) {
+                    this.act('$DecrementScore', {
+                        playerId: this.state.internal.currentAnsweringPlayerId,
+                        value: price
+                    })
+                } else {
+                    logger.warn("Can't get player or score to decrement score!")
+                }
+            }
+
             this.updateInternal({
                 correctAnswers: null,
                 incorrectAnswers: null,

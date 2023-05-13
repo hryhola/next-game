@@ -8,7 +8,7 @@ import { PlayerMenu } from './PlayerMenu'
 type Props = {
     isHighlighted?: boolean
     size?: 'medium' | 'small'
-    subtitle: 'score' | 'role'
+    subtitle?: 'score' | 'role'
 } & (PlayerProps | LoadingData)
 
 type PlayerProps = {
