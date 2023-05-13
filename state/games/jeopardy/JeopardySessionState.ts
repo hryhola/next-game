@@ -43,6 +43,7 @@ export namespace JeopardyState {
         playersWhoAnswered: string[]
         answeringPlayerId: string | null
         skipVoted: string[]
+        result?: 'approved' | 'declined'
         // TODO: mode
     }
 

@@ -7,7 +7,7 @@ interface HeaderProps {
     members: PlayerData[]
     highlightedPlayedIds?: string[]
     isLoading: boolean
-    masterLabel: 'role' | 'score'
+    masterLabel?: 'role' | 'score'
 }
 
 export const PlayersHeader: React.FC<HeaderProps> = props => {

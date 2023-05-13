@@ -136,7 +136,7 @@ export abstract class GameSession<State extends { internal: any } = any> {
         }
 
         player.update({
-            playerScore: payload.score
+            playerScore: Number(payload.score)
         })
 
         complete()
