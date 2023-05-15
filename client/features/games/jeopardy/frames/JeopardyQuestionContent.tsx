@@ -26,11 +26,19 @@ export const QuestionContent: React.FC<
     const closeAnswerModal = useRef<{ close: (() => void) | null }>({ close: null })
     const closeVerifyModal = useRef<{ close: (() => void) | null }>({ close: null })
 
-    useEffect(() => {
+    function updatePlayerVolume() {
         if (!playerRef.current) return
 
         playerRef.current.volume = audio.volume / 100
+    }
+
+    useEffect(() => {
+        updatePlayerVolume()
     }, [audio.volume, playerRef.current])
+
+    useEffect(() => {
+        updatePlayerVolume()
+    }, [])
 
     useEffect(() => {
         if (!props.useMediaTimestamp || typeof props.packFetchingTimeMs !== 'number' || typeof props.elapsedMediaTimeMs !== 'number' || !playerRef.current)
