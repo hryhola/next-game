@@ -557,7 +557,7 @@ export class JeopardySession extends GameSession<JeopardySessionState> {
             questionId,
             id: 'question-content',
             content: atom._text,
-            type: atom._attributes?.type || 'text',
+            type: '_attributes' in atom ? atom._attributes.type : 'text',
             answeringStatus: beforeMarker ? 'too-early' : 'too-late',
             answerRequestTimeLeft: null,
             answerGivingTimeLeft: null,
