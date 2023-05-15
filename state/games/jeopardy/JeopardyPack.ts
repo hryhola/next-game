@@ -213,11 +213,9 @@ export class JeopardyPack {
             return null
         }
 
-        if (!Array.isArray(question.scenario.atom)) {
-            return [[question.scenario.atom as JeopardyDeclaration.QuestionScenarioContentAtom], []]
-        }
+        const atoms = arrayed(question.scenario.atom)
 
-        const nonEmptyAtoms = question.scenario.atom.filter(a => Object.keys(a).length)
+        const nonEmptyAtoms = atoms.filter(a => Object.keys(a).length)
 
         const beforeMarker: JeopardyDeclaration.QuestionScenarioContentAtom[] = []
         const afterMarker: JeopardyDeclaration.QuestionScenarioContentAtom[] = []
@@ -237,6 +235,14 @@ export class JeopardyPack {
             } else {
                 beforeMarker.push(atom as JeopardyDeclaration.QuestionScenarioContentAtom)
             }
+        }
+
+        if (!afterMarker.length) {
+            afterMarker.push({
+                _text: arrayed(question.right.answer)
+                    .map(a => a._text)
+                    .join(',')
+            })
         }
 
         return [beforeMarker, afterMarker]

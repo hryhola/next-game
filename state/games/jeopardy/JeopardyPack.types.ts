@@ -20,17 +20,25 @@ export namespace JeopardyDeclaration {
         _text: `@${string}.${string}"`
     }
 
+    export interface QuestionScenarioAtomText {
+        _text: string
+    }
+
     export interface QuestionScenarioAtomMarker {
         _attributes: {
             type: 'marker'
         }
     }
 
-    export type QuestionScenarioContentAtom = QuestionScenarioAtomImage | QuestionScenarioAtomVoice | QuestionScenarioAtomVideo
+    export type QuestionScenarioContentAtom = QuestionScenarioAtomImage | QuestionScenarioAtomVoice | QuestionScenarioAtomVideo | QuestionScenarioAtomText
     export type QuestionScenarioAtom = QuestionScenarioContentAtom | QuestionScenarioAtomMarker
 
     export interface QuestionScenario {
         atom: QuestionScenarioAtom | QuestionScenarioAtom[]
+    }
+
+    export interface QuestionAnswer {
+        _text: string
     }
 
     export interface Question {
@@ -39,22 +47,10 @@ export namespace JeopardyDeclaration {
         }
         scenario: QuestionScenario
         right: {
-            answer:
-                | {
-                      _text: string
-                  }
-                | {
-                      _text: string
-                  }[]
+            answer: QuestionAnswer | QuestionAnswer[]
         }
         wrong?: {
-            answer:
-                | {
-                      _text: string
-                  }
-                | {
-                      _text: string
-                  }[]
+            answer: QuestionAnswer | QuestionAnswer[]
         }
     }
 
