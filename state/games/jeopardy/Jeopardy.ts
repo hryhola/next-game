@@ -20,6 +20,10 @@ export class Jeopardy extends Game {
         return this.players.filter(p => !p.state.playerIsMaster)
     }
 
+    get master() {
+        return this.players.find(p => p.state.playerIsMaster)
+    }
+
     pack!: JeopardyPack
 
     async postConstructor() {
