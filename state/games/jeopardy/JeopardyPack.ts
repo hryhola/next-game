@@ -225,7 +225,7 @@ export class JeopardyPack {
         for (let i = 0; i < nonEmptyAtoms.length; i++) {
             const atom = nonEmptyAtoms[i]
 
-            if (atom._attributes?.type === 'marker') {
+            if ('_attributes' in atom && atom._attributes.type === 'marker') {
                 hadPassMarker = true
                 continue
             }

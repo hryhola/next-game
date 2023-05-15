@@ -29,7 +29,8 @@ export class JeopardySession extends GameSession<JeopardySessionState> {
                 answeredQuestions: [],
                 currentRoundId: 0,
                 currentAnsweringPlayerId: null,
-                currentAnsweringPlayerAnswerText: null
+                currentAnsweringPlayerAnswerText: null,
+                pickerId: null
             },
             frame: {
                 id: 'none'
@@ -113,7 +114,7 @@ export class JeopardySession extends GameSession<JeopardySessionState> {
         ;(async () => {
             await this.act('$PackPreview', null)
             await this.act('$RoundPreview', { roundId: this.state.internal.currentRoundId })
-            await this.act('$ShowQuestionBoard', { roundId: this.state.internal.currentRoundId, playerId: random(this.game.players).data().id })
+            await this.act('$ShowQuestionBoard', { roundId: this.state.internal.currentRoundId })
         })()
     }
 
@@ -294,6 +295,10 @@ export class JeopardySession extends GameSession<JeopardySessionState> {
         })
 
         frame.result = payload.rating
+
+        if (payload.rating === 'approved') {
+            this.state.internal.pickerId = this.state.internal.currentAnsweringPlayerId
+        }
 
         this.update({ frame })
 
@@ -646,14 +651,14 @@ export class JeopardySession extends GameSession<JeopardySessionState> {
                         this.act('$RoundPreview', { roundId: this.state.internal.currentRoundId }).then(() => this.act('$ShowFinalRoundBoard', null))
                     } else {
                         this.act('$RoundPreview', { roundId: this.state.internal.currentRoundId }).then(() =>
-                            this.act('$ShowQuestionBoard', { roundId: this.state.internal.currentRoundId, playerId: random(this.game.players).data().id })
+                            this.act('$ShowQuestionBoard', { roundId: this.state.internal.currentRoundId })
                         )
                     }
                 } else {
                     this.act('$ShowFinalScores', null)
                 }
             } else {
-                this.act('$ShowQuestionBoard', { roundId: this.state.internal.currentRoundId, playerId: random(this.game.players).data().id })
+                this.act('$ShowQuestionBoard', { roundId: this.state.internal.currentRoundId })
             }
 
             complete()
@@ -745,14 +750,14 @@ export class JeopardySession extends GameSession<JeopardySessionState> {
     }
 
     @GameOnlyActed
-    $ShowQuestionBoard(actor: A, payload: { roundId: number; playerId: string }, { complete }: E): R {
-        const player = this.game.players.find(p => p.member.user.id === payload.playerId)
+    $ShowQuestionBoard(actor: A, payload: { roundId: number }, { complete }: E): R {
+        const picker = (this.state.internal.pickerId && this.game.players.find(p => p.member.user.id === this.state.internal.pickerId)) ?? this.game.master
 
-        if (!player) {
+        if (!picker) {
             complete()
             return {
                 success: false,
-                message: `Cannot find player with ID ${payload.playerId}`
+                message: `Cannot find any picker player!`
             }
         }
 
@@ -777,7 +782,7 @@ export class JeopardySession extends GameSession<JeopardySessionState> {
         this.update({
             frame: {
                 id: 'question-board',
-                pickerId: payload.playerId,
+                pickerId: picker.member.user.id,
                 roundId: payload.roundId,
                 themes: currentThemesData
             } as JeopardyState.QuestionBoardFrame
