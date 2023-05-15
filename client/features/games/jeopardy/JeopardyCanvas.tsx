@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
+import { FinalRoundBoard } from './frames/JeopardyFinalRoundBoard'
 import { FinalScore } from './frames/JeopardyFinalScore'
 import { PackPreview } from './frames/JeopardyPackPreview'
 import { QuestionBoard } from './frames/JeopardyQuestionBoard'
@@ -75,6 +76,8 @@ export const JeopardyCanvas: React.FC<JeopardyCanvasProps> = props => {
             return (
                 <QuestionContent {...game.session.frame} Resources={Resources} packFetchingTimeMs={packFetchingTimeMs!} useMediaTimestamp={useMediaTimestamp} />
             )
+        case 'final-round-board':
+            return <FinalRoundBoard {...game.session.frame} />
         case 'final-score':
             return <FinalScore {...game.session.frame} />
         case 'none':

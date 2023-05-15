@@ -687,14 +687,85 @@ export class JeopardySession extends GameSession<JeopardySessionState> {
         }
     }
 
+    @PlayersOnlyActed
+    @OnFrame(
+        'final-round-board',
+        ({ state }) =>
+            (player: JeopardyPlayer) =>
+                player.state.playerIsMaster || state.frame.skipperId === player.member.user.id
+    )
+    $SkipFinalTheme(actor: JeopardyPlayer, payload: { themeIndex: number }, { complete }: E): R {
+        const frame = this.state.frame as JeopardyState.FinalRoundBoardFrame
+
+        const theme = frame.themes[payload.themeIndex]
+
+        if (!theme) {
+            complete()
+            return {
+                success: false,
+                message: 'Incorrect theme index ID!'
+            }
+        }
+
+        if (theme.skipped) {
+            complete()
+            return {
+                success: false,
+                message: 'Already skipped!'
+            }
+        }
+
+        // Only one theme left
+        if (frame.themes.filter(t => t.skipped).length + 1 === frame.themes.length) {
+            complete()
+            return {
+                success: false,
+                message: "Can't skip last theme!"
+            }
+        }
+
+        theme.skipped = true
+
+        const currentSkipperIndex = this.game.answeringPlayers.findIndex(p => p.member.user.id === actor.member.user.id)
+
+        const nextSkipperIndex = currentSkipperIndex + 1 === this.game.answeringPlayers.length ? 0 : currentSkipperIndex + 1
+
+        const nextSkipper = this.game.answeringPlayers[nextSkipperIndex]
+
+        frame.skipperId = nextSkipper.member.user.id
+
+        this.update({ frame })
+
+        const onlyOneThemeLeft = frame.themes.filter(t => t.skipped).length + 1 === frame.themes.length
+
+        if (onlyOneThemeLeft) {
+            // TODO:
+            // * Await bets from players
+            // * Show question content
+            // * Await all answers
+            // * Verify answers
+            // * Show final frame with winner
+        }
+
+        complete()
+
+        return {
+            success: true
+        }
+    }
+
     @GameOnlyActed
     $ShowFinalRoundBoard(actor: A, payload: P, { complete }: E): R {
-        const finalThemes = this.game.pack.getNonFinalThemes()
+        const finalThemes = this.game.pack.getFinalThemes()
 
         this.update({
             frame: {
                 id: 'final-round-board',
-                themes: finalThemes.map(t => ({ name: t, skipped: false }))
+                themes: finalThemes.map(t => ({ name: t, skipped: false })),
+                skipperId: this.state.internal.pickerId,
+                playersThatAnswered: [],
+                playersThatMadeBet: [],
+                status: 'skipping'
             }
         })
 
