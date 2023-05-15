@@ -26,6 +26,10 @@ const JeopardyPlayersHeader = (props: Props) => {
         highlightedPlayedIds.push(game.session.frame.answeringPlayerId)
     }
 
+    if (game.session?.frame.id === 'final-round-board' && game.session.frame.skipperId) {
+        highlightedPlayedIds.push(game.session.frame.skipperId)
+    }
+
     return (
         <PlayersHeader
             members={game.players}

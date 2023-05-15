@@ -57,6 +57,10 @@ export namespace JeopardyState {
     export interface FinalRoundBoardFrame {
         id: 'final-round-board'
         themes: { name: string; skipped: boolean }[]
+        playersThatMadeBet: string[]
+        playersThatAnswered: string[]
+        skipperId: string | null
+        status: 'skipping' | 'betting' | 'answering' | 'answer-verifying'
     }
 
     export type Frame =
