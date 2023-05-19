@@ -60,6 +60,8 @@ export namespace JeopardyState {
         playersThatMadeBet: string[]
         playersThatAnswered: string[]
         skipperId: string | null
+        questionContent?: string
+        questionType?: 'text' | 'voice' | 'video' | 'image'
         status: 'skipping' | 'betting' | 'answering' | 'answer-verifying'
     }
 

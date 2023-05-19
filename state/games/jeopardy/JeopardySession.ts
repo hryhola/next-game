@@ -742,9 +742,10 @@ export class JeopardySession extends GameSession<JeopardySessionState> {
         if (onlyOneThemeLeft) {
             ;(async () => {
                 await this.act('$FinalRoundBetting', null)
+                await this.act('$FinalQuestionAnswering', null)
             })()
             // TODO:
-            // * Await bets from players
+            // ? Await bets from players
             // * Show question content
             // * Await all answers
             // * Verify answers
@@ -752,6 +753,41 @@ export class JeopardySession extends GameSession<JeopardySessionState> {
         }
 
         complete()
+
+        return {
+            success: true
+        }
+    }
+
+    resolveFinalQuestionAnswering?: () => void
+
+    @GameOnlyActed
+    @OnFrame('final-round-board')
+    $FinalQuestionAnswering(actor: A, payload: P, { complete }: E): R {
+        const frame = this.state.frame as JeopardyState.FinalRoundBoardFrame
+
+        const themeIndex = frame.themes.findIndex(t => !t.skipped)
+
+        const finalRoundIndex = this.game.pack.getRoundsCount() - 1
+
+        const question = this.game.pack.getQuestionById(`${finalRoundIndex}-${themeIndex}-0`)
+        const scenario = this.game.pack.getQuestionScenarioById(`${finalRoundIndex}-${themeIndex}-0`)
+
+        if (!question || !scenario) {
+            complete()
+            return {
+                success: false,
+                message: 'Cannot get final question!'
+            }
+        }
+
+        frame.status = 'answering'
+        frame.questionType = '_attributes' in scenario[0][0] ? scenario[0][0]._attributes.type : 'text'
+        frame.questionContent = scenario[0][0]._text
+
+        this.update({ frame })
+
+        this.resolveFinalQuestionAnswering = complete
 
         return {
             success: true

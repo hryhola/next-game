@@ -77,7 +77,7 @@ export const JeopardyCanvas: React.FC<JeopardyCanvasProps> = props => {
                 <QuestionContent {...game.session.frame} Resources={Resources} packFetchingTimeMs={packFetchingTimeMs!} useMediaTimestamp={useMediaTimestamp} />
             )
         case 'final-round-board':
-            return <FinalRoundBoard {...game.session.frame} />
+            return <FinalRoundBoard {...game.session.frame} Resources={Resources} />
         case 'final-score':
             return <FinalScore {...game.session.frame} />
         case 'none':
