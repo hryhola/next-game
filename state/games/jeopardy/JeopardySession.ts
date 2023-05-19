@@ -30,7 +30,8 @@ export class JeopardySession extends GameSession<JeopardySessionState> {
                 currentRoundId: 0,
                 currentAnsweringPlayerId: null,
                 currentAnsweringPlayerAnswerText: null,
-                pickerId: null
+                pickerId: null,
+                bets: {}
             },
             frame: {
                 id: 'none'
@@ -739,12 +740,80 @@ export class JeopardySession extends GameSession<JeopardySessionState> {
         const onlyOneThemeLeft = frame.themes.filter(t => t.skipped).length + 1 === frame.themes.length
 
         if (onlyOneThemeLeft) {
+            ;(async () => {
+                await this.act('$FinalRoundBetting', null)
+            })()
             // TODO:
             // * Await bets from players
             // * Show question content
             // * Await all answers
             // * Verify answers
             // * Show final frame with winner
+        }
+
+        complete()
+
+        return {
+            success: true
+        }
+    }
+
+    resolveFinalRoundBetting?: () => void
+
+    @GameOnlyActed
+    @OnFrame(
+        'final-round-board',
+        ({ state }) =>
+            () =>
+                state.frame.status === 'skipping'
+    )
+    $FinalRoundBetting(actor: A, payload: P, { complete }: E): R {
+        const frame = this.state.frame as JeopardyState.FinalRoundBoardFrame
+
+        frame.status = 'betting'
+
+        this.update({ frame })
+
+        this.resolveFinalRoundBetting = complete
+
+        return {
+            success: true
+        }
+    }
+
+    @PublishedForMasterOnly
+    @PlayersOnlyActed
+    @OnFrame(
+        'final-round-board',
+        ({ state }) =>
+            (player: JeopardyPlayer) =>
+                state.frame.status === 'betting' && !state.frame.playersThatMadeBet.includes(player.member.user.id)
+    )
+    $MakeFinalBet(player: JeopardyPlayer, payload: { value: number }, { complete }: E): R {
+        if (payload.value > player.state.playerScore || payload.value < 1) {
+            complete()
+
+            return {
+                success: false,
+                message: 'Ranges error'
+            }
+        }
+
+        const frame = this.state.frame as JeopardyState.FinalRoundBoardFrame
+
+        frame.playersThatMadeBet.push(player.member.user.id)
+
+        this.update({ frame })
+
+        const bets = this.state.internal.bets
+
+        bets[player.member.user.id] = payload.value
+
+        this.updateInternal({ bets })
+
+        if (frame.playersThatMadeBet.length === this.game.answeringPlayers.filter(p => p.state.playerScore > 0).length) {
+            if (this.resolveFinalRoundBetting) this.resolveFinalRoundBetting()
+            else logger.error("Can't resolveFinalRoundBetting during the let bet!")
         }
 
         complete()
@@ -768,6 +837,8 @@ export class JeopardySession extends GameSession<JeopardySessionState> {
                 status: 'skipping'
             }
         })
+
+        complete()
 
         return {
             success: true

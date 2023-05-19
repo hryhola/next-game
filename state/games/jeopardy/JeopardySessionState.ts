@@ -83,6 +83,7 @@ export type JeopardySessionState = {
         correctAnswers?: string[] | null
         incorrectAnswers?: string[] | null
         pickerId: string | null
+        bets: { [userId in string]: number }
     }
     frame: JeopardyState.Frame
     isPaused: boolean
