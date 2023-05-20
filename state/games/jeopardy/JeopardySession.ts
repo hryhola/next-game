@@ -745,7 +745,9 @@ export class JeopardySession extends GameSession<JeopardySessionState> {
                     this.state.internal.currentRoundId = nextRoundId
 
                     if (this.game.pack.isFinalRound(nextRoundId)) {
-                        this.act('$RoundPreview', { roundId: this.state.internal.currentRoundId }).then(() => this.act('$ShowFinalRoundBoard', null))
+                        if (this.game.players.some(p => p.state.playerScore > 0))
+                            this.act('$RoundPreview', { roundId: this.state.internal.currentRoundId }).then(() => this.act('$ShowFinalRoundBoard', null))
+                        else this.act('$ShowFinalScores', null)
                     } else {
                         this.act('$RoundPreview', { roundId: this.state.internal.currentRoundId }).then(() =>
                             this.act('$ShowQuestionBoard', { roundId: this.state.internal.currentRoundId })
