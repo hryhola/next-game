@@ -10,11 +10,12 @@ export const FinalScore: React.FC<JeopardyState.FinalScoreFrame> = props => {
             justifyContent="center"
             alignContent="center"
             width="100vw"
+            minHeight="var(--fullHeight)"
         >
             <Grid sx={{ textAlign: 'center' }} item>
                 <Typography align="center">winner</Typography>
                 <Typography variant="h1" align="center">
-                    {props.winner.userNickname}
+                    🎉{props.winner.userNickname}🎉
                 </Typography>
                 {props.winner.userAvatarUrl ? <img src={props.winner.userAvatarUrl} alt="Winner picture" /> : <></>}
             </Grid>

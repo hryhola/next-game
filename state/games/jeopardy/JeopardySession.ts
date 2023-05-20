@@ -2,7 +2,15 @@ import logger from 'logger'
 import { random, shuffle } from 'util/array'
 import { Chronos, TimeHall } from 'util/chronos'
 import { Game } from 'state/common/game/Game'
-import { GameOnlyActed, NonPublished, MasterOnlyActed, PlayersOnlyActed, PublishedForMasterOnly, ActedBy } from 'state/common/game/GameSession.decorators'
+import {
+    GameOnlyActed,
+    NonPublished,
+    MasterOnlyActed,
+    PlayersOnlyActed,
+    PublishedForMasterOnly,
+    ActedBy,
+    GameAndMasterOnlyActed
+} from 'state/common/game/GameSession.decorators'
 import { A, E, P, GameSession, GameSessionActionHandlerEventOptions, GameSessionActionsName, GameSessionAction } from 'state/common/game/GameSession'
 import { Player } from 'state/common/game/Player'
 import { GeneralSuccess, GeneralFailure, R, RecursivePartial } from 'util/universalTypes'
@@ -31,7 +39,8 @@ export class JeopardySession extends GameSession<JeopardySessionState> {
                 currentAnsweringPlayerId: null,
                 currentAnsweringPlayerAnswerText: null,
                 pickerId: null,
-                bets: {}
+                finalBets: {},
+                finalAnswers: {}
             },
             frame: {
                 id: 'none'
@@ -211,6 +220,93 @@ export class JeopardySession extends GameSession<JeopardySessionState> {
         }
 
         this.timeHall.resolveEvent('AnswerVerifying')
+    }
+
+    @PublishedForMasterOnly
+    @PlayersOnlyActed
+    @OnFrame(
+        'final-round-board',
+        ({ state }) =>
+            (player: JeopardyPlayer) =>
+                state.frame.status === 'answering' && !state.frame.playersThatAnswered.includes(player.member.user.id) && !player.state.playerIsMaster
+    )
+    $GiveFinalAnswer(player: JeopardyPlayer, payload: { answer: string }, { complete }: E): R {
+        const { finalAnswers } = this.state.internal
+
+        finalAnswers[player.member.user.id] = {
+            value: payload.answer
+        }
+
+        this.updateInternal({
+            finalAnswers
+        })
+
+        const frame = this.state.frame as JeopardyState.FinalRoundBoardFrame
+
+        frame.playersThatAnswered.push(player.member.user.id)
+
+        this.update({ frame })
+
+        if (frame.playersThatAnswered.length === this.game.answeringPlayers.filter(p => p.state.playerScore > 0).length) {
+            if (this.resolveFinalQuestionAnswering) this.resolveFinalQuestionAnswering()
+            else logger.error('Cannot resolveFinalQuestionAnswering!')
+        }
+
+        complete()
+
+        return {
+            success: true
+        }
+    }
+
+    @MasterOnlyActed
+    @OnFrame(
+        'final-round-board',
+        ({ state }) =>
+            (master: JeopardyPlayer) =>
+                state.frame.status === 'answer-verifying'
+    )
+    $RateFinalAnswer(master: JeopardyPlayer, payload: { answeringPlayerId: string; rate: 'approved' | 'declined' }, { complete }: E): R {
+        const answeringPlayer = this.game.answeringPlayers.find(p => p.member.user.id === payload.answeringPlayerId)
+
+        if (!answeringPlayer) {
+            complete()
+            return {
+                success: false,
+                message: `Cannot get answeringPlayer with id ${payload.answeringPlayerId}`
+            }
+        }
+
+        const answer = this.state.internal.finalAnswers[payload.answeringPlayerId]
+
+        if (!answer) {
+            complete()
+            return {
+                success: false,
+                message: `Cannot get answer of player ${payload.answeringPlayerId}`
+            }
+        }
+
+        answer.rate = payload.rate
+
+        const betAmount = this.state.internal.finalBets[payload.answeringPlayerId]
+
+        const score = answeringPlayer.state.playerScore + (answer.rate === 'approved' ? betAmount : -betAmount)
+
+        answeringPlayer.update({ playerScore: score })
+
+        this.updateInternal({ finalAnswers: this.state.internal.finalAnswers })
+
+        if (Object.values(this.state.internal.finalAnswers).every(answer => answer.rate)) {
+            if (this.resolveFinalQuestionVerifying) this.resolveFinalQuestionVerifying()
+            else logger.error('Cannot resolve resolveFinalQuestionVerifying!')
+        }
+
+        complete()
+
+        return {
+            success: true
+        }
     }
 
     @GameOnlyActed
@@ -670,7 +766,7 @@ export class JeopardySession extends GameSession<JeopardySessionState> {
         }
     }
 
-    @GameOnlyActed
+    @GameAndMasterOnlyActed
     $ShowFinalScores(actor: A, payload: P, { complete }: E): R {
         this.update({
             frame: {
@@ -682,6 +778,29 @@ export class JeopardySession extends GameSession<JeopardySessionState> {
         })
 
         complete()
+
+        return {
+            success: true
+        }
+    }
+
+    resolveFinalQuestionVerifying?: () => void
+
+    @GameOnlyActed
+    @OnFrame(
+        'final-round-board',
+        ({ state }) =>
+            actor =>
+                state.frame.status === 'answering'
+    )
+    $FinalQuestionVerifying(actor: A, payload: P, { complete }: E): R {
+        const frame = this.state.frame as JeopardyState.FinalRoundBoardFrame
+
+        frame.status = 'answer-verifying'
+
+        this.update({ frame })
+
+        this.resolveFinalQuestionVerifying = complete
 
         return {
             success: true
@@ -743,11 +862,12 @@ export class JeopardySession extends GameSession<JeopardySessionState> {
             ;(async () => {
                 await this.act('$FinalRoundBetting', null)
                 await this.act('$FinalQuestionAnswering', null)
+                await this.act('$FinalQuestionVerifying', null)
             })()
             // TODO:
             // ? Await bets from players
-            // * Show question content
-            // * Await all answers
+            // ? Show question content
+            // ? Await all answers
             // * Verify answers
             // * Show final frame with winner
         }
@@ -770,8 +890,10 @@ export class JeopardySession extends GameSession<JeopardySessionState> {
 
         const finalRoundIndex = this.game.pack.getRoundsCount() - 1
 
-        const question = this.game.pack.getQuestionById(`${finalRoundIndex}-${themeIndex}-0`)
-        const scenario = this.game.pack.getQuestionScenarioById(`${finalRoundIndex}-${themeIndex}-0`)
+        const questionId = `${finalRoundIndex}-${themeIndex}-0` as const
+
+        const question = this.game.pack.getQuestionById(questionId)
+        const scenario = this.game.pack.getQuestionScenarioById(questionId)
 
         if (!question || !scenario) {
             complete()
@@ -781,9 +903,17 @@ export class JeopardySession extends GameSession<JeopardySessionState> {
             }
         }
 
+        const answers = this.game.pack.getAnswers(questionId)!
+
+        this.state.internal.correctAnswers = answers[0]
+        this.state.internal.incorrectAnswers = answers[1]
+
+        frame.skipperId = null
         frame.status = 'answering'
-        frame.questionType = '_attributes' in scenario[0][0] ? scenario[0][0]._attributes.type : 'text'
-        frame.questionContent = scenario[0][0]._text
+        frame.questionAtoms = scenario[0].map(a => ({
+            content: a._text,
+            type: '_attributes' in a ? a._attributes.type : 'text'
+        }))
 
         this.update({ frame })
 
@@ -841,11 +971,11 @@ export class JeopardySession extends GameSession<JeopardySessionState> {
 
         this.update({ frame })
 
-        const bets = this.state.internal.bets
+        const bets = this.state.internal.finalBets
 
         bets[player.member.user.id] = payload.value
 
-        this.updateInternal({ bets })
+        this.updateInternal({ finalBets: bets })
 
         if (frame.playersThatMadeBet.length === this.game.answeringPlayers.filter(p => p.state.playerScore > 0).length) {
             if (this.resolveFinalRoundBetting) this.resolveFinalRoundBetting()

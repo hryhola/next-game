@@ -60,8 +60,10 @@ export namespace JeopardyState {
         playersThatMadeBet: string[]
         playersThatAnswered: string[]
         skipperId: string | null
-        questionContent?: string
-        questionType?: 'text' | 'voice' | 'video' | 'image'
+        questionAtoms?: {
+            content: string
+            type?: 'text' | 'voice' | 'video' | 'image'
+        }[]
         status: 'skipping' | 'betting' | 'answering' | 'answer-verifying'
     }
 
@@ -85,7 +87,13 @@ export type JeopardySessionState = {
         correctAnswers?: string[] | null
         incorrectAnswers?: string[] | null
         pickerId: string | null
-        bets: { [userId in string]: number }
+        finalBets: { [userId in string]: number }
+        finalAnswers: {
+            [userId in string]: {
+                value: string
+                rate?: 'approved' | 'declined'
+            }
+        }
     }
     frame: JeopardyState.Frame
     isPaused: boolean

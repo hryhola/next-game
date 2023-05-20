@@ -1,6 +1,6 @@
 import React, { MutableRefObject, useEffect, useRef, useState } from 'react'
-import { JeopardyState } from 'state/games/jeopardy/JeopardySessionState'
-import { Box, Button, Grid, List, ListItem, ListItemButton, Slider, TextField } from '@mui/material'
+import { JeopardySessionState, JeopardyState } from 'state/games/jeopardy/JeopardySessionState'
+import { Box, Button, Grid, List, ListItem, ListItemButton, Slider, Table, TableBody, TableCell, TableHead, TableRow, TextField } from '@mui/material'
 import { useUser } from 'client/context/list'
 import { useActionSender, useJeopardy } from '../JeopardyView'
 import { useGlobalModal } from 'client/features/global-modal/GlobalModal'
@@ -18,7 +18,7 @@ const FinalQuestion: React.FC<{ type: string; content: string; Resources: Mutabl
                 <video
                     ref={playerRef as React.MutableRefObject<HTMLVideoElement | null>}
                     style={{ maxWidth: '100vw' }}
-                    autoPlay
+                    controls
                     src={props.Resources.current.Video[props.content.slice(1)]}
                 ></video>
             )
@@ -26,7 +26,7 @@ const FinalQuestion: React.FC<{ type: string; content: string; Resources: Mutabl
         case 'voice': {
             return (
                 <>
-                    <audio ref={playerRef} autoPlay src={props.Resources.current.Audio[props.content.slice(1)]}></audio>
+                    <audio ref={playerRef} controls src={props.Resources.current.Audio[props.content.slice(1)]}></audio>
                     <img src="/assets/jeopardy/audio.gif" alt="Audio question" />
                 </>
             )
@@ -49,6 +49,7 @@ export const FinalRoundBoard: React.FC<
     const sendAction = useActionSender()
 
     const [betValue, setBetValue] = useState(1)
+    const betValueRef = useRef(1)
     const [answer, setAnswer] = useState('')
 
     const isMasterView = game.players.some(p => p.id === user.id && p.playerIsMaster)
@@ -59,6 +60,10 @@ export const FinalRoundBoard: React.FC<
         })
     }
 
+    useEffect(() => {
+        betValueRef.current = betValue
+    }, [betValue])
+
     const showBettingModal = () => {
         const player = game.players.find(p => p.id === user.id)
 
@@ -67,20 +72,23 @@ export const FinalRoundBoard: React.FC<
         globalModal.confirm({
             header: 'Make your bet',
             content: (
-                <Slider
-                    sx={{ mt: 4.5 }}
-                    defaultValue={betValue}
-                    valueLabelDisplay="on"
-                    onChange={(_, n) => setBetValue(n as number)}
-                    min={1}
-                    max={player.playerScore}
-                    step={1}
-                />
+                <Box minWidth="200px" display="flex" justifyContent="center" alignItems="center" overflow="hidden">
+                    <Slider
+                        sx={{ mt: 4, mx: 3, mb: 2 }}
+                        defaultValue={betValue}
+                        valueLabelDisplay="on"
+                        onChange={(_, n) => setBetValue(n as number)}
+                        min={1}
+                        max={player.playerScore}
+                        step={1}
+                    />
+                </Box>
             ),
+            inContainer: false,
             actionRequired: 'confirm',
             onConfirm: () => {
                 sendAction('$MakeFinalBet', {
-                    value: betValue
+                    value: betValueRef.current
                 })
             }
         })
@@ -93,6 +101,8 @@ export const FinalRoundBoard: React.FC<
     useEffect(() => {
         if (props.status === 'betting') showBettingModal()
     }, [props.status])
+
+    const internal = (game.session as JeopardySessionState).internal
 
     let content = <></>
 
@@ -110,20 +120,78 @@ export const FinalRoundBoard: React.FC<
                 </List>
             )
             break
+        case 'answer-verifying':
         case 'answering':
             content = (
-                <>
-                    <FinalQuestion Resources={props.Resources} content={props.questionContent || ''} type={props.questionType || 'text'} />
-                    {props.playersThatAnswered.includes(user.id) || isMasterView ? (
-                        <></>
-                    ) : (
-                        <Box sx={{ mt: 2 }}>
+                <Grid sx={{ pt: 25 }} display="flex" flexDirection="column" spacing={3} container>
+                    {isMasterView && props.status === 'answer-verifying' && (
+                        <>
+                            {internal.finalAnswers && Object.values(internal.finalAnswers).every(a => a.rate) && (
+                                <Grid item>
+                                    <Button onClick={() => sendAction('$ShowFinalScores', null)}>End</Button>
+                                </Grid>
+                            )}
+                            <Grid item>
+                                Correct: {internal.correctAnswers?.join(',')}
+                                <br />
+                                Incorrect: {internal.incorrectAnswers?.join(',')}
+                                <Table aria-label="Final Answers" size="small">
+                                    <TableHead>
+                                        <TableRow>
+                                            <TableCell>Player</TableCell>
+                                            <TableCell>Answer</TableCell>
+                                            <TableCell>Action</TableCell>
+                                        </TableRow>
+                                    </TableHead>
+                                    <TableBody>
+                                        {Object.entries(internal.finalAnswers).map(([playerId, answer]) => (
+                                            <TableRow key={playerId}>
+                                                <TableCell>{game.players.find(p => p.id === playerId)?.userNickname || playerId}</TableCell>
+                                                <TableCell>{answer.value}</TableCell>
+                                                <TableCell>
+                                                    {!answer.rate && (
+                                                        <>
+                                                            <Button
+                                                                color="success"
+                                                                onClick={() =>
+                                                                    sendAction('$RateFinalAnswer', { answeringPlayerId: playerId, rate: 'approved' })
+                                                                }
+                                                            >
+                                                                Approve
+                                                            </Button>
+                                                            <Button
+                                                                color="error"
+                                                                onClick={() =>
+                                                                    sendAction('$RateFinalAnswer', { answeringPlayerId: playerId, rate: 'declined' })
+                                                                }
+                                                            >
+                                                                Decline
+                                                            </Button>
+                                                        </>
+                                                    )}
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </Grid>
+                        </>
+                    )}
+                    {props.questionAtoms?.map((q, i) => (
+                        <Grid item key={i}>
+                            <FinalQuestion Resources={props.Resources} content={q.content || ''} type={q.type || 'text'} />
+                        </Grid>
+                    ))}
+                    {!isMasterView && !props.playersThatAnswered.includes(user.id) && (
+                        <Grid item>
                             <TextField value={answer} onChange={e => setAnswer(e.target.value)} />
                             <br />
-                            <Button sx={{ mt: 2 }}>Answer</Button>
-                        </Box>
+                            <Button onClick={() => sendAction('$GiveFinalAnswer', { answer })} sx={{ mt: 2 }}>
+                                Answer
+                            </Button>
+                        </Grid>
                     )}
-                </>
+                </Grid>
             )
             break
     }
