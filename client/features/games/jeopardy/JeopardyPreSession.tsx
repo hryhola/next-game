@@ -14,7 +14,15 @@ const JeopardyPreSession = (props: Props) => {
         return <LoadingOverlay isLoading={true} text="Pause" zIndex="auto" hideProgress />
     }
 
-    return <>{props.isPackLoading ? <LoadingOverlay isLoading={props.isPackLoading} text="Pack loading" zIndex="auto" /> : <NoSession game={game} />}</>
+    return (
+        <>
+            {props.isPackLoading ? (
+                <LoadingOverlay isLoading={props.isPackLoading} text="Pack loading" zIndex="auto" />
+            ) : (
+                <NoSession game={game} starter="master" />
+            )}
+        </>
+    )
 }
 
 export default JeopardyPreSession
