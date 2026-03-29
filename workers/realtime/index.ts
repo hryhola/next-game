@@ -412,6 +412,10 @@ const worker: ExportedHandler<RealtimeWorkerEnv> = {
                         return errorResponse(400, 'Lobby id is required', 'invalid_payload')
                     }
 
+                    if (body.gameName && !['TicTacToe', 'Clicker'].includes(body.gameName)) {
+                        return errorResponse(400, `Unsupported game: ${body.gameName}`, 'invalid_game')
+                    }
+
                     const roomId = body.roomId.trim()
                     const stub = getLobbyRoomStub(env, roomId)
 
@@ -422,7 +426,7 @@ const worker: ExportedHandler<RealtimeWorkerEnv> = {
                                 headers: request.headers,
                                 body: JSON.stringify({
                                     ...body,
-                                    gameName: 'TicTacToe',
+                                    gameName: body.gameName === 'Clicker' ? 'Clicker' : 'TicTacToe',
                                     roomId
                                 })
                             }),

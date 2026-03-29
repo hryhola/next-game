@@ -20,7 +20,7 @@ export const LobbyCreator: React.FC = () => {
     const [lobbyId, setLobbyId] = useState('')
     const [password, setPassword] = useState('')
     const [error, setError] = useState('')
-    const [gameName, setGameName] = useState<GameName>(isWorkerMode ? 'TicTacToe' : 'Clicker')
+    const [gameName, setGameName] = useState<GameName>('Clicker')
     const [isLoading, setIsLoading] = useState(false)
     const [initialDataScheme, setInitialDataScheme] = useState<InitialGameDataSchema>([])
 
@@ -90,7 +90,7 @@ export const LobbyCreator: React.FC = () => {
                 )}
                 {isWorkerMode && (
                     <Grid item>
-                        <Alert severity="info">Worker mode currently supports TicTacToe only. File-based game setup is disabled for now.</Alert>
+                        <Alert severity="info">Worker mode currently supports TicTacToe and Clicker. File-based game setup is still disabled for now.</Alert>
                     </Grid>
                 )}
                 <Grid item>
@@ -109,10 +109,9 @@ export const LobbyCreator: React.FC = () => {
                             name="gameName"
                             label="Game"
                             fullWidth
-                            disabled={isWorkerMode}
                         >
                             <MenuItem value="TicTacToe">Tic Tac Toe</MenuItem>
-                            {!isWorkerMode && <MenuItem value="Clicker">Clicker</MenuItem>}
+                            <MenuItem value="Clicker">Clicker</MenuItem>
                             {!isWorkerMode && <MenuItem value="Jeopardy">[PRE-ALPHA] Jeopardy</MenuItem>}
                         </Select>
                     </FormControl>

@@ -1,6 +1,8 @@
 import type {
     LobbyBaseInfo,
+    LobbyRoomGameActionMessage,
     RealtimeChatMessage,
+    RealtimeLobbyGame,
     RealtimeLobbyListItem,
     RealtimeLobbyMember,
     RealtimeLobbySnapshot,
@@ -16,6 +18,11 @@ export type LegacyEventEnvelope = {
         data: StateEvents[E]
     }
 }[StateEventName]
+
+type LegacyPlayerData = PlayerData & {
+    playerChar?: RealtimeLobbyMember['playerChar']
+    playerIsClickAllowed?: boolean
+}
 
 function toLegacyChatMessage(message: RealtimeChatMessage): TChatMessage {
     return {
@@ -41,12 +48,21 @@ function toLegacyLobbyMember(member: RealtimeLobbyMember, memberPosition: number
 }
 
 function toLegacyPlayer(member: RealtimeLobbyMember, memberPosition: number): PlayerData {
-    return {
+    const player: LegacyPlayerData = {
         ...toLegacyLobbyMember(member, memberPosition),
-        playerChar: member.playerChar!,
-        playerIsMaster: member.isCreator,
-        playerScore: 0
-    } as PlayerData
+        playerIsMaster: member.playerIsMaster ?? member.isCreator,
+        playerScore: member.playerScore ?? 0
+    }
+
+    if (member.playerChar) {
+        player.playerChar = member.playerChar
+    }
+
+    if (typeof member.playerIsClickAllowed === 'boolean') {
+        player.playerIsClickAllowed = member.playerIsClickAllowed
+    }
+
+    return player as PlayerData
 }
 
 function getLegacyMembers(snapshot: RealtimeLobbySnapshot): LobbyMemberData[] {
@@ -58,18 +74,6 @@ function getLegacyPlayers(snapshot: RealtimeLobbySnapshot): PlayerData[] {
         .map((member, index) => ({ member, index }))
         .filter(({ member }) => member.role === 'player')
         .map(({ member, index }) => toLegacyPlayer(member, index))
-}
-
-function toLegacyActiveSession(session: RealtimeTicTacToeSession) {
-    if (session.status !== 'active') {
-        return undefined
-    }
-
-    return {
-        board: session.board.map(row => [...row]),
-        turn: session.turnUserId,
-        winner: undefined
-    }
 }
 
 function findLegacyCreator(snapshot: RealtimeLobbySnapshot) {
@@ -90,6 +94,71 @@ function findLegacyCreator(snapshot: RealtimeLobbySnapshot) {
               userIsOnline: false,
               userNickname: ''
           }
+}
+
+function toLegacyClickerWinner(snapshot: RealtimeLobbySnapshot, winnerUserId: string | null): PlayerData | undefined {
+    if (!winnerUserId) {
+        return undefined
+    }
+
+    const winnerIndex = snapshot.members.findIndex(member => member.id === winnerUserId && member.role === 'player')
+
+    if (winnerIndex < 0) {
+        return undefined
+    }
+
+    return toLegacyPlayer(snapshot.members[winnerIndex], winnerIndex)
+}
+
+function toLegacyActiveSession(game: RealtimeLobbyGame, snapshot: RealtimeLobbySnapshot): GameData['session'] {
+    if (game.name === 'Clicker') {
+        if (game.session.status === 'idle') {
+            return undefined
+        }
+
+        return {
+            playerIsClickAllowed: game.session.playerIsClickAllowed,
+            winner: toLegacyClickerWinner(snapshot, game.session.winnerUserId)
+        }
+    }
+
+    if (game.session.status !== 'active') {
+        return undefined
+    }
+
+    return {
+        board: game.session.board.map(row => [...row]),
+        turn: game.session.turnUserId,
+        winner: undefined
+    }
+}
+
+function toLegacyEndedSession(previous: RealtimeLobbySnapshot, next: RealtimeLobbySnapshot): GameData['session'] {
+    if (previous.game.name === 'Clicker') {
+        return {
+            playerIsClickAllowed: true,
+            winner: toLegacyClickerWinner(next, previous.game.session.winnerUserId)
+        }
+    }
+
+    return {
+        board: previous.game.session.board.map(row => [...row]),
+        turn: previous.game.session.turnUserId,
+        winner: previous.game.session.winnerUserId || undefined
+    }
+}
+
+function toLegacyInitialData(snapshot: RealtimeLobbySnapshot): GameData['initialData'] {
+    if (snapshot.game.name !== 'Clicker' || !snapshot.game.initialData.backgroundUrl) {
+        return {}
+    }
+
+    return {
+        background: {
+            public: true,
+            value: snapshot.game.initialData.backgroundUrl
+        }
+    }
 }
 
 export function toLegacyLobbyBaseInfo(item: RealtimeLobbyListItem): LobbyBaseInfo {
@@ -126,15 +195,25 @@ export function toLegacyLobbyData(snapshot: RealtimeLobbySnapshot): LobbyData {
 
 export function toLegacyGameData(snapshot: RealtimeLobbySnapshot): GameData {
     return {
-        initialData: {},
+        initialData: toLegacyInitialData(snapshot),
         name: snapshot.game.name,
         players: getLegacyPlayers(snapshot),
-        session: toLegacyActiveSession(snapshot.game.session)
+        session: toLegacyActiveSession(snapshot.game, snapshot)
     }
 }
 
 export function toLegacyLobbyChatMessages(snapshot: RealtimeLobbySnapshot): TChatMessage[] {
     return snapshot.chat.slice(-50).reverse().map(toLegacyChatMessage)
+}
+
+export function toLegacyGameActionEvent(lobbyId: string, payload: LobbyRoomGameActionMessage['payload']): StateEvents['Game-SessionAction'] {
+    return {
+        actor: payload.actor,
+        lobbyId,
+        payload: payload.actionPayload,
+        result: payload.actionResult,
+        type: payload.actionName
+    }
 }
 
 export async function getWorkerErrorMessage(response: Response, fallbackMessage: string): Promise<string> {
@@ -151,10 +230,8 @@ export async function getWorkerErrorMessage(response: Response, fallbackMessage:
     return fallbackMessage
 }
 
-function getChangedMemberData(previous: RealtimeLobbyMember, next: RealtimeLobbyMember): Partial<LobbyMemberData> | null {
-    const data: Partial<LobbyMemberData> & { id: string } = {
-        id: next.id
-    }
+function getChangedLobbyMemberData(previous: RealtimeLobbyMember, next: RealtimeLobbyMember): Partial<LobbyMemberData> | null {
+    const data: Partial<LobbyMemberData> = {}
 
     if (previous.userNickname !== next.userNickname) {
         data.userNickname = next.userNickname
@@ -168,12 +245,54 @@ function getChangedMemberData(previous: RealtimeLobbyMember, next: RealtimeLobby
         data.userAvatarUrl = next.userAvatarUrl
     }
 
+    if (previous.connected !== next.connected) {
+        data.userIsOnline = next.connected
+    }
+
     if (previous.role !== next.role) {
         data.memberRole = next.role
         data.memberIsPlayer = next.role === 'player'
     }
 
-    return Object.keys(data).length > 1 ? data : null
+    return Object.keys(data).length ? data : null
+}
+
+function getChangedPlayerData(previous: RealtimeLobbyMember, next: RealtimeLobbyMember): Partial<PlayerData> | null {
+    const data: Record<string, unknown> = {}
+
+    if (previous.userNickname !== next.userNickname) {
+        data.userNickname = next.userNickname
+    }
+
+    if (previous.userColor !== next.userColor) {
+        data.userColor = next.userColor
+    }
+
+    if (previous.userAvatarUrl !== next.userAvatarUrl) {
+        data.userAvatarUrl = next.userAvatarUrl
+    }
+
+    if (previous.connected !== next.connected) {
+        data.userIsOnline = next.connected
+    }
+
+    if (previous.playerChar !== next.playerChar) {
+        data.playerChar = next.playerChar
+    }
+
+    if ((previous.playerScore ?? 0) !== (next.playerScore ?? 0)) {
+        data.playerScore = next.playerScore ?? 0
+    }
+
+    if ((previous.playerIsMaster ?? previous.isCreator) !== (next.playerIsMaster ?? next.isCreator)) {
+        data.playerIsMaster = next.playerIsMaster ?? next.isCreator
+    }
+
+    if (previous.playerIsClickAllowed !== next.playerIsClickAllowed && typeof next.playerIsClickAllowed === 'boolean') {
+        data.playerIsClickAllowed = next.playerIsClickAllowed
+    }
+
+    return Object.keys(data).length ? (data as Partial<PlayerData>) : null
 }
 
 function findBoardMove(previous: RealtimeTicTacToeSession, next: RealtimeTicTacToeSession): { cell: [number, number]; value: 'x' | 'o' } | null {
@@ -243,30 +362,59 @@ export function deriveLegacyEventsFromSnapshot(previous: RealtimeLobbySnapshot, 
         }
     })
 
-    next.members.forEach(member => {
+    next.members.forEach((member, index) => {
         const previousMember = previousMembersById.get(member.id)
 
         if (!previousMember) {
             return
         }
 
-        const changedMemberData = getChangedMemberData(previousMember, member)
+        const changedMemberData = getChangedLobbyMemberData(previousMember, member)
 
         if (changedMemberData) {
             events.push({
                 ctx: 'Lobby-MemberUpdate',
                 data: {
                     lobbyId: next.roomId,
-                    data: changedMemberData
+                    data: {
+                        id: member.id,
+                        ...changedMemberData
+                    }
                 }
             })
+        }
 
-            if (member.role === 'player') {
+        if (previousMember.role !== member.role) {
+            if (previousMember.role !== 'player' && member.role === 'player') {
+                events.push({
+                    ctx: 'Game-Join',
+                    data: {
+                        lobbyId: next.roomId,
+                        player: toLegacyPlayer(member, index)
+                    }
+                })
+            } else if (previousMember.role === 'player' && member.role !== 'player') {
+                events.push({
+                    ctx: 'Game-Leave',
+                    data: {
+                        lobbyId: next.roomId,
+                        player: toLegacyPlayer(previousMember, index)
+                    }
+                })
+            }
+
+            return
+        }
+
+        if (member.role === 'player') {
+            const changedPlayerData = getChangedPlayerData(previousMember, member)
+
+            if (changedPlayerData) {
                 events.push({
                     ctx: 'Game-PlayerUpdate',
                     data: {
                         id: member.id,
-                        data: changedMemberData
+                        data: changedPlayerData
                     }
                 })
             }
@@ -322,62 +470,80 @@ export function deriveLegacyEventsFromSnapshot(previous: RealtimeLobbySnapshot, 
         }
     })
 
-    const previousSession = previous.game.session
-    const nextSession = next.game.session
-
-    if (previousSession.status !== 'active' && nextSession.status === 'active') {
-        events.push({
-            ctx: 'Game-SessionStart',
-            data: {
-                lobbyId: next.roomId,
-                session: toLegacyActiveSession(nextSession)!
-            }
-        })
-    }
-
-    const move = previousSession.status === 'active' ? findBoardMove(previousSession, nextSession) : null
-
-    if (move) {
-        const actor = next.members.find(member => member.role === 'player' && member.playerChar === move.value)
-
-        if (actor) {
+    if (previous.game.name === 'TicTacToe' && next.game.name === 'TicTacToe') {
+        if (previous.game.session.status !== 'active' && next.game.session.status === 'active') {
             events.push({
-                ctx: 'Game-SessionAction',
+                ctx: 'Game-SessionStart',
                 data: {
                     lobbyId: next.roomId,
-                    actor: {
-                        id: actor.id,
-                        type: 'player'
-                    },
-                    payload: {
-                        cell: move.cell
-                    },
-                    result: {
-                        isDraw: nextSession.isDraw,
-                        nextTurn: nextSession.status === 'active' ? nextSession.turnUserId : null,
-                        status: 'Success',
-                        winLine: nextSession.winLine,
-                        winner: nextSession.winnerUserId || undefined
-                    },
-                    type: '$Move'
+                    session: toLegacyActiveSession(next.game, next)!
+                }
+            })
+        }
+
+        const move = previous.game.session.status === 'active' ? findBoardMove(previous.game.session, next.game.session) : null
+
+        if (move) {
+            const actor = next.members.find(member => member.role === 'player' && member.playerChar === move.value)
+
+            if (actor) {
+                events.push({
+                    ctx: 'Game-SessionAction',
+                    data: {
+                        actor: {
+                            id: actor.id,
+                            type: 'player'
+                        },
+                        lobbyId: next.roomId,
+                        payload: {
+                            cell: move.cell
+                        },
+                        result: {
+                            isDraw: next.game.session.isDraw,
+                            nextTurn: next.game.session.status === 'active' ? next.game.session.turnUserId : null,
+                            status: 'Success',
+                            winLine: next.game.session.winLine,
+                            winner: next.game.session.winnerUserId || undefined
+                        },
+                        type: '$Move'
+                    }
+                })
+            }
+        }
+
+        if (previous.game.session.status === 'active' && next.game.session.status === 'finished') {
+            events.push({
+                ctx: 'Game-SessionEnd',
+                data: {
+                    lobbyId: next.roomId,
+                    players: getLegacyPlayers(next),
+                    session: toLegacyEndedSession(next, next)
                 }
             })
         }
     }
 
-    if (previousSession.status === 'active' && nextSession.status === 'finished') {
-        events.push({
-            ctx: 'Game-SessionEnd',
-            data: {
-                lobbyId: next.roomId,
-                players: getLegacyPlayers(next),
-                session: {
-                    board: nextSession.board.map(row => [...row]),
-                    turn: nextSession.turnUserId,
-                    winner: nextSession.winnerUserId || undefined
+    if (previous.game.name === 'Clicker' && next.game.name === 'Clicker') {
+        if (previous.game.session.status === 'idle' && next.game.session.status !== 'idle') {
+            events.push({
+                ctx: 'Game-SessionStart',
+                data: {
+                    lobbyId: next.roomId,
+                    session: toLegacyActiveSession(next.game, next)!
                 }
-            }
-        })
+            })
+        }
+
+        if (previous.game.session.status !== 'idle' && next.game.session.status === 'idle') {
+            events.push({
+                ctx: 'Game-SessionEnd',
+                data: {
+                    lobbyId: next.roomId,
+                    players: getLegacyPlayers(next),
+                    session: toLegacyEndedSession(previous, next)
+                }
+            })
+        }
     }
 
     return events

@@ -41,8 +41,8 @@ export const ClickerCanvas: React.FC = () => {
         setGameClickAllowed(false)
     })
 
-    useEventHandler('Game-SessionStart', ({ lobbyId }) => {
-        if (lobbyId === lobbyId) {
+    useEventHandler('Game-SessionStart', ({ lobbyId: eventLobbyId }) => {
+        if (eventLobbyId === lobbyId) {
             const canvas = canvasRef.current
 
             if (!canvas) {

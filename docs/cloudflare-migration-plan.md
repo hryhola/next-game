@@ -271,19 +271,18 @@ Supported through the bridge:
 
 -   auth bootstrap and registration
 -   lobby list and preview
--   TicTacToe create/join/leave/destroy
+-   TicTacToe and Clicker create/join/leave/destroy
 -   lobby chat
 -   ready check
 -   TicTacToe moves and session flow
+-   Clicker timed session flow
 
 Still intentionally unsupported through the bridge:
 
 -   global chat
 -   global users list
 -   avatar uploads
--   Clicker
 -   Jeopardy
--   time-based legacy flows
 -   isolating the Worker toolchain avoids forcing both runtimes into the same root package
 
 ### First Objects To Introduce
@@ -454,10 +453,12 @@ Replace Node timers and `node-schedule` assumptions with a Cloudflare-friendly t
 
 -   timer abstraction
 -   Cloudflare-backed room timer implementation
+-   fully playable Clicker flow on the Worker runtime and legacy bridge
 
 ### Done When
 
--   no game code depends directly on Node timers or `node-schedule`
+-   no migrated Worker game code depends directly on Node timers or `node-schedule`
+-   Clicker is playable end-to-end against the Worker on localhost
 
 ## Phase 8: Migrate Uploads And Asset Access To R2
 

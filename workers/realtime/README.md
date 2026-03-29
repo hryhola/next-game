@@ -22,7 +22,7 @@ The current worker already supports a real localhost migration slice:
 -   `POST /auth/logout` revokes the current session and clears the cookie
 -   `PATCH /auth/profile` updates nickname/color/avatar metadata in D1
 -   `GET /lobbies` lists active DO-backed lobbies from the D1 index
--   `POST /lobbies` creates a DO-backed TicTacToe lobby
+-   `POST /lobbies` creates a DO-backed TicTacToe or Clicker lobby
 -   `DELETE /lobbies/:roomId` destroys a lobby
 -   `POST /lobbies/:roomId/join` joins a lobby over HTTP for the legacy frontend bridge
 -   `POST /lobbies/:roomId/leave` leaves a lobby over HTTP for the legacy frontend bridge
@@ -40,7 +40,7 @@ The new identity/presence layer currently:
 -   keeps online presence in a dedicated Durable Object instead of Node process memory
 -   broadcasts websocket presence snapshots that survive reconnects within the worker runtime
 
-The room object currently owns the Phase 5 and 6 slice:
+The room object currently owns the Phase 5, 6, and 7 slice:
 
 -   lobby creation and destruction
 -   join and leave flow
@@ -48,6 +48,7 @@ The room object currently owns the Phase 5 and 6 slice:
 -   ready checks
 -   lobby chat
 -   TicTacToe session lifecycle and move validation
+-   Clicker session lifecycle, action fanout, and Durable Object alarm scheduling
 -   room snapshot fanout over websocket
 
 ## Node Version
@@ -91,14 +92,14 @@ Use separate browser tabs to simulate two players. The playground stores the aut
 -   the legacy UI bridge currently supports:
     -   auth/register/logout/session bootstrap
     -   lobby list and preview
-    -   TicTacToe lobby create/join/leave/destroy
+    -   TicTacToe and Clicker lobby create/join/leave/destroy
     -   lobby chat
     -   ready checks
     -   TicTacToe gameplay
+    -   Clicker gameplay, including timed click-enable and cooldown flow
 -   the legacy UI bridge intentionally does not support:
     -   global chat
     -   global users
     -   avatar uploads
-    -   Clicker
     -   Jeopardy
 -   `/playground` remains the fastest low-level worker test harness

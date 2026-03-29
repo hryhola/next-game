@@ -1,4 +1,4 @@
-import type { SocketMessage, StateEventName, StateEvents } from 'shared/contracts'
+import type { SocketMessage, StateEventName, StateEvents } from '../../contracts'
 
 export interface RealtimeBus {
     publish(channel: string, message: SocketMessage): void

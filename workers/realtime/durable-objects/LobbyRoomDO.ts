@@ -1,28 +1,40 @@
 import { DurableObject } from 'cloudflare:workers'
 import type {
     CreateLobbyRequest,
+    LobbyRoomGameActionMessage,
     LobbyRoomClientMessage,
     LobbyRoomServerMessage,
+    RealtimeLobbyGameName,
     RealtimeLobbyListItem,
     RealtimeLobbyMemberRole,
     RealtimeLobbySnapshot,
-    TicTacToePlayerChar
+    RealtimeTicTacToeSession
 } from '../../../shared/contracts/realtime-lobby'
 import type { IdentityProfile } from '../../../shared/contracts/identity'
 import { json } from '../lib/json'
+import { CLICKER_COMPLETE_DELAY_MS, CLICKER_REENABLE_DELAY_MS, createIdleClickerSession, getRandomClickerAllowDelayMs } from '../lobbies/clicker'
 import { markLobbyDeleted, upsertLobbyMetadata } from '../lobbies/store'
 import { createEmptyBoard, findWinningLine, isBoardFull } from '../lobbies/tictactoe'
-import type { ComputedLobbySnapshot, RoomSocketAttachment, StoredLobbyMember, StoredLobbyState } from '../lobbies/types'
+import type {
+    ComputedLobbySnapshot,
+    RoomScheduledTaskPayload,
+    RoomSocketAttachment,
+    StoredLobbyMember,
+    StoredLobbyState,
+    StoredTicTacToeGame
+} from '../lobbies/types'
+import { RoomScheduler } from '../scheduler/RoomScheduler'
 import type { RealtimeWorkerEnv } from '../types'
 
 function nowIso(): string {
     return new Date().toISOString()
 }
 
-function createIdleSession() {
+function createIdleTicTacToeSession(): RealtimeTicTacToeSession {
     return {
         board: createEmptyBoard(),
         endedAt: null,
+        id: null,
         isDraw: false,
         startedAt: null,
         status: 'idle' as const,
@@ -78,9 +90,12 @@ function parseClientMessage(message: string | ArrayBuffer): LobbyRoomClientMessa
 }
 
 export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
+    private readonly scheduler: RoomScheduler<RoomScheduledTaskPayload>
+
     constructor(ctx: DurableObjectState, env: RealtimeWorkerEnv) {
         super(ctx, env)
 
+        this.scheduler = new RoomScheduler(ctx.storage)
         this.ctx.setHibernatableWebSocketEventTimeout(60_000)
     }
 
@@ -270,14 +285,21 @@ export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
                 return
             }
             case 'game.start': {
-                const gameStartResult = this.startGame(state, attachment.user.id)
+                const gameStartResult = await this.startGame(state, attachment.user.id)
 
                 if (!gameStartResult.success) {
                     this.sendError(ws, gameStartResult.message, gameStartResult.code)
                     return
                 }
 
-                await this.persistState(state)
+                if (gameStartResult.action) {
+                    this.broadcastGameAction(gameStartResult.action)
+                }
+
+                if (gameStartResult.stateChanged) {
+                    await this.persistState(state)
+                }
+
                 this.broadcastSnapshot(state)
                 return
             }
@@ -291,6 +313,25 @@ export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
 
                 await this.persistState(state)
                 this.broadcastSnapshot(state)
+                return
+            }
+            case 'clicker.click': {
+                const clickResult = await this.handleClickerClick(state, attachment.user.id, request.payload.x, request.payload.y)
+
+                if (!clickResult.success) {
+                    this.sendError(ws, clickResult.message, clickResult.code)
+                    return
+                }
+
+                if (clickResult.action) {
+                    this.broadcastGameAction(clickResult.action)
+                }
+
+                if (clickResult.stateChanged) {
+                    await this.persistState(state)
+                    this.broadcastSnapshot(state)
+                }
+
                 return
             }
         }
@@ -377,11 +418,14 @@ export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
 
         const createdAt = nowIso()
 
+        const gameName: RealtimeLobbyGameName = payload.gameName === 'Clicker' ? 'Clicker' : 'TicTacToe'
         const creatorMember: StoredLobbyMember = {
             ...identity.user,
             isCreator: true,
             joinedAt: createdAt,
-            playerChar: 'x',
+            playerChar: gameName === 'TicTacToe' ? 'x' : null,
+            playerIsClickAllowed: true,
+            playerScore: 0,
             ready: null,
             role: 'player'
         }
@@ -390,10 +434,17 @@ export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
             chat: [],
             createdAt,
             creatorUserId: identity.user.id,
-            game: {
-                name: 'TicTacToe',
-                session: createIdleSession()
-            },
+            game:
+                gameName === 'Clicker'
+                    ? {
+                          initialData: {},
+                          name: 'Clicker',
+                          session: createIdleClickerSession()
+                      }
+                    : ({
+                          name: 'TicTacToe',
+                          session: createIdleTicTacToeSession()
+                      } as StoredTicTacToeGame),
             members: [creatorMember],
             name: payload.name?.trim() || payload.roomId,
             password: payload.password?.trim() || undefined,
@@ -680,6 +731,7 @@ export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
         })
 
         await markLobbyDeleted(this.env.IDENTITY_DB, roomId, deletedAt)
+        await this.scheduler.clear()
         await this.ctx.storage.deleteAll()
     }
 
@@ -700,7 +752,14 @@ export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
             membersCount: state.members.length,
             name: state.name,
             playersCount: state.members.filter(member => member.role === 'player').length,
-            status: state.game.session.status === 'active' ? 'in_progress' : 'waiting',
+            status:
+                state.game.name === 'Clicker'
+                    ? state.game.session.status === 'idle'
+                        ? 'waiting'
+                        : 'in_progress'
+                    : state.game.session.status === 'active'
+                    ? 'in_progress'
+                    : 'waiting',
             updatedAt: state.updatedAt
         }
 
@@ -708,24 +767,40 @@ export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
     }
 
     private buildSnapshot(state: StoredLobbyState): ComputedLobbySnapshot {
+        const game =
+            state.game.name === 'Clicker'
+                ? {
+                      initialData: {
+                          ...state.game.initialData
+                      },
+                      name: 'Clicker' as const,
+                      session: {
+                          ...state.game.session
+                      }
+                  }
+                : {
+                      name: 'TicTacToe' as const,
+                      session: {
+                          ...state.game.session,
+                          board: state.game.session.board.map(row => [...row]),
+                          winLine: state.game.session.winLine ? [...state.game.session.winLine] : null
+                      }
+                  }
+
         return {
             chat: [...state.chat],
             createdAt: state.createdAt,
             creatorUserId: state.creatorUserId,
-            game: {
-                name: state.game.name,
-                session: {
-                    ...state.game.session,
-                    board: state.game.session.board.map(row => [...row]),
-                    winLine: state.game.session.winLine ? [...state.game.session.winLine] : null
-                }
-            },
+            game,
             hasPassword: Boolean(state.password),
             members: state.members
                 .map(member => ({
                     ...member,
                     connected: this.ctx.getWebSockets(userTag(member.id)).length > 0,
-                    playerChar: member.playerChar || undefined
+                    playerChar: member.playerChar || undefined,
+                    playerIsClickAllowed: member.role === 'player' && state.game.name === 'Clicker' ? member.playerIsClickAllowed : undefined,
+                    playerIsMaster: member.role === 'player' ? member.isCreator : undefined,
+                    playerScore: member.role === 'player' ? member.playerScore : undefined
                 }))
                 .sort((a, b) => a.joinedAt.localeCompare(b.joinedAt)),
             name: state.name,
@@ -750,6 +825,22 @@ export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
             type: 'room.snapshot',
             payload: this.buildSnapshot(state)
         } as LobbyRoomServerMessage)
+
+        this.ctx.getWebSockets().forEach(socket => {
+            try {
+                socket.send(payload)
+            } catch (_error) {
+                try {
+                    socket.close(1011, 'broadcast failed')
+                } catch (_nestedError) {
+                    return
+                }
+            }
+        })
+    }
+
+    private broadcastGameAction(message: LobbyRoomGameActionMessage): void {
+        const payload = JSON.stringify(message as LobbyRoomServerMessage)
 
         this.ctx.getWebSockets().forEach(socket => {
             try {
@@ -793,6 +884,7 @@ export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
         }
 
         const existingMember = state.members.find(member => member.id === user.id)
+        const maxPlayers = state.game.name === 'TicTacToe' ? 2 : Number.POSITIVE_INFINITY
 
         if (existingMember) {
             if (existingMember.role === role) {
@@ -803,7 +895,7 @@ export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
                 }
             }
 
-            if (state.game.session.status === 'active') {
+            if (state.game.name === 'Clicker' ? state.game.session.status !== 'idle' : state.game.session.status === 'active') {
                 return {
                     success: false,
                     message: 'Cannot change roles during an active game',
@@ -811,7 +903,7 @@ export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
                 }
             }
 
-            if (role === 'player' && state.members.filter(member => member.role === 'player' && member.id !== user.id).length >= 2) {
+            if (role === 'player' && state.members.filter(member => member.role === 'player' && member.id !== user.id).length >= maxPlayers) {
                 return {
                     success: false,
                     message: 'Player slots are full',
@@ -830,7 +922,7 @@ export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
             }
         }
 
-        if (role === 'player' && state.members.filter(member => member.role === 'player').length >= 2) {
+        if (role === 'player' && state.members.filter(member => member.role === 'player').length >= maxPlayers) {
             return {
                 success: false,
                 message: 'Player slots are full',
@@ -844,7 +936,9 @@ export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
             ...user,
             isCreator: false,
             joinedAt,
-            playerChar: role === 'player' ? null : null,
+            playerChar: null,
+            playerIsClickAllowed: true,
+            playerScore: 0,
             ready: null,
             role
         })
@@ -893,8 +987,24 @@ export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
             state.creatorUserId = state.members.find(item => item.isCreator)!.id
         }
 
-        if (member.role === 'player' && state.game.session.status === 'active') {
-            state.game.session = createIdleSession()
+        if (member.role === 'player') {
+            if (state.game.name === 'TicTacToe' && state.game.session.status === 'active') {
+                state.game.session = createIdleTicTacToeSession()
+            }
+
+            if (state.game.name === 'Clicker' && state.game.session.status !== 'idle') {
+                const activePlayersLeft = state.members.some(item => item.role === 'player')
+
+                if (!activePlayersLeft) {
+                    const sessionId = state.game.session.id
+
+                    state.game.session = createIdleClickerSession()
+
+                    if (sessionId) {
+                        await this.cancelClickerSessionTasks(sessionId)
+                    }
+                }
+            }
         }
 
         this.normalizePlayerAssignments(state)
@@ -952,7 +1062,7 @@ export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
             }
         }
 
-        if (state.game.session.status === 'active') {
+        if (state.game.name === 'Clicker' ? state.game.session.status !== 'idle' : state.game.session.status === 'active') {
             return {
                 success: false,
                 message: 'Cannot start a ready check during an active game',
@@ -962,10 +1072,12 @@ export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
 
         const players = state.members.filter(member => member.role === 'player')
 
-        if (players.length !== 2) {
+        const isValidPlayerCount = state.game.name === 'Clicker' ? players.length >= 1 : players.length === 2
+
+        if (!isValidPlayerCount) {
             return {
                 success: false,
-                message: 'TicTacToe requires exactly 2 players',
+                message: state.game.name === 'Clicker' ? 'Clicker requires at least 1 player' : 'TicTacToe requires exactly 2 players',
                 code: 'invalid_player_count'
             }
         }
@@ -1036,7 +1148,40 @@ export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
         }
     }
 
-    private startGame(state: StoredLobbyState, userId: string): { success: true } | { success: false; message: string; code: string } {
+    private async startGame(
+        state: StoredLobbyState,
+        userId: string
+    ): Promise<
+        | {
+              success: true
+              action?: LobbyRoomGameActionMessage
+              stateChanged: boolean
+          }
+        | {
+              success: false
+              code: string
+              message: string
+          }
+    > {
+        if (state.game.name === 'Clicker') {
+            return this.startClickerGame(state, userId)
+        }
+
+        return this.startTicTacToeGame(state, userId)
+    }
+
+    private startTicTacToeGame(
+        state: StoredLobbyState,
+        userId: string
+    ): { success: true; action?: LobbyRoomGameActionMessage; stateChanged: boolean } | { success: false; message: string; code: string } {
+        if (state.game.name !== 'TicTacToe') {
+            return {
+                success: false,
+                message: 'This room does not run TicTacToe',
+                code: 'invalid_game'
+            }
+        }
+
         if (state.creatorUserId !== userId) {
             return {
                 success: false,
@@ -1070,6 +1215,7 @@ export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
         state.game.session = {
             board: createEmptyBoard(),
             endedAt: null,
+            id: crypto.randomUUID(),
             isDraw: false,
             startedAt: nowIso(),
             status: 'active',
@@ -1078,18 +1224,244 @@ export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
             winnerUserId: null
         }
 
-        state.readyCheck = {
-            participants: [],
-            status: 'idle',
-            updatedAt: nowIso()
+        this.resetReadyCheck(state)
+
+        return {
+            success: true,
+            stateChanged: true
+        }
+    }
+
+    private async startClickerGame(
+        state: StoredLobbyState,
+        userId: string
+    ): Promise<{ success: true; action?: LobbyRoomGameActionMessage; stateChanged: boolean } | { success: false; message: string; code: string }> {
+        if (state.game.name !== 'Clicker') {
+            return {
+                success: false,
+                message: 'This room does not run Clicker',
+                code: 'invalid_game'
+            }
+        }
+
+        const player = state.members.find(member => member.id === userId && member.role === 'player')
+
+        if (!player) {
+            return {
+                success: false,
+                message: 'Only players can start Clicker',
+                code: 'not_a_player'
+            }
+        }
+
+        if (state.game.session.status !== 'idle') {
+            return {
+                success: false,
+                message: 'A Clicker session is already in progress',
+                code: 'game_in_progress'
+            }
+        }
+
+        const players = state.members.filter(member => member.role === 'player')
+
+        if (!players.length) {
+            return {
+                success: false,
+                message: 'Clicker requires at least 1 player',
+                code: 'invalid_player_count'
+            }
+        }
+
+        players.forEach(member => {
+            member.playerIsClickAllowed = true
+        })
+
+        const sessionId = crypto.randomUUID()
+
+        state.game.session = {
+            endedAt: null,
+            id: sessionId,
+            playerIsClickAllowed: false,
+            startedAt: nowIso(),
+            status: 'waiting',
+            winnerUserId: null
+        }
+
+        this.resetReadyCheck(state)
+
+        await this.scheduler.schedule({
+            key: this.getClickerAllowClickTaskKey(sessionId),
+            payload: {
+                sessionId,
+                type: 'clicker.allow-click'
+            },
+            scheduledAt: Date.now() + getRandomClickerAllowDelayMs()
+        })
+
+        return {
+            success: true,
+            stateChanged: true
+        }
+    }
+
+    private async handleClickerClick(
+        state: StoredLobbyState,
+        userId: string,
+        x: number,
+        y: number
+    ): Promise<
+        | {
+              success: true
+              action: LobbyRoomGameActionMessage
+              stateChanged: boolean
+          }
+        | {
+              success: false
+              code: string
+              message: string
+          }
+    > {
+        if (state.game.name !== 'Clicker') {
+            return {
+                success: false,
+                message: 'This room does not run Clicker',
+                code: 'invalid_game'
+            }
+        }
+
+        const player = state.members.find(member => member.id === userId && member.role === 'player')
+
+        if (!player) {
+            return {
+                success: false,
+                message: 'Only players can click',
+                code: 'not_a_player'
+            }
+        }
+
+        if (state.game.session.status === 'idle') {
+            return {
+                success: false,
+                message: 'There is no active Clicker session',
+                code: 'game_not_started'
+            }
+        }
+
+        const actionPayload = { x, y }
+
+        if (!player.playerIsClickAllowed) {
+            return {
+                success: true,
+                action: this.createGameActionMessage({
+                    actor: {
+                        id: player.id,
+                        type: 'player'
+                    },
+                    actionName: '$Click',
+                    actionPayload,
+                    actionResult: {
+                        color: player.userColor,
+                        status: 'Skipped'
+                    }
+                }),
+                stateChanged: false
+            }
+        }
+
+        if (!state.game.session.playerIsClickAllowed) {
+            player.playerIsClickAllowed = false
+
+            if (state.game.session.id) {
+                await this.scheduler.schedule({
+                    key: this.getClickerReenablePlayerTaskKey(state.game.session.id, player.id),
+                    payload: {
+                        sessionId: state.game.session.id,
+                        type: 'clicker.reenable-player',
+                        userId: player.id
+                    },
+                    scheduledAt: Date.now() + CLICKER_REENABLE_DELAY_MS
+                })
+            }
+
+            return {
+                success: true,
+                action: this.createGameActionMessage({
+                    actor: {
+                        id: player.id,
+                        type: 'player'
+                    },
+                    actionName: '$Click',
+                    actionPayload,
+                    actionResult: {
+                        color: player.userColor,
+                        status: 'Failure'
+                    }
+                }),
+                stateChanged: true
+            }
+        }
+
+        if (state.game.session.winnerUserId) {
+            return {
+                success: true,
+                action: this.createGameActionMessage({
+                    actor: {
+                        id: player.id,
+                        type: 'player'
+                    },
+                    actionName: '$Click',
+                    actionPayload,
+                    actionResult: {
+                        color: player.userColor,
+                        status: 'NotWin'
+                    }
+                }),
+                stateChanged: false
+            }
+        }
+
+        state.game.session.status = 'resolving'
+        state.game.session.winnerUserId = player.id
+
+        if (state.game.session.id) {
+            await this.scheduler.schedule({
+                key: this.getClickerCompleteSessionTaskKey(state.game.session.id),
+                payload: {
+                    sessionId: state.game.session.id,
+                    type: 'clicker.complete-session',
+                    winnerUserId: player.id
+                },
+                scheduledAt: Date.now() + CLICKER_COMPLETE_DELAY_MS
+            })
         }
 
         return {
-            success: true
+            success: true,
+            action: this.createGameActionMessage({
+                actor: {
+                    id: player.id,
+                    type: 'player'
+                },
+                actionName: '$Click',
+                actionPayload,
+                actionResult: {
+                    color: player.userColor,
+                    status: 'Ok'
+                }
+            }),
+            stateChanged: true
         }
     }
 
     private makeMove(state: StoredLobbyState, userId: string, cell: [number, number]): { success: true } | { success: false; message: string; code: string } {
+        if (state.game.name !== 'TicTacToe') {
+            return {
+                success: false,
+                message: 'This room does not run TicTacToe',
+                code: 'invalid_game'
+            }
+        }
+
         const player = state.members.find(member => member.id === userId && member.role === 'player')
 
         if (!player) {
@@ -1183,6 +1555,168 @@ export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
         }
     }
 
+    async alarm(): Promise<void> {
+        const dueTasks = await this.scheduler.peekDue()
+
+        if (!dueTasks.length) {
+            return
+        }
+
+        const state = await this.getState()
+
+        if (!state) {
+            await this.scheduler.complete(dueTasks.map(task => task.key))
+            return
+        }
+
+        const completedKeys: string[] = []
+        const gameActions: LobbyRoomGameActionMessage[] = []
+        let stateChanged = false
+
+        for (const task of dueTasks) {
+            const taskResult = this.runScheduledTask(state, task.payload)
+
+            completedKeys.push(task.key)
+            stateChanged = stateChanged || taskResult.stateChanged
+
+            if (taskResult.action) {
+                gameActions.push(taskResult.action)
+            }
+        }
+
+        if (stateChanged) {
+            await this.persistState(state)
+        }
+
+        await this.scheduler.complete(completedKeys)
+
+        gameActions.forEach(action => this.broadcastGameAction(action))
+
+        if (stateChanged) {
+            this.broadcastSnapshot(state)
+        }
+    }
+
+    private runScheduledTask(state: StoredLobbyState, task: RoomScheduledTaskPayload): { action?: LobbyRoomGameActionMessage; stateChanged: boolean } {
+        switch (task.type) {
+            case 'clicker.allow-click':
+                return this.handleClickerAllowClickTask(state, task.sessionId)
+            case 'clicker.reenable-player':
+                return this.handleClickerReenablePlayerTask(state, task.sessionId, task.userId)
+            case 'clicker.complete-session':
+                return this.handleClickerCompleteSessionTask(state, task.sessionId, task.winnerUserId)
+        }
+    }
+
+    private handleClickerAllowClickTask(state: StoredLobbyState, sessionId: string): { action?: LobbyRoomGameActionMessage; stateChanged: boolean } {
+        if (state.game.name !== 'Clicker' || state.game.session.id !== sessionId || state.game.session.status !== 'waiting') {
+            return {
+                stateChanged: false
+            }
+        }
+
+        state.game.session.playerIsClickAllowed = true
+        state.game.session.status = 'active'
+
+        return {
+            action: this.createGameActionMessage({
+                actor: {
+                    id: 'game',
+                    type: 'game'
+                },
+                actionName: '$ClickAllowed',
+                actionPayload: {},
+                actionResult: {
+                    playerIsClickAllowed: true
+                }
+            }),
+            stateChanged: true
+        }
+    }
+
+    private handleClickerReenablePlayerTask(
+        state: StoredLobbyState,
+        sessionId: string,
+        userId: string
+    ): { action?: LobbyRoomGameActionMessage; stateChanged: boolean } {
+        if (state.game.name !== 'Clicker' || state.game.session.id !== sessionId || state.game.session.status === 'idle') {
+            return {
+                stateChanged: false
+            }
+        }
+
+        const player = state.members.find(member => member.id === userId && member.role === 'player')
+
+        if (!player || player.playerIsClickAllowed) {
+            return {
+                stateChanged: false
+            }
+        }
+
+        player.playerIsClickAllowed = true
+
+        return {
+            stateChanged: true
+        }
+    }
+
+    private handleClickerCompleteSessionTask(
+        state: StoredLobbyState,
+        sessionId: string,
+        winnerUserId: string
+    ): { action?: LobbyRoomGameActionMessage; stateChanged: boolean } {
+        if (state.game.name !== 'Clicker' || state.game.session.id !== sessionId || state.game.session.status !== 'resolving') {
+            return {
+                stateChanged: false
+            }
+        }
+
+        state.members
+            .filter(member => member.role === 'player')
+            .forEach(member => {
+                member.playerIsClickAllowed = true
+            })
+
+        const winner = state.members.find(member => member.id === winnerUserId && member.role === 'player')
+
+        if (winner) {
+            winner.playerScore += 1
+        }
+
+        state.game.session = createIdleClickerSession()
+
+        return {
+            stateChanged: true
+        }
+    }
+
+    private createGameActionMessage(message: LobbyRoomGameActionMessage['payload']): LobbyRoomGameActionMessage {
+        return {
+            type: 'game.action',
+            payload: message
+        }
+    }
+
+    private getClickerSessionTaskPrefix(sessionId: string): string {
+        return `clicker:${sessionId}:`
+    }
+
+    private getClickerAllowClickTaskKey(sessionId: string): string {
+        return `${this.getClickerSessionTaskPrefix(sessionId)}allow-click`
+    }
+
+    private getClickerReenablePlayerTaskKey(sessionId: string, userId: string): string {
+        return `${this.getClickerSessionTaskPrefix(sessionId)}reenable-player:${userId}`
+    }
+
+    private getClickerCompleteSessionTaskKey(sessionId: string): string {
+        return `${this.getClickerSessionTaskPrefix(sessionId)}complete-session`
+    }
+
+    private async cancelClickerSessionTasks(sessionId: string): Promise<void> {
+        await this.scheduler.cancelByPrefix(this.getClickerSessionTaskPrefix(sessionId))
+    }
+
     private refreshStoredMember(member: StoredLobbyMember, profile: IdentityProfile): void {
         member.userNickname = profile.userNickname
         member.userColor = profile.userColor
@@ -1192,15 +1726,32 @@ export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
     private normalizePlayerAssignments(state: StoredLobbyState): void {
         const orderedPlayers = state.members.filter(member => member.role === 'player').sort((a, b) => a.joinedAt.localeCompare(b.joinedAt))
 
-        orderedPlayers.forEach((member, index) => {
-            member.playerChar = index === 0 ? 'x' : 'o'
+        state.members.forEach(member => {
+            member.playerScore = member.playerScore || 0
+            member.playerIsClickAllowed = member.role === 'player' ? member.playerIsClickAllowed : true
         })
 
-        state.members
-            .filter(member => member.role !== 'player')
-            .forEach(member => {
-                member.playerChar = null
+        if (state.game.name === 'TicTacToe') {
+            orderedPlayers.forEach((member, index) => {
+                member.playerChar = index === 0 ? 'x' : 'o'
             })
+
+            state.members
+                .filter(member => member.role !== 'player')
+                .forEach(member => {
+                    member.playerChar = null
+                })
+
+            return
+        }
+
+        state.members.forEach(member => {
+            member.playerChar = null
+
+            if (member.role !== 'player') {
+                member.playerIsClickAllowed = true
+            }
+        })
     }
 
     private resetReadyCheck(state: StoredLobbyState): void {

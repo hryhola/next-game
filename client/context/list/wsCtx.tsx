@@ -6,6 +6,7 @@ import { getCloudflareRealtimeApiUrl, isCloudflareRealtimeEnabled } from 'client
 import {
     deriveLegacyEventsFromSnapshot,
     getWorkerErrorMessage,
+    toLegacyGameActionEvent,
     toLegacyLobbyBaseInfo,
     toLegacyLobbyChatMessages,
     toLegacyLobbyData
@@ -255,17 +256,28 @@ export const WSProvider: React.FC<Props> = props => {
                 case 'Game-SendAction': {
                     const payload = data as RequestData<'Game-SendAction'>
 
-                    if (payload.actionName !== '$Move') {
-                        console.warn(`Action ${payload.actionName} is not supported in Cloudflare worker mode yet`)
+                    if (payload.actionName === '$Move') {
+                        sendWorkerRoomMessage({
+                            type: 'tictactoe.move',
+                            payload: {
+                                cell: (payload.actionPayload as { cell: [number, number] }).cell
+                            }
+                        })
                         return
                     }
 
-                    sendWorkerRoomMessage({
-                        type: 'tictactoe.move',
-                        payload: {
-                            cell: (payload.actionPayload as { cell: [number, number] }).cell
-                        }
-                    })
+                    if (payload.actionName === '$Click') {
+                        sendWorkerRoomMessage({
+                            type: 'clicker.click',
+                            payload: {
+                                x: (payload.actionPayload as { x: number; y: number }).x,
+                                y: (payload.actionPayload as { x: number; y: number }).y
+                            }
+                        })
+                        return
+                    }
+
+                    console.warn(`Action ${payload.actionName} is not supported in Cloudflare worker mode yet`)
                     return
                 }
                 case 'Universal-Subscription': {
@@ -353,6 +365,15 @@ export const WSProvider: React.FC<Props> = props => {
 
             if (workerMessage.type === 'room.snapshot') {
                 applyWorkerSnapshot(workerMessage.payload)
+                return
+            }
+
+            if (workerMessage.type === 'game.action') {
+                if (!workerRoomIdRef.current) {
+                    return
+                }
+
+                emit('Game-SessionAction', toLegacyGameActionEvent(workerRoomIdRef.current, workerMessage.payload))
             }
 
             return

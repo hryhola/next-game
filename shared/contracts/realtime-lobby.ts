@@ -1,13 +1,14 @@
 import type { IdentityProfile } from './identity'
 import type { LobbyBaseInfo } from './lobby'
 
-export type RealtimeLobbyGameName = 'TicTacToe'
+export type RealtimeLobbyGameName = 'TicTacToe' | 'Clicker'
 export type RealtimeLobbyMemberRole = 'player' | 'spectator'
 export type RealtimeLobbyStatus = 'waiting' | 'in_progress'
 export type ReadyCheckStatus = 'idle' | 'active' | 'success' | 'failed'
 export type TicTacToeCellValue = 'x' | 'o' | null
 export type TicTacToePlayerChar = Exclude<TicTacToeCellValue, null>
 export type TicTacToeCellCoords = [number, number]
+export type ClickerSessionStatus = 'idle' | 'waiting' | 'active' | 'resolving'
 
 export interface RealtimeChatMessage {
     id: string
@@ -23,6 +24,9 @@ export interface RealtimeLobbyMember extends IdentityProfile {
     isCreator: boolean
     joinedAt: string
     playerChar?: TicTacToePlayerChar
+    playerIsClickAllowed?: boolean
+    playerIsMaster?: boolean
+    playerScore?: number
     ready: boolean | null
     role: RealtimeLobbyMemberRole
 }
@@ -36,6 +40,7 @@ export interface RealtimeReadyCheckState {
 export interface RealtimeTicTacToeSession {
     board: TicTacToeCellValue[][]
     endedAt: string | null
+    id: string | null
     isDraw: boolean
     startedAt: string | null
     status: 'idle' | 'active' | 'finished'
@@ -44,14 +49,35 @@ export interface RealtimeTicTacToeSession {
     winnerUserId: string | null
 }
 
+export interface RealtimeClickerSession {
+    endedAt: string | null
+    id: string | null
+    playerIsClickAllowed: boolean
+    startedAt: string | null
+    status: ClickerSessionStatus
+    winnerUserId: string | null
+}
+
+export interface RealtimeTicTacToeGame {
+    name: 'TicTacToe'
+    session: RealtimeTicTacToeSession
+}
+
+export interface RealtimeClickerGame {
+    initialData: {
+        backgroundUrl?: string
+    }
+    name: 'Clicker'
+    session: RealtimeClickerSession
+}
+
+export type RealtimeLobbyGame = RealtimeTicTacToeGame | RealtimeClickerGame
+
 export interface RealtimeLobbySnapshot {
     chat: RealtimeChatMessage[]
     createdAt: string
     creatorUserId: string
-    game: {
-        name: RealtimeLobbyGameName
-        session: RealtimeTicTacToeSession
-    }
+    game: RealtimeLobbyGame
     hasPassword: boolean
     members: RealtimeLobbyMember[]
     name: string
@@ -124,12 +150,21 @@ export interface LobbyRoomTicTacToeMoveMessage {
     type: 'tictactoe.move'
 }
 
+export interface LobbyRoomClickerClickMessage {
+    payload: {
+        x: number
+        y: number
+    }
+    type: 'clicker.click'
+}
+
 export interface LobbyRoomPingMessage {
     type: 'ping'
 }
 
 export type LobbyRoomClientMessage =
     | LobbyRoomChatSendMessage
+    | LobbyRoomClickerClickMessage
     | LobbyRoomGameStartMessage
     | LobbyRoomJoinMessage
     | LobbyRoomLeaveMessage
@@ -163,4 +198,22 @@ export interface LobbyRoomPongMessage {
     type: 'pong'
 }
 
-export type LobbyRoomServerMessage = LobbyRoomErrorMessage | LobbyRoomNoticeMessage | LobbyRoomPongMessage | LobbyRoomSnapshotMessage
+export interface LobbyRoomGameActionMessage {
+    payload: {
+        actionName: string
+        actionPayload: unknown
+        actionResult: unknown
+        actor: {
+            id: string
+            type: 'game' | 'player'
+        }
+    }
+    type: 'game.action'
+}
+
+export type LobbyRoomServerMessage =
+    | LobbyRoomErrorMessage
+    | LobbyRoomGameActionMessage
+    | LobbyRoomNoticeMessage
+    | LobbyRoomPongMessage
+    | LobbyRoomSnapshotMessage
