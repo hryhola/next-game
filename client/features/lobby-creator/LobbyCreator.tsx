@@ -98,9 +98,9 @@ export const LobbyCreator: React.FC = () => {
                             label="Game"
                             fullWidth
                         >
-                            <MenuItem value="Jeopardy">[PRE-ALPHA] Jeopardy</MenuItem>
-                            <MenuItem value="Clicker">Clicker</MenuItem>
                             <MenuItem value="TicTacToe">Tic Tac Toe</MenuItem>
+                            <MenuItem value="Clicker">Clicker</MenuItem>
+                            <MenuItem value="Jeopardy">Jeopardy</MenuItem>
                         </Select>
                     </FormControl>
                 </Grid>

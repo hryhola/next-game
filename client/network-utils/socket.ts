@@ -1,4 +1,3 @@
-import { URL } from './url'
 import { WebSocketCallbacks } from './types'
 
 const messageLogger = (message: MessageEvent<any>) => {
@@ -31,16 +30,22 @@ export const connectToWebSocket = async (callbacks?: WebSocketCallbacks) => {
 
     isHandlingConnectRequest = true
 
-    console.log('WS url is', URL.WS)
+    const socketUrl = callbacks?.url
 
-    const ws = new WebSocket(URL.WS)
+    if (!socketUrl) {
+        throw new Error('WebSocket URL is required')
+    }
+
+    console.log('WS url is', socketUrl)
+
+    const ws = new WebSocket(socketUrl)
 
     ws.onopen = () => {
         ws.addEventListener('message', messageLogger)
 
         callbacks?.onOpen(ws!)
 
-        pingIntervals.push(setInterval(() => ws.send('ping'), 2000))
+        pingIntervals.push(setInterval(() => ws.send(callbacks?.pingMessage || 'ping'), 2000))
     }
 
     ws.onclose = () => {

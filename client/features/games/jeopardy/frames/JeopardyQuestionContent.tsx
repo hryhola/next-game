@@ -1,26 +1,49 @@
 import { Box, DialogContentText, Grid, LinearProgress, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from '@mui/material'
-import { useAudio, useUser } from 'client/context/list'
+import { useAudio, useLobby, useUser, useWS } from 'client/context/list'
 import { useGlobalModal } from 'client/features/global-modal/GlobalModal'
+import { isCloudflareRealtimeEnabled } from 'client/network-utils/realtimeMode'
 import { overlayedTabsToolbarHeight } from 'client/ui/overlayed-tabs/OverlayedTabs'
-import React, { MutableRefObject, useEffect, useRef } from 'react'
+import React, { MutableRefObject, useEffect, useRef, useState } from 'react'
 import { JeopardySessionState, JeopardyState } from 'state/games/jeopardy/JeopardySessionState'
 import { useActionSender, useJeopardy, useJeopardyAction } from '../JeopardyView'
 import { JeopardyMedia } from '../utils/jeopardyPackLoading'
 
-export const QuestionContent: React.FC<
-    JeopardyState.QuestionContentFrame & {
-        Resources: MutableRefObject<JeopardyMedia>
-        packFetchingTimeMs: number
-        useMediaTimestamp: boolean
+type QuestionContentProps = JeopardyState.QuestionContentFrame & {
+    Resources: MutableRefObject<JeopardyMedia>
+    packFetchingTimeMs: number
+    useMediaTimestamp: boolean
+}
+
+function getTimedProgress(startedAt: string | null | undefined, endsAt: string | null | undefined, fallback: number | null, nowMs: number): number | null {
+    if (!startedAt || !endsAt) {
+        return fallback
     }
-> = props => {
+
+    const startedAtMs = new Date(startedAt).getTime()
+    const endsAtMs = new Date(endsAt).getTime()
+
+    if (!Number.isFinite(startedAtMs) || !Number.isFinite(endsAtMs) || endsAtMs <= startedAtMs) {
+        return fallback
+    }
+
+    const totalDurationMs = endsAtMs - startedAtMs
+    const remainingMs = Math.max(0, endsAtMs - nowMs)
+
+    return Math.max(0, Math.min(100, (remainingMs / totalDurationMs) * 100))
+}
+
+export const QuestionContent: React.FC<QuestionContentProps> = props => {
     const user = useUser()
+    const lobby = useLobby()
+    const ws = useWS()
     const game = useJeopardy()
     const globalModal = useGlobalModal()
     const actionSender = useActionSender()
     const playerRef = useRef<HTMLAudioElement | HTMLVideoElement | null>(null)
     const audio = useAudio()
     const sendAction = useActionSender()
+    const isWorkerMode = isCloudflareRealtimeEnabled()
+    const [timerNowMs, setTimerNowMs] = useState(() => Date.now())
 
     const answerInputRef = useRef<HTMLInputElement>(null)
     const closeAnswerModal = useRef<{ close: (() => void) | null }>({ close: null })
@@ -41,11 +64,40 @@ export const QuestionContent: React.FC<
     }, [])
 
     useEffect(() => {
-        if (!props.useMediaTimestamp || typeof props.packFetchingTimeMs !== 'number' || typeof props.elapsedMediaTimeMs !== 'number' || !playerRef.current)
+        if (!props.useMediaTimestamp || typeof props.elapsedMediaTimeMs !== 'number' || !playerRef.current) {
             return
+        }
 
         playerRef.current.currentTime = (props.packFetchingTimeMs + props.elapsedMediaTimeMs) / 1000
-    }, [props.useMediaTimestamp])
+    }, [props.elapsedMediaTimeMs, props.packFetchingTimeMs, props.questionId, props.useMediaTimestamp])
+
+    useEffect(() => {
+        const hasLiveWorkerTimer =
+            (props.answeringStatus === 'allowed' && props.answerRequestStartedAt && props.answerRequestEndsAt) ||
+            (props.answeringStatus === 'answering' && props.answerGivingStartedAt && props.answerGivingEndsAt) ||
+            (props.answeringStatus === 'answer-verifying' && props.answerVerifyingStartedAt && props.answerVerifyingEndsAt)
+
+        if (!hasLiveWorkerTimer) {
+            return
+        }
+
+        setTimerNowMs(Date.now())
+
+        const intervalId = window.setInterval(() => setTimerNowMs(Date.now()), 100)
+
+        return () => {
+            window.clearInterval(intervalId)
+        }
+    }, [
+        props.answerGivingEndsAt,
+        props.answerGivingStartedAt,
+        props.answerRequestEndsAt,
+        props.answerRequestStartedAt,
+        props.answerVerifyingEndsAt,
+        props.answerVerifyingStartedAt,
+        props.answeringStatus,
+        props.questionId
+    ])
 
     useEffect(() => {
         if (props.answeringPlayerId === user.id) {
@@ -68,6 +120,9 @@ export const QuestionContent: React.FC<
 
         if (session?.internal?.currentAnsweringPlayerId) {
             showVerifyModal(session.internal)
+        } else if (closeVerifyModal.current.close) {
+            closeVerifyModal.current.close()
+            closeVerifyModal.current.close = null
         }
     }, [(game.session as JeopardySessionState)?.internal?.currentAnsweringPlayerId])
 
@@ -132,6 +187,22 @@ export const QuestionContent: React.FC<
         playerRef.current?.play()
     })
 
+    const handleMediaEnded = () => {
+        if (!isWorkerMode) {
+            return
+        }
+
+        ws.send('Game-SendAction', {
+            actionName: '$MediaEnded',
+            actionPayload: null,
+            lobbyId: lobby.lobbyId
+        })
+    }
+
+    const answerRequestProgress = getTimedProgress(props.answerRequestStartedAt, props.answerRequestEndsAt, props.answerRequestTimeLeft, timerNowMs)
+    const answerGivingProgress = getTimedProgress(props.answerGivingStartedAt, props.answerGivingEndsAt, props.answerGivingTimeLeft, timerNowMs)
+    const answerVerifyingProgress = getTimedProgress(props.answerVerifyingStartedAt, props.answerVerifyingEndsAt, props.answerVerifyingTimeLeft, timerNowMs)
+
     let content!: JSX.Element
 
     switch (props.type) {
@@ -145,6 +216,7 @@ export const QuestionContent: React.FC<
                     ref={playerRef as React.MutableRefObject<HTMLVideoElement | null>}
                     style={{ maxWidth: '100vw' }}
                     autoPlay
+                    onEnded={handleMediaEnded}
                     src={props.Resources.current.Video[props.content.slice(1)]}
                 ></video>
             )
@@ -153,7 +225,7 @@ export const QuestionContent: React.FC<
         case 'voice': {
             content = (
                 <>
-                    <audio ref={playerRef} autoPlay src={props.Resources.current.Audio[props.content.slice(1)]}></audio>
+                    <audio ref={playerRef} autoPlay onEnded={handleMediaEnded} src={props.Resources.current.Audio[props.content.slice(1)]}></audio>
                     <img src="/assets/jeopardy/audio.gif" alt="Audio question" />
                 </>
             )
@@ -172,19 +244,19 @@ export const QuestionContent: React.FC<
                     {content}
                 </Grid>
             </Grid>
-            {props.answeringStatus === 'answer-verifying' && props.answerVerifyingTimeLeft && (
+            {props.answeringStatus === 'answer-verifying' && answerVerifyingProgress !== null && (
                 <Box sx={{ position: 'fixed', width: '100vw', bottom: overlayedTabsToolbarHeight }}>
-                    <LinearProgress variant="determinate" value={props.answerVerifyingTimeLeft} color="success" />
+                    <LinearProgress variant="determinate" value={answerVerifyingProgress} color="success" />
                 </Box>
             )}
-            {props.answeringStatus === 'answering' && props.answerGivingTimeLeft && (
+            {props.answeringStatus === 'answering' && answerGivingProgress !== null && (
                 <Box sx={{ position: 'fixed', width: '100vw', bottom: overlayedTabsToolbarHeight }}>
-                    <LinearProgress variant="determinate" value={props.answerGivingTimeLeft} color="secondary" />
+                    <LinearProgress variant="determinate" value={answerGivingProgress} color="secondary" />
                 </Box>
             )}
-            {props.answeringStatus === 'allowed' && props.answerRequestTimeLeft && (
+            {props.answeringStatus === 'allowed' && answerRequestProgress !== null && (
                 <Box sx={{ position: 'fixed', width: '100vw', bottom: overlayedTabsToolbarHeight }}>
-                    <LinearProgress variant="determinate" value={props.answerRequestTimeLeft} />
+                    <LinearProgress variant="determinate" value={answerRequestProgress} />
                 </Box>
             )}
         </>

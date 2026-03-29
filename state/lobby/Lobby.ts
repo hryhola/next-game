@@ -1,7 +1,7 @@
 import { Game, Chat, State, GameCtors, GameName, LobbyMember, User, ReadyCheck } from 'state'
 import { InitialGameData } from 'state/common/game/GameInitialData'
 import { GeneralFailure, GeneralSuccess } from 'util/universalTypes'
-import { StateEventName, StateEvents } from 'uWebSockets/topicEvents'
+import type { StateEventName, StateEvents } from 'shared/contracts'
 
 export type LobbyCreateOptions<G extends GameName> = {
     id: string
@@ -40,7 +40,7 @@ export class Lobby<G extends GameName = GameName> {
     }
 
     publish<E extends StateEventName>(сtx: E, data: StateEvents[E]) {
-        State.act.publish(`Lobby-${this.id}`, {
+        State.realtime.publish(`Lobby-${this.id}`, {
             ctx: сtx,
             data
         })
@@ -99,7 +99,7 @@ export class Lobby<G extends GameName = GameName> {
 
         user.unlinkLobby(this)
 
-        user.ws.unsubscribe(`Lobby-${this.id}`)
+        user.connection.unsubscribe(`Lobby-${this.id}`)
 
         this.publish('Lobby-Leave', {
             lobbyId: this.id,

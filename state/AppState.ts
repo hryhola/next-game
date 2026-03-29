@@ -1,15 +1,15 @@
 import { UserRegistry, LobbiesRegistry, Chat, User } from 'state'
-import Publisher from 'uWebSockets/utils/ws/Publisher'
+import type { RealtimeBus } from 'shared/domain'
 
 export class State {
-    static act: Publisher
+    static realtime: RealtimeBus
 
     globalChat = new Chat('global', 100, true)
     lobbies = new LobbiesRegistry()
     users = new UserRegistry()
 
-    constructor(res: Publisher) {
-        State.act = res
+    constructor(realtime: RealtimeBus) {
+        State.realtime = realtime
     }
 
     data() {

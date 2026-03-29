@@ -1,7 +1,7 @@
 import { FormControl, IconButton, InputAdornment, List, Toolbar } from '@mui/material'
 import { useEventHandler, useHome, useRequestHandler, useWS } from 'client/context/list'
 import { useEffect, useState } from 'react'
-import { LobbyBaseInfo } from 'uWebSockets/ws/Lobby-GetList'
+import type { LobbyBaseInfo } from 'shared/contracts/lobby'
 import AddIcon from '@mui/icons-material/Add'
 import { OutlinedInput } from '@mui/material'
 import SearchIcon from '@mui/icons-material/Search'

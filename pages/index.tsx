@@ -4,10 +4,11 @@ import { AppContext } from 'client/context/AppContext'
 import { ClientRouterProvider, FrameName } from 'client/route/ClientRouter'
 import { deleteCookie } from 'cookies-next'
 import logger from 'logger'
+import { toAppLobbyData } from 'client/network-utils/realtimeAdapter'
 import { LobbyData, UserData } from 'state'
-import { NextApiResponseUWS } from 'util/universalTypes'
-import { initializeSocketServer } from 'uWebSockets/createSocketServer'
+import type { IdentitySession, RealtimeLobbyListItem, RealtimeLobbySnapshot } from 'shared/contracts'
 import { SnackbarProvider } from 'notistack'
+import { getCloudflareRealtimeApiUrl, getRequestOrigin } from 'client/network-utils/realtimeMode'
 
 type Props = {
     initialFrame: FrameName
@@ -35,29 +36,73 @@ const Home: NextPage<Props> = props => {
     )
 }
 
-export const getServerSideProps: GetServerSideProps = async context => {
-    initializeSocketServer(context.res as NextApiResponseUWS)
+function sanitizeForNext<T>(value: T): T {
+    return JSON.parse(JSON.stringify(value)) as T
+}
 
+async function readJson<T>(url: string, token: string): Promise<T | null> {
+    const response = await fetch(url, {
+        headers: {
+            authorization: `Bearer ${token}`
+        }
+    })
+
+    if (!response.ok) {
+        return null
+    }
+
+    return (await response.json()) as T
+}
+
+async function findActiveLobbySnapshot(token: string, userId: string, requestOrigin?: string): Promise<RealtimeLobbySnapshot | null> {
+    const lobbiesResponse = await readJson<{ lobbies?: RealtimeLobbyListItem[] }>(getCloudflareRealtimeApiUrl('/lobbies', requestOrigin), token)
+    const lobbies = lobbiesResponse?.lobbies || []
+
+    for (const lobby of lobbies) {
+        const roomResponse = await readJson<{ room?: RealtimeLobbySnapshot }>(
+            getCloudflareRealtimeApiUrl(`/rooms/${encodeURIComponent(lobby.id)}/state`, requestOrigin),
+            token
+        )
+
+        const room = roomResponse?.room
+
+        if (room?.members.some(member => member.id === userId)) {
+            return room
+        }
+    }
+
+    return null
+}
+
+export const getServerSideProps: GetServerSideProps = async context => {
     const props: Props = {
         initialFrame: 'Login'
     }
 
     const token = context.req.cookies.token
+    const requestOrigin = getRequestOrigin(context.req.headers)
 
     if (token) {
         try {
-            const { appState } = (context.res as NextApiResponseUWS).socket?.server
-            const user = appState.users.getByToken(token)
+            const body = await readJson<{ session?: IdentitySession }>(getCloudflareRealtimeApiUrl('/auth/session', requestOrigin), token)
 
-            if (!user) {
-                deleteCookie('token')
+            if (!body?.session) {
+                deleteCookie('token', {
+                    req: context.req,
+                    res: context.res
+                })
             } else {
                 props.initialFrame = 'Home'
-                props.user = user.data()
+                props.user = {
+                    ...body.session.user,
+                    userIsOnline: true
+                }
 
-                if (user.hasLobbies) {
+                const activeLobby = await findActiveLobbySnapshot(token, body.session.user.id, requestOrigin)
+
+                if (activeLobby) {
                     props.initialFrame = 'Lobby'
-                    props.lobby = user.lobby.data()
+                    props.lobby = toAppLobbyData(activeLobby)
                 }
             }
         } catch (e) {
@@ -66,7 +111,7 @@ export const getServerSideProps: GetServerSideProps = async context => {
     }
 
     return {
-        props
+        props: sanitizeForNext(props)
     }
 }
 

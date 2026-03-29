@@ -3,6 +3,7 @@ import { PlayerData, GameSessionData, GameSessionActionsName, GameSessionAction,
 import { useLobby, useEventHandler, useWS } from 'client/context/list'
 import { api } from 'client/network-utils/api'
 import { InitialGameData } from 'state/common/game/GameInitialData'
+import { GameName } from 'state/games'
 
 export type GameCtxValue = {
     players: PlayerData[]
@@ -88,7 +89,7 @@ export const createGame = <Game extends AbstractGame>(Component: React.Component
                 }
 
                 lobby.setMembers(response.lobby.members)
-                lobby.setGameName(response.game.name as 'Clicker')
+                lobby.setGameName(response.game.name as GameName)
 
                 setInitialData(response.game.initialData)
                 setPlayers(response.game.players as ThisPlayerData[])

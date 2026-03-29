@@ -36,10 +36,17 @@ export namespace JeopardyState {
         id: 'question-content'
         type: 'text' | 'voice' | 'video' | 'image'
         elapsedMediaTimeMs?: number
+        mediaStartedAt?: string | null
         content: string
         answeringStatus: 'too-early' | 'allowed' | 'answering' | 'answer-verifying' | 'too-late'
+        answerRequestStartedAt?: string | null
+        answerRequestEndsAt?: string | null
         answerRequestTimeLeft: number | null // percentage
+        answerGivingStartedAt?: string | null
+        answerGivingEndsAt?: string | null
         answerGivingTimeLeft: number | null // percentage
+        answerVerifyingStartedAt?: string | null
+        answerVerifyingEndsAt?: string | null
         answerVerifyingTimeLeft: number | null // percentage
         playersOnCooldown: string[]
         playersWhoAnswered: string[]

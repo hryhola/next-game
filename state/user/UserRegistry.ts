@@ -1,6 +1,6 @@
 import logger from 'logger'
 import { State, User } from 'state'
-import { WebSocket } from 'uWebSockets.js'
+import type { RealtimeConnection } from 'shared/domain'
 
 export class UserRegistry {
     private list: User[] = []
@@ -10,7 +10,7 @@ export class UserRegistry {
     }
 
     private publishOnlineUpdate() {
-        State.act.publishTopicEvent('UserRegistry-OnlineUpdate', {
+        State.realtime.publishTopicEvent('UserRegistry-OnlineUpdate', {
             scope: 'global',
             list: this.onlineUsers.map(u => ({
                 userNickname: u.state.userNickname,
@@ -19,11 +19,11 @@ export class UserRegistry {
         })
     }
 
-    register(nickname: string, ws: WebSocket<unknown>) {
-        const user = new User(nickname, ws)
+    register(nickname: string, connection: RealtimeConnection) {
+        const user = new User(nickname, connection)
 
         user.onUpdate(data => {
-            if ('isOnline' in data || 'nickname' in data) {
+            if ('userIsOnline' in data || 'userNickname' in data) {
                 this.publishOnlineUpdate()
             }
         })
@@ -84,8 +84,8 @@ export class UserRegistry {
         return this.list.find(u => u.state.userNickname === nickname)
     }
 
-    getByConnection(ws: WebSocket<unknown>) {
-        return this.list.find(u => u.ws === ws)
+    getByConnection(connection: unknown) {
+        return this.list.find(u => u.connection.matches(connection))
     }
 
     data() {
