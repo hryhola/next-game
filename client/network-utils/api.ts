@@ -25,11 +25,11 @@ async function handleWorkerApiRequest<E extends EndpointName>(endpoint: E, data:
             case 'game-get-schema': {
                 const request = data as Endpoints['game-get-schema']['request']
 
-                if (request.gameName !== 'TicTacToe') {
+                if (!['TicTacToe', 'Clicker'].includes(request.gameName)) {
                     return [
                         {
                             success: false,
-                            message: 'Cloudflare worker mode currently supports TicTacToe only'
+                            message: `Cloudflare worker mode does not support ${request.gameName} yet`
                         } as Endpoints[E]['response'],
                         undefined
                     ]
@@ -38,7 +38,7 @@ async function handleWorkerApiRequest<E extends EndpointName>(endpoint: E, data:
                 return [
                     {
                         success: true,
-                        gameName: 'TicTacToe'
+                        gameName: request.gameName
                     } as Endpoints[E]['response'],
                     undefined
                 ]
@@ -65,11 +65,11 @@ async function handleWorkerApiRequest<E extends EndpointName>(endpoint: E, data:
                     ]
                 }
 
-                if (gameName !== 'TicTacToe') {
+                if (!['TicTacToe', 'Clicker'].includes(gameName)) {
                     return [
                         {
                             success: false,
-                            message: 'Cloudflare worker mode currently supports TicTacToe only'
+                            message: `Cloudflare worker mode does not support ${gameName} yet`
                         } as Endpoints[E]['response'],
                         undefined
                     ]
@@ -89,7 +89,7 @@ async function handleWorkerApiRequest<E extends EndpointName>(endpoint: E, data:
                     method: 'POST',
                     headers: createWorkerAuthHeaders(),
                     body: JSON.stringify({
-                        gameName: 'TicTacToe',
+                        gameName,
                         name: lobbyId,
                         password,
                         roomId: lobbyId
