@@ -1,15 +1,17 @@
 import logger from 'logger'
 import { TemplatedApp, WebSocket } from 'uWebSockets.js'
 import type { SocketMessage, StateEvents } from 'shared/contracts'
+import type { RealtimeConnection } from 'shared/domain'
+import { UWSRealtimeConnection } from './UWSRealtimeConnection'
 
 export class WSMessageResponseActions {
-    ws: WebSocket<unknown>
+    ws: RealtimeConnection
     app: TemplatedApp
     request: SocketMessage
 
     constructor(app: TemplatedApp, ws: WebSocket<unknown>, request: SocketMessage) {
         this.app = app
-        this.ws = ws
+        this.ws = new UWSRealtimeConnection(ws)
         this.request = request
     }
 

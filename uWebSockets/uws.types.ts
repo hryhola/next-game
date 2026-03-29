@@ -2,6 +2,7 @@ import { WebSocket, HttpResponse, HttpRequest } from 'uWebSockets.js'
 import queryString from 'query-string'
 import { State } from 'state'
 import type { SocketMessage, StateEvents, StateEventName, WSRequestContext } from 'shared/contracts'
+import type { RealtimeConnection } from 'shared/domain'
 
 export type { SocketMessage, StateEvents, StateEventName, WSRequestContext } from 'shared/contracts'
 export type HandlerName = WSRequestContext
@@ -11,7 +12,7 @@ export type ResponseActions<ResponseType = unknown> = {
     publishTopicEvent<C extends StateEventName>(channel: C, message: StateEvents[C]): void
     res(data: ResponseType): void
     send(ctx: string, data: any): void
-    ws: WebSocket<unknown>
+    ws: RealtimeConnection
 }
 
 export type Handler<RequestData extends Object | null = null, ResponseType = any> = (

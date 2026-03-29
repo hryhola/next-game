@@ -40,7 +40,7 @@ export class Lobby<G extends GameName = GameName> {
     }
 
     publish<E extends StateEventName>(сtx: E, data: StateEvents[E]) {
-        State.act.publish(`Lobby-${this.id}`, {
+        State.realtime.publish(`Lobby-${this.id}`, {
             ctx: сtx,
             data
         })
@@ -99,7 +99,7 @@ export class Lobby<G extends GameName = GameName> {
 
         user.unlinkLobby(this)
 
-        user.ws.unsubscribe(`Lobby-${this.id}`)
+        user.connection.unsubscribe(`Lobby-${this.id}`)
 
         this.publish('Lobby-Leave', {
             lobbyId: this.id,

@@ -1,8 +1,8 @@
 import { EventEmitter } from 'node:events'
-import { WebSocket } from 'uWebSockets.js'
 import randomColor from 'randomcolor'
 import { v4 } from 'uuid'
 import { Lobby } from 'state'
+import type { RealtimeConnection } from 'shared/domain'
 
 type onUpdateCb = (user: Partial<User['state']>) => void
 
@@ -13,7 +13,7 @@ export class User {
     private logoutTimeout: NodeJS.Timeout
     private lobbies: Lobby[] = []
 
-    ws: WebSocket<unknown>
+    connection: RealtimeConnection
 
     readonly token: string
     readonly id: string
@@ -25,9 +25,9 @@ export class User {
         readonly userIsOnline: boolean
     }
 
-    constructor(id: string, ws: WebSocket<unknown>) {
+    constructor(id: string, connection: RealtimeConnection) {
         this.emitter = new EventEmitter()
-        this.ws = ws
+        this.connection = connection
         this.token = v4()
         this.id = v4()
 
