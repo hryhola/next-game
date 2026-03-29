@@ -9,6 +9,7 @@ import { ProfilePicture } from '../profile-picture/ProfilePicture'
 import randomColor from 'randomcolor'
 import { deleteCookie } from 'cookies-next'
 import { useGlobalModal } from '../global-modal/GlobalModal'
+import { isCloudflareRealtimeEnabled } from 'client/network-utils/realtimeMode'
 
 interface Props {
     onUpdated?: () => void
@@ -18,6 +19,7 @@ export const ProfileEditor: React.FC<Props> = props => {
     const globalModel = useGlobalModal()
 
     const formRef = useRef<HTMLFormElement | null>(null)
+    const isWorkerMode = isCloudflareRealtimeEnabled()
 
     const user = useUser()
     const ws = useWS()
@@ -94,8 +96,15 @@ export const ProfileEditor: React.FC<Props> = props => {
                         <Alert severity="error">{error}</Alert>
                     </Grid>
                 )}
+                {isWorkerMode && (
+                    <Grid item>
+                        <Alert severity="info">
+                            Worker mode currently supports nickname and color updates only. Avatar uploads stay on the legacy backend for now.
+                        </Alert>
+                    </Grid>
+                )}
                 <Grid item alignSelf="center">
-                    <ProfilePicture editable {...displayedImage} color={userColor} onChange={file => setImageFile(file)} />
+                    <ProfilePicture editable={!isWorkerMode} {...displayedImage} color={userColor} onChange={file => setImageFile(file)} />
                 </Grid>
                 <Grid item>
                     <Box sx={{ display: 'flex', alignItems: 'flex-end' }}>

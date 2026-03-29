@@ -1,7 +1,7 @@
 import { Server as NetServer, Socket } from 'net'
 import { NextApiResponse } from 'next'
-import { State } from 'state'
-import { TemplatedApp } from 'uWebSockets.js'
+import type { State } from 'state'
+import type { TemplatedApp } from 'uWebSockets.js'
 
 export type Resulted<Result, Error = unknown> = [Result, undefined] | [undefined, Error]
 

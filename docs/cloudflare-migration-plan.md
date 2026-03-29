@@ -258,6 +258,32 @@ Reason:
 
 -   the legacy app is currently pinned to Node 18 because of `uWebSockets.js`
 -   current `wrangler` tooling requires a newer Node runtime
+
+## Bridge Status
+
+The repo now also has an additive bridge mode for local migration testing:
+
+-   start the worker with `npm run dev` inside `workers/realtime`
+-   start the legacy frontend with `yarn dev:worker-api`
+-   when `NEXT_PUBLIC_USE_CLOUDFLARE_REALTIME=true`, the legacy UI uses the worker backend for the currently migrated slice
+
+Supported through the bridge:
+
+-   auth bootstrap and registration
+-   lobby list and preview
+-   TicTacToe create/join/leave/destroy
+-   lobby chat
+-   ready check
+-   TicTacToe moves and session flow
+
+Still intentionally unsupported through the bridge:
+
+-   global chat
+-   global users list
+-   avatar uploads
+-   Clicker
+-   Jeopardy
+-   time-based legacy flows
 -   isolating the Worker toolchain avoids forcing both runtimes into the same root package
 
 ### First Objects To Introduce

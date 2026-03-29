@@ -96,6 +96,14 @@ export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
             return this.handleDestroy(request, roomId)
         }
 
+        if (url.pathname === '/join') {
+            return this.handleJoin(request)
+        }
+
+        if (url.pathname === '/leave') {
+            return this.handleLeave(request)
+        }
+
         if (url.pathname === '/health') {
             const state = await this.getState()
 
@@ -418,6 +426,137 @@ export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
                 { status: 404 }
             )
         }
+
+        return json({
+            ok: true,
+            room: this.buildSnapshot(state)
+        })
+    }
+
+    private async handleJoin(request: Request): Promise<Response> {
+        if (request.method !== 'POST') {
+            return json(
+                {
+                    ok: false,
+                    message: 'Method not allowed'
+                },
+                { status: 405 }
+            )
+        }
+
+        const state = await this.getState()
+
+        if (!state) {
+            return json(
+                {
+                    ok: false,
+                    message: 'Room not found'
+                },
+                { status: 404 }
+            )
+        }
+
+        const identity = readIdentityHeaders(request)
+
+        if (!identity) {
+            return json(
+                {
+                    ok: false,
+                    message: 'Missing authenticated join headers'
+                },
+                { status: 400 }
+            )
+        }
+
+        const body = (await request.json().catch(() => null)) as { password?: string; role?: RealtimeLobbyMemberRole } | null
+
+        if (!body?.role || !['player', 'spectator'].includes(body.role)) {
+            return json(
+                {
+                    ok: false,
+                    message: 'Invalid join role'
+                },
+                { status: 400 }
+            )
+        }
+
+        const result = this.joinRoom(state, identity.user, body.role, body.password)
+
+        if (!result.success) {
+            return json(
+                {
+                    ok: false,
+                    message: result.message,
+                    code: result.code
+                },
+                { status: result.code === 'player_slots_full' ? 409 : 400 }
+            )
+        }
+
+        await this.persistState(state)
+
+        return json({
+            ok: true,
+            room: this.buildSnapshot(state)
+        })
+    }
+
+    private async handleLeave(request: Request): Promise<Response> {
+        if (request.method !== 'POST') {
+            return json(
+                {
+                    ok: false,
+                    message: 'Method not allowed'
+                },
+                { status: 405 }
+            )
+        }
+
+        const state = await this.getState()
+
+        if (!state) {
+            return json(
+                {
+                    ok: false,
+                    message: 'Room not found'
+                },
+                { status: 404 }
+            )
+        }
+
+        const identity = readIdentityHeaders(request)
+
+        if (!identity) {
+            return json(
+                {
+                    ok: false,
+                    message: 'Missing authenticated leave headers'
+                },
+                { status: 400 }
+            )
+        }
+
+        const result = await this.leaveRoom(state, identity.user.id)
+
+        if (!result.success) {
+            return json(
+                {
+                    ok: false,
+                    message: result.message,
+                    code: result.code
+                },
+                { status: 400 }
+            )
+        }
+
+        if (result.destroyed) {
+            return json({
+                ok: true,
+                destroyed: true
+            })
+        }
+
+        await this.persistState(state)
 
         return json({
             ok: true,

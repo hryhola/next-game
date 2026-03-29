@@ -5,9 +5,9 @@ import { ClientRouterProvider, FrameName } from 'client/route/ClientRouter'
 import { deleteCookie } from 'cookies-next'
 import logger from 'logger'
 import { LobbyData, UserData } from 'state'
-import { NextApiResponseUWS } from 'util/universalTypes'
-import { initializeSocketServer } from 'uWebSockets/createSocketServer'
+import type { NextApiResponseUWS } from 'util/universalTypes'
 import { SnackbarProvider } from 'notistack'
+import { getCloudflareRealtimeApiUrl, isCloudflareRealtimeEnabled } from 'client/network-utils/realtimeMode'
 
 type Props = {
     initialFrame: FrameName
@@ -36,7 +36,13 @@ const Home: NextPage<Props> = props => {
 }
 
 export const getServerSideProps: GetServerSideProps = async context => {
-    initializeSocketServer(context.res as NextApiResponseUWS)
+    const isWorkerMode = isCloudflareRealtimeEnabled()
+
+    if (!isWorkerMode) {
+        const { initializeSocketServer } = await import('uWebSockets/createSocketServer')
+
+        initializeSocketServer(context.res as NextApiResponseUWS)
+    }
 
     const props: Props = {
         initialFrame: 'Login'
@@ -46,18 +52,36 @@ export const getServerSideProps: GetServerSideProps = async context => {
 
     if (token) {
         try {
-            const { appState } = (context.res as NextApiResponseUWS).socket?.server
-            const user = appState.users.getByToken(token)
+            if (isWorkerMode) {
+                const response = await fetch(getCloudflareRealtimeApiUrl('/auth/session'), {
+                    headers: {
+                        authorization: `Bearer ${token}`
+                    }
+                })
 
-            if (!user) {
-                deleteCookie('token')
+                if (response.ok) {
+                    const body = await response.json()
+
+                    props.initialFrame = 'Home'
+                    props.user = {
+                        ...body.session.user,
+                        userIsOnline: true
+                    }
+                }
             } else {
-                props.initialFrame = 'Home'
-                props.user = user.data()
+                const { appState } = (context.res as NextApiResponseUWS).socket?.server
+                const user = appState.users.getByToken(token)
 
-                if (user.hasLobbies) {
-                    props.initialFrame = 'Lobby'
-                    props.lobby = user.lobby.data()
+                if (!user) {
+                    deleteCookie('token')
+                } else {
+                    props.initialFrame = 'Home'
+                    props.user = user.data()
+
+                    if (user.hasLobbies) {
+                        props.initialFrame = 'Lobby'
+                        props.lobby = user.lobby.data()
+                    }
                 }
             }
         } catch (e) {
