@@ -9,7 +9,6 @@ import { ProfilePicture } from '../profile-picture/ProfilePicture'
 import randomColor from 'randomcolor'
 import { deleteCookie } from 'cookies-next'
 import { useGlobalModal } from '../global-modal/GlobalModal'
-import { isCloudflareRealtimeEnabled } from 'client/network-utils/realtimeMode'
 
 interface Props {
     onUpdated?: () => void
@@ -19,7 +18,6 @@ export const ProfileEditor: React.FC<Props> = props => {
     const globalModel = useGlobalModal()
 
     const formRef = useRef<HTMLFormElement | null>(null)
-    const isWorkerMode = isCloudflareRealtimeEnabled()
 
     const user = useUser()
     const ws = useWS()
@@ -94,11 +92,6 @@ export const ProfileEditor: React.FC<Props> = props => {
                 {error && (
                     <Grid item>
                         <Alert severity="error">{error}</Alert>
-                    </Grid>
-                )}
-                {isWorkerMode && (
-                    <Grid item>
-                        <Alert severity="info">Worker mode now stores avatars in R2. Larger lobby asset uploads will follow in the next migration steps.</Alert>
                     </Grid>
                 )}
                 <Grid item alignSelf="center">

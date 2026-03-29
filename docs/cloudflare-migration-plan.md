@@ -256,18 +256,18 @@ The Worker scaffold lives in its own package under `workers/realtime`.
 
 Reason:
 
--   the legacy app is currently pinned to Node 18 because of `uWebSockets.js`
--   current `wrangler` tooling requires a newer Node runtime
+-   the worker toolchain and the root app still use separate local Node baselines
+-   isolating the worker package keeps Wrangler-specific config out of the web app build
 
-## Bridge Status
+## App Status
 
-The repo now also has an additive bridge mode for local migration testing:
+The migration bridge has now become the main app runtime:
 
 -   start the worker with `npm run dev` inside `workers/realtime`
--   start the legacy frontend with `yarn dev:worker-api`
--   when `NEXT_PUBLIC_USE_CLOUDFLARE_REALTIME=true`, the legacy UI uses the worker backend for the currently migrated slice
+-   start the frontend with `yarn dev:app`
+-   the root Next.js app now uses the worker backend by default
 
-Supported through the bridge:
+Supported through the app:
 
 -   auth bootstrap and registration
 -   profile nickname, color, and avatar updates
@@ -561,6 +561,15 @@ Switch the frontend from the legacy socket/API layer to the new backend incremen
 -   frontend runtime switch
 -   compatibility mode during transition
 
+### Current Implementation
+
+Phase 10 is now complete:
+
+-   the Next.js frontend talks only to the Worker HTTP and websocket endpoints
+-   shared request and response contracts live under `shared/contracts`
+-   `pages/index.tsx` now bootstraps auth and lobby restoration from the Worker runtime
+-   the old runtime feature flag is no longer needed for normal development
+
 ### Done When
 
 -   selected features route entirely to the new backend
@@ -587,6 +596,16 @@ Remove the old server once all critical flows are migrated.
 
 -   cleaner dependency graph
 -   no Next.js server-side bootstrapping of realtime state
+
+### Current Implementation
+
+Phase 11 is now complete:
+
+-   `pages/index.tsx` no longer initializes any in-process realtime server
+-   the old `pages/api/*` routes are removed
+-   the old `uWebSockets` runtime tree is removed
+-   the root app now uses standard Next.js scripts again
+-   the remaining runtime-specific server code lives under `workers/realtime`
 
 ### Done When
 

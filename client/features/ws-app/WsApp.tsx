@@ -5,7 +5,7 @@ import { useLobby, useWS } from 'client/context/list'
 import { DevToolsOverlay } from 'client/features/dev/DevToolsOverlay'
 import { Backdrop, Box, Button } from '@mui/material'
 import { useClientRouter } from 'client/route/ClientRouter'
-import { getCloudflareRoomWebSocketUrl, isCloudflareRealtimeEnabled } from 'client/network-utils/realtimeMode'
+import { getCloudflareRoomWebSocketUrl } from 'client/network-utils/realtimeMode'
 import { getCookie } from 'cookies-next'
 
 type Props = {
@@ -16,7 +16,6 @@ export const WsApp: React.FC<Props> = props => {
     const ws = useWS()
     const lobby = useLobby()
     const router = useClientRouter()
-    const isWorkerMode = isCloudflareRealtimeEnabled()
 
     const isFirstConnection = useRef(true)
     const currentTargetUrl = useRef<string | null>(null)
@@ -54,7 +53,7 @@ export const WsApp: React.FC<Props> = props => {
         isFirstConnection.current = false
 
         connectToWebSocket({
-            pingMessage: isWorkerMode ? JSON.stringify({ type: 'ping' }) : 'ping',
+            pingMessage: JSON.stringify({ type: 'ping' }),
             onClose: () => {
                 ws.wsRef.current = null
                 ws.setIsConnected(false)
@@ -71,7 +70,7 @@ export const WsApp: React.FC<Props> = props => {
                 ws.setIsConnected(true)
 
                 if (!isFirstConnection.current) {
-                    setTimeout(() => webSocket.send(isWorkerMode ? JSON.stringify({ type: 'ping' }) : 'ping'), 0)
+                    setTimeout(() => webSocket.send(JSON.stringify({ type: 'ping' })), 0)
                 }
 
                 updateHandlingConnection(false)
@@ -81,10 +80,6 @@ export const WsApp: React.FC<Props> = props => {
     }
 
     useEffect(() => {
-        if (!isWorkerMode) {
-            return
-        }
-
         const requiresRoomSocket = router.frame === 'Lobby' && Boolean(lobby.lobbyId)
 
         if (!requiresRoomSocket) {
@@ -120,14 +115,13 @@ export const WsApp: React.FC<Props> = props => {
         if (!isHandlingConnectionRef.current) {
             startConnecting(targetUrl)
         }
-    }, [isWorkerMode, lobby.lobbyId, router.frame])
+    }, [lobby.lobbyId, router.frame])
 
-    const showChildren = isWorkerMode || !isFirstConnection.current
-    const shouldShowBackdrop = isWorkerMode ? router.frame === 'Lobby' && !isHandlingConnection && !ws.isConnected : !isHandlingConnection && !ws.isConnected
+    const shouldShowBackdrop = router.frame === 'Lobby' && !isHandlingConnection && !ws.isConnected
 
     return (
         <>
-            {showChildren && props.children}
+            {props.children}
             <DevToolsOverlay />
             <LoadingOverlay transitionDuration={0} text="connecting..." isLoading={isHandlingConnection} />
             <Backdrop
@@ -143,13 +137,9 @@ export const WsApp: React.FC<Props> = props => {
                 open={shouldShowBackdrop}
             >
                 <Box sx={{ display: 'flex', flexFlow: 'column' }}>
-                    {isWorkerMode
-                        ? 'Connect to the room server to continue.'
-                        : isFirstConnection.current
-                        ? 'Connect to the game server to join'
-                        : 'Connection to the server is lost.'}
+                    Connect to the room server to continue.
                     <Button sx={{ mt: 4 }} variant="contained" color="secondary" onClick={() => startConnecting(currentTargetUrl.current || undefined)}>
-                        {isWorkerMode ? 'reconnect' : isFirstConnection.current ? 'connect' : 'reconnect'}
+                        reconnect
                     </Button>
                 </Box>
             </Backdrop>

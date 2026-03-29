@@ -1,5 +1,31 @@
+import type { IncomingHttpHeaders } from 'http'
+
 export function isCloudflareRealtimeEnabled(): boolean {
-    return process.env.NEXT_PUBLIC_USE_CLOUDFLARE_REALTIME === 'true'
+    return true
+}
+
+function readForwardedHeader(value?: string | string[]): string | undefined {
+    const raw = Array.isArray(value) ? value[0] : value
+
+    if (!raw) {
+        return undefined
+    }
+
+    return raw
+        .split(',')
+        .map(part => part.trim())
+        .find(Boolean)
+}
+
+export function getRequestOrigin(headers: IncomingHttpHeaders): string | undefined {
+    const protocol = readForwardedHeader(headers['x-forwarded-proto']) || 'http'
+    const host = readForwardedHeader(headers['x-forwarded-host']) || readForwardedHeader(headers.host)
+
+    if (!host) {
+        return undefined
+    }
+
+    return `${protocol}://${host}`
 }
 
 export function getCloudflareRealtimeApiOrigin(currentOrigin?: string): string {
@@ -8,7 +34,7 @@ export function getCloudflareRealtimeApiOrigin(currentOrigin?: string): string {
     const origin = configuredOrigin || fallbackOrigin
 
     if (!origin) {
-        throw new Error('Cloudflare realtime API origin is not configured')
+        throw new Error('Realtime API origin is not configured')
     }
 
     return origin.replace(/\/$/, '')

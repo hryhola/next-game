@@ -25,10 +25,10 @@ The current worker already supports a real localhost migration slice:
 -   `PATCH /auth/profile` and `POST /auth/profile` update nickname/color metadata and can upload avatars to R2
 -   `GET /assets/:assetId` serves public uploaded assets from R2 through the worker
 -   `GET /lobbies` lists active DO-backed lobbies from the D1 index
--   `POST /lobbies` creates a DO-backed TicTacToe or Clicker lobby
+-   `POST /lobbies` creates a DO-backed TicTacToe, Clicker, or Jeopardy lobby
 -   `DELETE /lobbies/:roomId` destroys a lobby
--   `POST /lobbies/:roomId/join` joins a lobby over HTTP for the legacy frontend bridge
--   `POST /lobbies/:roomId/leave` leaves a lobby over HTTP for the legacy frontend bridge
+-   `POST /lobbies/:roomId/join` joins a lobby over HTTP for the main Next.js app
+-   `POST /lobbies/:roomId/leave` leaves a lobby over HTTP for the main Next.js app
 -   `GET /presence/state` returns the current DO-managed online user snapshot
 -   `GET /presence/websocket` upgrades to a global presence websocket backed by a Durable Object
 -   `GET /rooms/:roomId/state` returns the authoritative room snapshot from Durable Object storage
@@ -55,13 +55,14 @@ The room object currently owns the Phase 5, 6, and 7 slice:
 -   lobby chat
 -   TicTacToe session lifecycle and move validation
 -   Clicker session lifecycle, action fanout, and Durable Object alarm scheduling
+-   Jeopardy pack upload, parsing, gameplay, media flow, and score control
 -   room snapshot fanout over websocket
 
 ## Node Version
 
-This worker package is intentionally isolated from the legacy app.
+This worker package is intentionally isolated from the root web app.
 
--   root app runtime: Node 18
+-   root app runtime: Node 24
 -   worker toolchain runtime: Node 20+
 
 Use the local `.nvmrc` inside this folder before installing or running `wrangler`.
@@ -92,22 +93,21 @@ Use separate browser tabs to simulate two players. The playground stores the aut
 -   D1 is now used only for low-frequency durable metadata
 -   D1 also keeps the lobby discovery index for active rooms
 -   D1 now also stores room session history for recovery, debugging, and future stats screens
--   R2 now stores public avatar assets and is the foundation for future lobby/game asset migration
--   the legacy Next.js frontend can now be started against this worker with:
-    -   `yarn dev:worker-api` from the repo root
+-   R2 now stores public avatar assets and Jeopardy pack assets
+-   the main Next.js app can be started against this worker with:
+    -   `yarn dev:app` from the repo root
     -   plus `npm run dev` inside `workers/realtime`
--   the legacy UI bridge currently supports:
+-   the root app now routes all migrated game flows through this worker:
     -   auth/register/logout/session bootstrap
     -   profile nickname/color/avatar updates
     -   lobby list, preview, and live list updates
     -   global chat
     -   global users list and count
-    -   TicTacToe and Clicker lobby create/join/leave/destroy
+    -   TicTacToe, Clicker, and Jeopardy lobby create/join/leave/destroy
     -   lobby chat
     -   lobby tip and kick actions
     -   ready checks
     -   TicTacToe gameplay
     -   Clicker gameplay, including timed click-enable and cooldown flow
--   the legacy UI bridge intentionally does not support:
-    -   Jeopardy
+    -   Jeopardy gameplay, including media timing and manual score changes
 -   `/playground` remains the fastest low-level worker test harness

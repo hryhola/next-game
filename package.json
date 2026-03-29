@@ -3,13 +3,13 @@
     "version": "0.1.0",
     "private": true,
     "engines": {
-        "node": ">=18 <19"
+        "node": ">=18"
     },
     "scripts": {
         "dev": "next dev",
-        "dev:worker-api": "cross-env NEXT_PUBLIC_USE_CLOUDFLARE_REALTIME=true NEXT_PUBLIC_REALTIME_API_ORIGIN=http://localhost:8787 npx -y node@18 ./node_modules/next/dist/bin/next dev",
+        "dev:app": "cross-env NEXT_PUBLIC_REALTIME_API_ORIGIN=http://localhost:8787 next dev",
         "build": "next build",
-        "prod": "node prod-server.js",
+        "start": "next start",
         "lint": "next lint",
         "prepare": "husky install",
         "test": "jest"
@@ -24,10 +24,8 @@
         "cross-env": "^7.0.3",
         "ffprobe-static": "^3.1.0",
         "fluent-ffmpeg": "^2.1.2",
-        "formidable": "^2.1.1",
         "jszip": "^3.10.1",
         "next": "^13.2.4",
-        "node-fetch": "^3.3.0",
         "node-schedule": "^2.1.1",
         "notistack": "^2.0.8",
         "pino": "^8.8.0",
@@ -41,14 +39,12 @@
         "react-swipeable-views": "^0.14.0",
         "sass": "^1.55.0",
         "styled-components": "^5.3.6",
-        "uWebSockets.js": "uNetworking/uWebSockets.js#v20.20.0",
         "uuid": "^9.0.0",
         "xml-js": "^1.6.11"
     },
     "devDependencies": {
         "@types/ffprobe-static": "^2.0.1",
         "@types/fluent-ffmpeg": "^2.1.21",
-        "@types/formidable": "^2.0.5",
         "@types/jest": "^29.5.1",
         "@types/node": "18.7.23",
         "@types/node-schedule": "^2.1.0",

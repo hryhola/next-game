@@ -1,81 +1,47 @@
 # Runtime Baseline
 
-This document captures the current legacy runtime assumptions before the Cloudflare migration starts.
+This document captures the current post-cutover runtime assumptions.
 
-## Supported Node Version
+## Supported Node Versions
 
-Until `uWebSockets.js` is removed, the project should run on Node 18.
+-   repo root: Node `24` in `.nvmrc`
+-   repo root engines: `>=18`
+-   `workers/realtime`: Node `20` in its local `.nvmrc`
 
--   `.nvmrc` pins local development to `18`
--   `package.json` declares `engines.node` as `>=18 <19`
-
-Reason:
-
--   the current `uWebSockets.js` dependency does not support the Node 24 runtime that is currently common on local machines and CI images
+The old `uWebSockets.js` dependency is gone, so the web app no longer needs the Node 18 pin that existed during the migration.
 
 ## Ports
 
 -   Next.js app: `3000`
--   uWebSockets server: `NEXT_PUBLIC_WS_PORT`
--   current local default websocket port: `5555`
+-   local Wrangler worker: `8787`
 
 ## Environment Variables
 
-### Required
+### Optional
 
--   `NEXT_PUBLIC_WS_PORT`
-    -   used by the client websocket URL builder
-    -   used by the uWebSockets server bootstrap
-    -   used by generated local `wsapi` URLs
-
-### Optional Migration Flags
-
--   `NEXT_PUBLIC_USE_CLOUDFLARE_REALTIME`
-    -   when `true`, the legacy Next.js frontend uses the new Cloudflare worker API for supported flows
-    -   when `false`, the app keeps using legacy `uWebSockets`
 -   `NEXT_PUBLIC_REALTIME_API_ORIGIN`
-    -   points the legacy frontend at the worker entrypoint
-    -   local default for `wrangler dev`: `http://localhost:8787`
+    -   points the web app at the worker entrypoint
+    -   for local development it should usually be `http://localhost:8787`
+    -   it can be omitted when the worker is served from the same origin as the frontend
 
-An example file now exists at `.env.example`.
+An example file exists at `.env.example`.
 
 ## Current Local Development Assumptions
 
--   `yarn dev` starts Next.js
--   `yarn dev:worker-api` starts Next.js with the worker bridge enabled
--   the realtime server is initialized from `pages/index.tsx` server-side execution
--   local uploads write into `public/res`
-
-When the worker bridge flag is enabled:
-
--   `pages/index.tsx` skips legacy socket bootstrap
--   auth/session bootstrap comes from the worker `/auth/session` endpoint
--   supported legacy UI flows are routed through the worker backend:
-    -   login
-    -   profile nickname, color, and avatar updates
-    -   lobby list and preview
-    -   TicTacToe and Clicker create/join/leave/destroy
-    -   lobby chat
-    -   ready checks
-    -   TicTacToe gameplay
-    -   Clicker gameplay
--   unsupported legacy UI remains intentionally disabled:
-    -   global chat
-    -   global users list
-    -   Jeopardy
+-   `yarn dev:app` starts the Next.js frontend against a local worker origin
+-   `npm run dev` inside `workers/realtime` starts the realtime worker
+-   auth, presence, lobby lifecycle, global chat, uploads, TicTacToe, Clicker, and Jeopardy all route through the worker runtime
+-   avatar and Jeopardy pack assets are stored through the worker-backed R2 layer
 
 ## Current Production Assumptions
 
--   `node prod-server.js` starts a custom HTTPS Next.js server on port `3000`
--   the websocket server runs separately through `uWebSockets.js`
--   production uploads write into `/var/www/game-club.click/html/res`
--   SSL cert paths resolve from either:
-    -   `cert/cert.pem` and `cert/key.pem`
-    -   or LetsEncrypt paths under `/etc/letsencrypt/live/game-club.click/`
+-   the frontend talks to the Worker API for realtime, uploads, and room state
+-   Durable Objects hold authoritative live room state
+-   D1 stores low-frequency metadata such as identity, lobby discovery, and room session history
+-   R2 stores public uploaded assets
 
-## Known Baseline Constraints
+## Known Constraints
 
--   `uWebSockets.js` is a native dependency and currently blocks `next build` on unsupported Node versions
--   websocket, room, and user state are stored in process memory
--   profile and lobby uploads currently rely on local filesystem writes
--   Jeopardy pack parsing depends on local file access and ffmpeg tooling
+-   the Next.js app and the worker are still developed as two local processes
+-   Jeopardy pack parsing still depends on ffmpeg-related tooling in the worker-side processing flow
+-   the UI layer is still MUI-based; the Tailwind migration is a separate follow-up stream

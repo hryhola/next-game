@@ -1,4 +1,3 @@
-import { URL } from './url'
 import { WebSocketCallbacks } from './types'
 
 const messageLogger = (message: MessageEvent<any>) => {
@@ -31,7 +30,11 @@ export const connectToWebSocket = async (callbacks?: WebSocketCallbacks) => {
 
     isHandlingConnectRequest = true
 
-    const socketUrl = callbacks?.url || URL.WS
+    const socketUrl = callbacks?.url
+
+    if (!socketUrl) {
+        throw new Error('WebSocket URL is required')
+    }
 
     console.log('WS url is', socketUrl)
 

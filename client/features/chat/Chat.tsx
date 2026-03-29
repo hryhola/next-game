@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react'
 import { v4 as uuid } from 'uuid'
 import { ChatBox, ChatSXProps } from 'client/ui'
 import { useWS, useUser, useEventHandler, useRequestHandler } from 'client/context/list'
+import { RequestData } from 'shared/contracts'
 import { TChatMessage } from 'state'
-import { RequestData } from 'uWebSockets/uws.types'
 
 type Props = ChatSXProps & {
     scope: 'global' | 'lobby'

@@ -1,34 +1,44 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Game Club
 
-## Getting Started
+This repo now uses a split architecture:
 
-First, run the development server:
+-   the Next.js frontend lives in the repo root
+-   realtime, presence, uploads, and room state live in `workers/realtime`
+
+## Local Development
+
+Start the worker first:
 
 ```bash
+cd workers/realtime
+nvm use
+npm install
+npm run db:migrate:local
 npm run dev
-# or
-yarn dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Then start the web app from the repo root:
 
-You can start editing the page by modifying `pages/index.tsx`. The page auto-updates as you edit the file.
+```bash
+nvm use
+yarn install
+yarn dev:app
+```
 
-[API routes](https://nextjs.org/docs/api-routes/introduction) can be accessed on [http://localhost:3000/api/hello](http://localhost:3000/api/hello). This endpoint can be edited in `pages/api/hello.ts`.
+Open `http://localhost:3000`.
 
-The `pages/api` directory is mapped to `/api/*`. Files in this directory are treated as [API routes](https://nextjs.org/docs/api-routes/introduction) instead of React pages.
+For local development, `NEXT_PUBLIC_REALTIME_API_ORIGIN` should usually point at Wrangler, for example `http://localhost:8787`. When the worker is served from the same origin as the frontend, that variable can be omitted.
 
-## Learn More
+## Current Stack
 
-To learn more about Next.js, take a look at the following resources:
+-   Next.js frontend
+-   Cloudflare Workers + Durable Objects realtime backend
+-   D1 for identity, lobby index, and room history metadata
+-   R2 for uploaded assets
+-   Jeopardy pack parsing and gameplay on the Worker runtime
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Useful Docs
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+-   `docs/cloudflare-migration-plan.md`
+-   `docs/runtime-baseline.md`
+-   `workers/realtime/README.md`

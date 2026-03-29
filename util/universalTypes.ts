@@ -1,18 +1,4 @@
-import { Server as NetServer, Socket } from 'net'
-import { NextApiResponse } from 'next'
-import type { State } from 'state'
-import type { TemplatedApp } from 'uWebSockets.js'
-
 export type Resulted<Result, Error = unknown> = [Result, undefined] | [undefined, Error]
-
-export type NextApiResponseUWS<T = any> = NextApiResponse<T> & {
-    socket: Socket & {
-        server: NetServer & {
-            uws: TemplatedApp
-            appState: State
-        }
-    }
-}
 
 export type GeneralFailure = {
     success: false

@@ -1,8 +1,8 @@
 import { Resulted } from 'util/universalTypes'
 import { getCookie } from 'cookies-next'
-import { EndpointName, Endpoints } from './url'
-import { getCloudflareRealtimeApiUrl, isCloudflareRealtimeEnabled } from './realtimeMode'
-import { getWorkerErrorMessage, toLegacyGameData, toLegacyLobbyData } from './workerCompat'
+import { HTTPEndpointName as EndpointName, HTTPEndpoints as Endpoints } from 'shared/contracts'
+import { getCloudflareRealtimeApiUrl } from './realtimeMode'
+import { getWorkerErrorMessage, toAppGameData, toAppLobbyData } from './realtimeAdapter'
 
 function createWorkerAuthHeaders(contentType: 'json' | null = 'json'): Headers {
     const headers = new Headers()
@@ -29,7 +29,7 @@ async function handleWorkerApiRequest<E extends EndpointName>(endpoint: E, data:
                     return [
                         {
                             success: false,
-                            message: `Cloudflare worker mode does not support ${request.gameName} yet`
+                            message: `The realtime API does not support ${request.gameName} yet`
                         } as Endpoints[E]['response'],
                         undefined
                     ]
@@ -82,7 +82,7 @@ async function handleWorkerApiRequest<E extends EndpointName>(endpoint: E, data:
                     return [
                         {
                             success: false,
-                            message: `Cloudflare worker mode does not support ${gameName} yet`
+                            message: `The realtime API does not support ${gameName} yet`
                         } as Endpoints[E]['response'],
                         undefined
                     ]
@@ -92,7 +92,7 @@ async function handleWorkerApiRequest<E extends EndpointName>(endpoint: E, data:
                     return [
                         {
                             success: false,
-                            message: 'Initial game files are not supported in Cloudflare worker mode yet'
+                            message: 'Initial game files are not supported by the realtime API yet'
                         } as Endpoints[E]['response'],
                         undefined
                     ]
@@ -162,8 +162,8 @@ async function handleWorkerApiRequest<E extends EndpointName>(endpoint: E, data:
                 return [
                     {
                         success: true,
-                        game: toLegacyGameData(snapshot, body.sessionInternal || null),
-                        lobby: toLegacyLobbyData(snapshot)
+                        game: toAppGameData(snapshot, body.sessionInternal || null),
+                        lobby: toAppLobbyData(snapshot)
                     } as Endpoints[E]['response'],
                     undefined
                 ]
@@ -295,28 +295,7 @@ async function handleWorkerApiRequest<E extends EndpointName>(endpoint: E, data:
 
 const createHandler = (method: string) => {
     return async function <E extends EndpointName>(endpoint: E, data: Endpoints[E]['request']): Promise<Resulted<Endpoints[E]['response']>> {
-        if (isCloudflareRealtimeEnabled()) {
-            return handleWorkerApiRequest(endpoint, data)
-        }
-
-        const req: RequestInit = {
-            method
-        }
-
-        if (data) {
-            req.body = typeof data === 'string' || data instanceof FormData ? data : JSON.stringify(data)
-        }
-
-        var url = `${location.origin}/api/${endpoint}`
-
-        try {
-            const response = await fetch(url, req)
-            const data = await response.json()
-
-            return [data as Endpoints[E]['response'], undefined]
-        } catch (e) {
-            return [undefined, e]
-        }
+        return handleWorkerApiRequest(endpoint, data)
     }
 }
 
