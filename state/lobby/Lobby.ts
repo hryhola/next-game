@@ -1,7 +1,7 @@
 import { Game, Chat, State, GameCtors, GameName, LobbyMember, User, ReadyCheck } from 'state'
 import { InitialGameData } from 'state/common/game/GameInitialData'
 import { GeneralFailure, GeneralSuccess } from 'util/universalTypes'
-import { StateEventName, StateEvents } from 'uWebSockets/topicEvents'
+import type { StateEventName, StateEvents } from 'shared/contracts'
 
 export type LobbyCreateOptions<G extends GameName> = {
     id: string

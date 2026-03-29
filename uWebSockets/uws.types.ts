@@ -1,14 +1,10 @@
 import { WebSocket, HttpResponse, HttpRequest } from 'uWebSockets.js'
-import type { HandlerName } from 'uWebSockets/ws'
-import type { StateEvents, StateEventName } from 'uWebSockets/topicEvents'
 import queryString from 'query-string'
 import { State } from 'state'
+import type { SocketMessage, StateEvents, StateEventName, WSRequestContext } from 'shared/contracts'
 
-export interface SocketMessage<Ctx extends string = string, Data extends null | {} = null | {}> {
-    ctx: Ctx
-    token?: string
-    data: Data
-}
+export type { SocketMessage, StateEvents, StateEventName, WSRequestContext } from 'shared/contracts'
+export type HandlerName = WSRequestContext
 
 export type ResponseActions<ResponseType = unknown> = {
     publish(channel: string, message: SocketMessage): void
@@ -25,9 +21,9 @@ export type Handler<RequestData extends Object | null = null, ResponseType = any
     token?: string
 ) => void
 
-export type RequestData<R extends HandlerName> = Parameters<typeof import('uWebSockets/ws')['handlers'][R]>[2]
-export type ResponseData<R extends HandlerName> = Parameters<Parameters<typeof import('uWebSockets/ws')['handlers'][R]>[0]['res']>[0]
-export type RequestHandler<R extends HandlerName> = (data: ResponseData<R>) => void
+export type RequestData<R extends WSRequestContext> = Parameters<typeof import('uWebSockets/ws')['handlers'][R]>[2]
+export type ResponseData<R extends WSRequestContext> = Parameters<Parameters<typeof import('uWebSockets/ws')['handlers'][R]>[0]['res']>[0]
+export type RequestHandler<R extends WSRequestContext> = (data: ResponseData<R>) => void
 export type TopicEventHandler<E extends StateEventName> = (data: StateEvents[E]) => void
 
 export type HTTPMethod = 'get' | 'connect' | 'post' | 'options' | 'del' | 'patch' | 'put' | 'head' | 'trace'

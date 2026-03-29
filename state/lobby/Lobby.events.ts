@@ -1,5 +1,5 @@
 import type { LobbyData, LobbyMemberData, Tip } from 'state'
-import { LobbyBaseInfo } from 'uWebSockets/ws/Lobby-GetList'
+import type { LobbyBaseInfo } from 'shared/contracts/lobby'
 
 export type Events = {
     'Lobby-Join': {
