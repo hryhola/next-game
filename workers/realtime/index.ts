@@ -4,6 +4,7 @@ import { R2AssetStore } from './assets/store'
 import { getIdentitySession, registerIdentity, revokeIdentitySession, updateIdentityProfile } from './auth/store'
 import { GlobalPresenceDO } from './durable-objects/GlobalPresenceDO'
 import { LobbyRoomDO } from './durable-objects/LobbyRoomDO'
+import { parseJeopardyPackArchive } from './jeopardy/pack'
 import { clearSessionCookie, createSessionCookie, readSessionToken } from './lib/cookies'
 import { json } from './lib/json'
 import { listLobbies } from './lobbies/store'
@@ -610,13 +611,81 @@ const worker: ExportedHandler<RealtimeWorkerEnv> = {
                         return auth.error
                     }
 
+                    if (isMultipartFormRequest(request)) {
+                        const formData = await request.formData()
+                        const roomId = String(formData.get('lobbyId') || '').trim()
+                        const name = String(formData.get('lobbyId') || '').trim()
+                        const password = readOptionalFormText(formData, 'password')
+                        const gameName = String(formData.get('gameName') || '').trim()
+
+                        if (!roomId) {
+                            return errorResponse(400, 'Lobby id is required', 'invalid_payload')
+                        }
+
+                        if (gameName !== 'Jeopardy') {
+                            return errorResponse(400, `Multipart lobby creation is only supported for Jeopardy`, 'invalid_game')
+                        }
+
+                        const packFile = formData.get('initialData-pack')
+
+                        if (!(packFile instanceof File)) {
+                            return errorResponse(400, 'Jeopardy pack is required', 'missing_pack')
+                        }
+
+                        const packBytes = await packFile.arrayBuffer()
+                        const parsedPack = await parseJeopardyPackArchive(packBytes)
+                        const assetStore = createAssetStore(env, request)
+                        const storedPack = await assetStore.put({
+                            body: packBytes,
+                            contentType: packFile.type || 'application/octet-stream',
+                            fileName: packFile.name,
+                            kind: 'jeopardy-pack',
+                            ownerId: roomId,
+                            ownerType: 'lobby',
+                            size: packFile.size,
+                            uploadedByUserId: auth.session.user.id
+                        })
+
+                        const stub = getLobbyRoomStub(env, roomId)
+
+                        return stub.fetch(
+                            toRoomRequest(
+                                new Request(request.url, {
+                                    method: 'POST',
+                                    headers: {
+                                        'content-type': 'application/json'
+                                    },
+                                    body: JSON.stringify({
+                                        gameName: 'Jeopardy',
+                                        initialData: {
+                                            pack: {
+                                                assetId: storedPack.id,
+                                                author: parsedPack.author,
+                                                dateCreated: parsedPack.dateCreated,
+                                                declaration: parsedPack.declaration,
+                                                fileName: storedPack.fileName,
+                                                value: storedPack.url
+                                            }
+                                        },
+                                        name,
+                                        password,
+                                        roomId
+                                    } as CreateLobbyRequest)
+                                }),
+                                roomId,
+                                '/create',
+                                auth.session
+                            )
+                        )
+                    }
+
                     const body = await parseJsonBody<CreateLobbyRequest>(request)
 
                     if (!body || typeof body.roomId !== 'string' || !body.roomId.trim()) {
                         return errorResponse(400, 'Lobby id is required', 'invalid_payload')
                     }
 
-                    if (body.gameName && !['TicTacToe', 'Clicker'].includes(body.gameName)) {
+                    if (body.gameName && !['TicTacToe', 'Clicker', 'Jeopardy'].includes(body.gameName)) {
                         return errorResponse(400, `Unsupported game: ${body.gameName}`, 'invalid_game')
                     }
 
@@ -630,7 +699,7 @@ const worker: ExportedHandler<RealtimeWorkerEnv> = {
                                 headers: request.headers,
                                 body: JSON.stringify({
                                     ...body,
-                                    gameName: body.gameName === 'Clicker' ? 'Clicker' : 'TicTacToe',
+                                    gameName: body.gameName === 'Clicker' ? 'Clicker' : body.gameName === 'Jeopardy' ? 'Jeopardy' : 'TicTacToe',
                                     roomId
                                 })
                             }),
@@ -708,6 +777,18 @@ const worker: ExportedHandler<RealtimeWorkerEnv> = {
                 }
 
                 return stub.fetch(toRoomRequest(request, roomRoute.roomId, roomRoute.targetPath, auth.session))
+            }
+
+            if (roomRoute.targetPath === '/state') {
+                const sessionToken = readSessionToken(request)
+
+                if (sessionToken) {
+                    const session = await getIdentitySession(env.IDENTITY_DB, sessionToken)
+
+                    if (session) {
+                        return stub.fetch(toRoomRequest(request, roomRoute.roomId, roomRoute.targetPath, session))
+                    }
+                }
             }
 
             return stub.fetch(toRoomRequest(request, roomRoute.roomId, roomRoute.targetPath))

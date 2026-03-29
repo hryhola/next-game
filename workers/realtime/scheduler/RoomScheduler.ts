@@ -46,6 +46,10 @@ export class RoomScheduler<TPayload> implements Scheduler<TPayload> {
         return (await this.getTasks()).filter(task => task.scheduledAt <= now)
     }
 
+    async list(): Promise<ScheduledTask<TPayload>[]> {
+        return this.getTasks()
+    }
+
     private async getTasks(): Promise<ScheduledTask<TPayload>[]> {
         return ((await this.storage.get<ScheduledTask<TPayload>[]>(STORAGE_KEY)) || []).sort((left, right) => left.scheduledAt - right.scheduledAt)
     }

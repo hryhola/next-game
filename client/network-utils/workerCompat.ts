@@ -1,6 +1,7 @@
 import type {
     LobbyBaseInfo,
     LobbyRoomGameActionMessage,
+    RealtimeJeopardySessionInternal,
     RealtimeChatMessage,
     RealtimeLobbyGame,
     RealtimeLobbyListItem,
@@ -114,7 +115,11 @@ function toLegacyClickerWinner(snapshot: RealtimeLobbySnapshot, winnerUserId: st
     return toLegacyPlayer(snapshot.members[winnerIndex], winnerIndex)
 }
 
-function toLegacyActiveSession(game: RealtimeLobbyGame, snapshot: RealtimeLobbySnapshot): GameData['session'] {
+function toLegacyActiveSession(
+    game: RealtimeLobbyGame,
+    snapshot: RealtimeLobbySnapshot,
+    sessionInternal?: RealtimeJeopardySessionInternal | null
+): GameData['session'] {
     if (game.name === 'Clicker') {
         if (game.session.status === 'idle') {
             return undefined
@@ -124,6 +129,21 @@ function toLegacyActiveSession(game: RealtimeLobbyGame, snapshot: RealtimeLobbyS
             playerIsClickAllowed: game.session.playerIsClickAllowed,
             winner: toLegacyClickerWinner(snapshot, game.session.winnerUserId)
         }
+    }
+
+    if (game.name === 'Jeopardy') {
+        if (!game.session) {
+            return undefined
+        }
+
+        return sessionInternal
+            ? {
+                  ...game.session,
+                  internal: sessionInternal
+              }
+            : {
+                  ...game.session
+              }
     }
 
     if (game.session.status !== 'active') {
@@ -145,6 +165,14 @@ function toLegacyEndedSession(previous: RealtimeLobbySnapshot, next: RealtimeLob
         }
     }
 
+    if (previous.game.name === 'Jeopardy') {
+        return previous.game.session
+            ? {
+                  ...previous.game.session
+              }
+            : undefined
+    }
+
     return {
         board: previous.game.session.board.map(row => [...row]),
         turn: previous.game.session.turnUserId,
@@ -153,6 +181,15 @@ function toLegacyEndedSession(previous: RealtimeLobbySnapshot, next: RealtimeLob
 }
 
 function toLegacyInitialData(snapshot: RealtimeLobbySnapshot): GameData['initialData'] {
+    if (snapshot.game.name === 'Jeopardy') {
+        return {
+            pack: {
+                public: true,
+                value: snapshot.game.initialData.pack.value
+            }
+        }
+    }
+
     if (snapshot.game.name !== 'Clicker' || !snapshot.game.initialData.backgroundUrl) {
         return {}
     }
@@ -197,12 +234,12 @@ export function toLegacyLobbyData(snapshot: RealtimeLobbySnapshot): LobbyData {
     }
 }
 
-export function toLegacyGameData(snapshot: RealtimeLobbySnapshot): GameData {
+export function toLegacyGameData(snapshot: RealtimeLobbySnapshot, sessionInternal?: RealtimeJeopardySessionInternal | null): GameData {
     return {
         initialData: toLegacyInitialData(snapshot),
         name: snapshot.game.name,
         players: getLegacyPlayers(snapshot),
-        session: toLegacyActiveSession(snapshot.game, snapshot)
+        session: toLegacyActiveSession(snapshot.game, snapshot, sessionInternal)
     }
 }
 

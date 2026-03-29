@@ -1,5 +1,6 @@
 export * from './identity'
 export * from './global-realtime'
+export * from './jeopardy'
 export * from './lobby'
 export * from './realtime-lobby'
 export * from './room-history'

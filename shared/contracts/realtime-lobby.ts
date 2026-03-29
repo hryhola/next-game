@@ -1,7 +1,8 @@
 import type { IdentityProfile } from './identity'
+import type { JeopardyDeclaration, RealtimeJeopardyPublicSession } from './jeopardy'
 import type { LobbyBaseInfo } from './lobby'
 
-export type RealtimeLobbyGameName = 'TicTacToe' | 'Clicker'
+export type RealtimeLobbyGameName = 'TicTacToe' | 'Clicker' | 'Jeopardy'
 export type RealtimeLobbyMemberRole = 'player' | 'spectator'
 export type RealtimeLobbyStatus = 'waiting' | 'in_progress'
 export type ReadyCheckStatus = 'idle' | 'active' | 'success' | 'failed'
@@ -71,7 +72,18 @@ export interface RealtimeClickerGame {
     session: RealtimeClickerSession
 }
 
-export type RealtimeLobbyGame = RealtimeTicTacToeGame | RealtimeClickerGame
+export interface RealtimeJeopardyGame {
+    initialData: {
+        pack: {
+            public: true
+            value: string
+        }
+    }
+    name: 'Jeopardy'
+    session: RealtimeJeopardyPublicSession | null
+}
+
+export type RealtimeLobbyGame = RealtimeTicTacToeGame | RealtimeClickerGame | RealtimeJeopardyGame
 
 export interface RealtimeLobbySnapshot {
     chat: RealtimeChatMessage[]
@@ -100,6 +112,16 @@ export interface RealtimeLobbyListItem extends LobbyBaseInfo {
 
 export interface CreateLobbyRequest {
     gameName?: RealtimeLobbyGameName
+    initialData?: {
+        pack?: {
+            assetId: string
+            author: string
+            dateCreated: string
+            declaration: JeopardyDeclaration.Pack
+            fileName: string
+            value: string
+        }
+    }
     name?: string
     password?: string
     roomId: string
@@ -158,6 +180,14 @@ export interface LobbyRoomClickerClickMessage {
     type: 'clicker.click'
 }
 
+export interface LobbyRoomJeopardyActionMessage {
+    payload: {
+        actionName: string
+        actionPayload: unknown
+    }
+    type: 'jeopardy.action'
+}
+
 export interface LobbyRoomTipClientMessage {
     payload: {
         id: string
@@ -181,6 +211,7 @@ export type LobbyRoomClientMessage =
     | LobbyRoomChatSendMessage
     | LobbyRoomClickerClickMessage
     | LobbyRoomGameStartMessage
+    | LobbyRoomJeopardyActionMessage
     | LobbyRoomJoinMessage
     | LobbyRoomKickClientMessage
     | LobbyRoomLeaveMessage
@@ -228,6 +259,28 @@ export interface LobbyRoomGameActionMessage {
     type: 'game.action'
 }
 
+export interface LobbyRoomGameSessionStartMessage {
+    payload: {
+        session: unknown
+    }
+    type: 'game.session.start'
+}
+
+export interface LobbyRoomGameSessionUpdateMessage {
+    payload: {
+        data: unknown
+    }
+    type: 'game.session.update'
+}
+
+export interface LobbyRoomGameSessionEndMessage {
+    payload: {
+        players: unknown[]
+        session: unknown
+    }
+    type: 'game.session.end'
+}
+
 export interface LobbyRoomTipServerMessage {
     payload: {
         from: string
@@ -248,6 +301,9 @@ export interface LobbyRoomKickServerMessage {
 export type LobbyRoomServerMessage =
     | LobbyRoomErrorMessage
     | LobbyRoomGameActionMessage
+    | LobbyRoomGameSessionEndMessage
+    | LobbyRoomGameSessionStartMessage
+    | LobbyRoomGameSessionUpdateMessage
     | LobbyRoomKickServerMessage
     | LobbyRoomNoticeMessage
     | LobbyRoomPongMessage
