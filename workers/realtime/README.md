@@ -8,6 +8,7 @@ This package contains the active Cloudflare Workers + Durable Objects migration 
 -   Durable Object classes in `durable-objects/LobbyRoomDO.ts` and `durable-objects/GlobalPresenceDO.ts`
 -   a D1-backed identity/session layer in `auth/store.ts`
 -   a D1-backed lobby index in `lobbies/store.ts`
+-   a D1-backed room session summary store in `room-sessions/store.ts`
 -   an R2-backed asset store in `assets/store.ts`
 -   a local test playground served from `/playground`
 -   a `wrangler.jsonc` config with Durable Object bindings, D1 binding, and migrations
@@ -31,6 +32,7 @@ The current worker already supports a real localhost migration slice:
 -   `GET /presence/state` returns the current DO-managed online user snapshot
 -   `GET /presence/websocket` upgrades to a global presence websocket backed by a Durable Object
 -   `GET /rooms/:roomId/state` returns the authoritative room snapshot from Durable Object storage
+-   `GET /rooms/:roomId/history` returns low-frequency room session summaries from D1
 -   `GET /rooms/:roomId/health` returns room health
 -   `GET /rooms/:roomId/websocket` upgrades to a websocket handled by the room Durable Object
 -   `GET /playground` serves a local browser-based test harness for the new flow
@@ -39,6 +41,7 @@ The new identity/presence layer currently:
 
 -   stores user profiles and session references in D1
 -   stores uploaded asset metadata in D1
+-   stores room session start/completion/abandonment summaries in D1
 -   reuses the legacy `token` cookie name for an easier frontend migration
 -   keeps online presence in a dedicated Durable Object instead of Node process memory
 -   broadcasts websocket presence snapshots that survive reconnects within the worker runtime
@@ -86,8 +89,9 @@ Use separate browser tabs to simulate two players. The playground stores the aut
 
 ## Notes
 
--   D1 is now used only for low-frequency identity/session metadata
+-   D1 is now used only for low-frequency durable metadata
 -   D1 also keeps the lobby discovery index for active rooms
+-   D1 now also stores room session history for recovery, debugging, and future stats screens
 -   R2 now stores public avatar assets and is the foundation for future lobby/game asset migration
 -   the legacy Next.js frontend can now be started against this worker with:
     -   `yarn dev:worker-api` from the repo root

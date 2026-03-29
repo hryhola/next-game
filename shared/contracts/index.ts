@@ -1,6 +1,7 @@
 export * from './identity'
 export * from './lobby'
 export * from './realtime-lobby'
+export * from './room-history'
 export * from './socket'
 export * from './state-events'
 export * from './ws-context'

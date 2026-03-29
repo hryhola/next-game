@@ -15,6 +15,7 @@ import { json } from '../lib/json'
 import { CLICKER_COMPLETE_DELAY_MS, CLICKER_REENABLE_DELAY_MS, createIdleClickerSession, getRandomClickerAllowDelayMs } from '../lobbies/clicker'
 import { markLobbyDeleted, upsertLobbyMetadata } from '../lobbies/store'
 import { createEmptyBoard, findWinningLine, isBoardFull } from '../lobbies/tictactoe'
+import { createRoomSession, finalizeRoomSession, type FinalizeRoomSessionInput } from '../room-sessions/store'
 import type {
     ComputedLobbySnapshot,
     RoomScheduledTaskPayload,
@@ -87,6 +88,19 @@ function parseClientMessage(message: string | ArrayBuffer): LobbyRoomClientMessa
     } catch (_error) {
         return null
     }
+}
+
+type StartedRoomSession = {
+    gameName: RealtimeLobbyGameName
+    id: string
+    initiatedByUserId: string
+    startedAt: string
+}
+
+type ScheduledTaskResult = {
+    action?: LobbyRoomGameActionMessage
+    finalizedSession?: FinalizeRoomSessionInput
+    stateChanged: boolean
 }
 
 export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
@@ -300,6 +314,10 @@ export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
                     await this.persistState(state)
                 }
 
+                if (gameStartResult.startedSession) {
+                    await this.persistStartedRoomSession(state, gameStartResult.startedSession)
+                }
+
                 this.broadcastSnapshot(state)
                 return
             }
@@ -312,6 +330,7 @@ export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
                 }
 
                 await this.persistState(state)
+                await this.persistFinalizedRoomSession(moveResult.finalizedSession)
                 this.broadcastSnapshot(state)
                 return
             }
@@ -650,7 +669,7 @@ export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
             )
         }
 
-        await this.destroyRoom(roomId)
+        await this.destroyRoom(roomId, state)
 
         return json({
             ok: true
@@ -711,8 +730,11 @@ export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
         await this.syncLobbyMetadata(state)
     }
 
-    private async destroyRoom(roomId: string): Promise<void> {
+    private async destroyRoom(roomId: string, state?: StoredLobbyState): Promise<void> {
         const deletedAt = nowIso()
+        const roomState = state || (await this.getState())
+
+        await this.persistFinalizedRoomSession(roomState ? this.createAbandonedRoomSessionRecord(roomState, 'room_destroyed') : null)
 
         this.ctx.getWebSockets().forEach(socket => {
             try {
@@ -969,7 +991,7 @@ export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
         state.members = state.members.filter(item => item.id !== userId)
 
         if (!state.members.length) {
-            await this.destroyRoom(state.roomId)
+            await this.destroyRoom(state.roomId, state)
             return {
                 success: true,
                 message: 'Room closed because the last member left',
@@ -989,6 +1011,7 @@ export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
 
         if (member.role === 'player') {
             if (state.game.name === 'TicTacToe' && state.game.session.status === 'active') {
+                await this.persistFinalizedRoomSession(this.createAbandonedRoomSessionRecord(state, 'player_left'))
                 state.game.session = createIdleTicTacToeSession()
             }
 
@@ -997,12 +1020,15 @@ export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
 
                 if (!activePlayersLeft) {
                     const sessionId = state.game.session.id
+                    const abandonedSession = this.createAbandonedRoomSessionRecord(state, 'all_players_left')
 
                     state.game.session = createIdleClickerSession()
 
                     if (sessionId) {
                         await this.cancelClickerSessionTasks(sessionId)
                     }
+
+                    await this.persistFinalizedRoomSession(abandonedSession)
                 }
             }
         }
@@ -1155,6 +1181,7 @@ export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
         | {
               success: true
               action?: LobbyRoomGameActionMessage
+              startedSession?: StartedRoomSession
               stateChanged: boolean
           }
         | {
@@ -1173,7 +1200,18 @@ export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
     private startTicTacToeGame(
         state: StoredLobbyState,
         userId: string
-    ): { success: true; action?: LobbyRoomGameActionMessage; stateChanged: boolean } | { success: false; message: string; code: string } {
+    ):
+        | {
+              success: true
+              action?: LobbyRoomGameActionMessage
+              startedSession?: StartedRoomSession
+              stateChanged: boolean
+          }
+        | {
+              success: false
+              message: string
+              code: string
+          } {
         if (state.game.name !== 'TicTacToe') {
             return {
                 success: false,
@@ -1212,12 +1250,16 @@ export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
 
         const orderedPlayers = [...players].sort((a, b) => a.joinedAt.localeCompare(b.joinedAt))
 
+        const startedAt = nowIso()
+
+        const sessionId = crypto.randomUUID()
+
         state.game.session = {
             board: createEmptyBoard(),
             endedAt: null,
-            id: crypto.randomUUID(),
+            id: sessionId,
             isDraw: false,
-            startedAt: nowIso(),
+            startedAt,
             status: 'active',
             turnUserId: orderedPlayers[0].id,
             winLine: null,
@@ -1228,6 +1270,12 @@ export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
 
         return {
             success: true,
+            startedSession: {
+                gameName: state.game.name,
+                id: sessionId,
+                initiatedByUserId: userId,
+                startedAt
+            },
             stateChanged: true
         }
     }
@@ -1235,7 +1283,19 @@ export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
     private async startClickerGame(
         state: StoredLobbyState,
         userId: string
-    ): Promise<{ success: true; action?: LobbyRoomGameActionMessage; stateChanged: boolean } | { success: false; message: string; code: string }> {
+    ): Promise<
+        | {
+              success: true
+              action?: LobbyRoomGameActionMessage
+              startedSession?: StartedRoomSession
+              stateChanged: boolean
+          }
+        | {
+              success: false
+              message: string
+              code: string
+          }
+    > {
         if (state.game.name !== 'Clicker') {
             return {
                 success: false,
@@ -1277,12 +1337,13 @@ export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
         })
 
         const sessionId = crypto.randomUUID()
+        const startedAt = nowIso()
 
         state.game.session = {
             endedAt: null,
             id: sessionId,
             playerIsClickAllowed: false,
-            startedAt: nowIso(),
+            startedAt,
             status: 'waiting',
             winnerUserId: null
         }
@@ -1300,6 +1361,12 @@ export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
 
         return {
             success: true,
+            startedSession: {
+                gameName: state.game.name,
+                id: sessionId,
+                initiatedByUserId: userId,
+                startedAt
+            },
             stateChanged: true
         }
     }
@@ -1453,7 +1520,11 @@ export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
         }
     }
 
-    private makeMove(state: StoredLobbyState, userId: string, cell: [number, number]): { success: true } | { success: false; message: string; code: string } {
+    private makeMove(
+        state: StoredLobbyState,
+        userId: string,
+        cell: [number, number]
+    ): { success: true; finalizedSession?: FinalizeRoomSessionInput } | { success: false; message: string; code: string } {
         if (state.game.name !== 'TicTacToe') {
             return {
                 success: false,
@@ -1529,6 +1600,7 @@ export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
             state.game.session.isDraw = false
 
             return {
+                finalizedSession: this.createCompletedTicTacToeRoomSessionRecord(state) || undefined,
                 success: true
             }
         }
@@ -1542,6 +1614,7 @@ export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
             state.game.session.isDraw = true
 
             return {
+                finalizedSession: this.createCompletedTicTacToeRoomSessionRecord(state) || undefined,
                 success: true
             }
         }
@@ -1570,6 +1643,7 @@ export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
         }
 
         const completedKeys: string[] = []
+        const finalizedSessions: FinalizeRoomSessionInput[] = []
         const gameActions: LobbyRoomGameActionMessage[] = []
         let stateChanged = false
 
@@ -1582,6 +1656,10 @@ export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
             if (taskResult.action) {
                 gameActions.push(taskResult.action)
             }
+
+            if (taskResult.finalizedSession) {
+                finalizedSessions.push(taskResult.finalizedSession)
+            }
         }
 
         if (stateChanged) {
@@ -1589,6 +1667,7 @@ export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
         }
 
         await this.scheduler.complete(completedKeys)
+        await Promise.all(finalizedSessions.map(session => this.persistFinalizedRoomSession(session)))
 
         gameActions.forEach(action => this.broadcastGameAction(action))
 
@@ -1597,7 +1676,7 @@ export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
         }
     }
 
-    private runScheduledTask(state: StoredLobbyState, task: RoomScheduledTaskPayload): { action?: LobbyRoomGameActionMessage; stateChanged: boolean } {
+    private runScheduledTask(state: StoredLobbyState, task: RoomScheduledTaskPayload): ScheduledTaskResult {
         switch (task.type) {
             case 'clicker.allow-click':
                 return this.handleClickerAllowClickTask(state, task.sessionId)
@@ -1608,7 +1687,7 @@ export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
         }
     }
 
-    private handleClickerAllowClickTask(state: StoredLobbyState, sessionId: string): { action?: LobbyRoomGameActionMessage; stateChanged: boolean } {
+    private handleClickerAllowClickTask(state: StoredLobbyState, sessionId: string): ScheduledTaskResult {
         if (state.game.name !== 'Clicker' || state.game.session.id !== sessionId || state.game.session.status !== 'waiting') {
             return {
                 stateChanged: false
@@ -1634,11 +1713,7 @@ export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
         }
     }
 
-    private handleClickerReenablePlayerTask(
-        state: StoredLobbyState,
-        sessionId: string,
-        userId: string
-    ): { action?: LobbyRoomGameActionMessage; stateChanged: boolean } {
+    private handleClickerReenablePlayerTask(state: StoredLobbyState, sessionId: string, userId: string): ScheduledTaskResult {
         if (state.game.name !== 'Clicker' || state.game.session.id !== sessionId || state.game.session.status === 'idle') {
             return {
                 stateChanged: false
@@ -1660,11 +1735,7 @@ export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
         }
     }
 
-    private handleClickerCompleteSessionTask(
-        state: StoredLobbyState,
-        sessionId: string,
-        winnerUserId: string
-    ): { action?: LobbyRoomGameActionMessage; stateChanged: boolean } {
+    private handleClickerCompleteSessionTask(state: StoredLobbyState, sessionId: string, winnerUserId: string): ScheduledTaskResult {
         if (state.game.name !== 'Clicker' || state.game.session.id !== sessionId || state.game.session.status !== 'resolving') {
             return {
                 stateChanged: false
@@ -1683,9 +1754,11 @@ export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
             winner.playerScore += 1
         }
 
+        const finalizedSession = this.createCompletedClickerRoomSessionRecord(state, sessionId, winnerUserId)
         state.game.session = createIdleClickerSession()
 
         return {
+            finalizedSession,
             stateChanged: true
         }
     }
@@ -1715,6 +1788,127 @@ export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
 
     private async cancelClickerSessionTasks(sessionId: string): Promise<void> {
         await this.scheduler.cancelByPrefix(this.getClickerSessionTaskPrefix(sessionId))
+    }
+
+    private async persistStartedRoomSession(state: StoredLobbyState, session: StartedRoomSession): Promise<void> {
+        try {
+            await createRoomSession(this.env.IDENTITY_DB, {
+                gameName: session.gameName,
+                id: session.id,
+                initiatedByUserId: session.initiatedByUserId,
+                roomId: state.roomId,
+                roomName: state.name,
+                startedAt: session.startedAt
+            })
+        } catch (error) {
+            console.error('Failed to persist room session start', error)
+        }
+    }
+
+    private async persistFinalizedRoomSession(session: FinalizeRoomSessionInput | null | undefined): Promise<void> {
+        if (!session) {
+            return
+        }
+
+        try {
+            await finalizeRoomSession(this.env.IDENTITY_DB, session)
+        } catch (error) {
+            console.error('Failed to persist room session finalization', error)
+        }
+    }
+
+    private createCompletedTicTacToeRoomSessionRecord(state: StoredLobbyState): FinalizeRoomSessionInput | null {
+        if (state.game.name !== 'TicTacToe' || state.game.session.status !== 'finished' || !state.game.session.id) {
+            return null
+        }
+
+        const winner = state.members.find(member => member.id === state.game.session.winnerUserId)
+
+        return {
+            endedAt: state.game.session.endedAt || nowIso(),
+            id: state.game.session.id,
+            resultSummary: {
+                board: state.game.session.board.map(row => [...row]),
+                isDraw: state.game.session.isDraw,
+                players: state.members
+                    .filter(member => member.role === 'player')
+                    .map(member => ({
+                        id: member.id,
+                        playerChar: member.playerChar,
+                        userNickname: member.userNickname
+                    })),
+                winLine: state.game.session.winLine ? [...state.game.session.winLine] : null
+            },
+            status: 'completed',
+            winnerNickname: winner?.userNickname || null,
+            winnerUserId: winner?.id || null
+        }
+    }
+
+    private createCompletedClickerRoomSessionRecord(state: StoredLobbyState, sessionId: string, winnerUserId: string): FinalizeRoomSessionInput {
+        const winner = state.members.find(member => member.id === winnerUserId && member.role === 'player')
+
+        return {
+            endedAt: nowIso(),
+            id: sessionId,
+            resultSummary: {
+                players: state.members
+                    .filter(member => member.role === 'player')
+                    .map(member => ({
+                        id: member.id,
+                        playerScore: member.playerScore,
+                        userNickname: member.userNickname
+                    }))
+            },
+            status: 'completed',
+            winnerNickname: winner?.userNickname || null,
+            winnerUserId: winner?.id || null
+        }
+    }
+
+    private createAbandonedRoomSessionRecord(state: StoredLobbyState, reason: string): FinalizeRoomSessionInput | null {
+        if (state.game.name === 'TicTacToe') {
+            if (state.game.session.status !== 'active' || !state.game.session.id) {
+                return null
+            }
+
+            return {
+                endedAt: nowIso(),
+                id: state.game.session.id,
+                resultSummary: {
+                    board: state.game.session.board.map(row => [...row]),
+                    players: state.members
+                        .filter(member => member.role === 'player')
+                        .map(member => ({
+                            id: member.id,
+                            playerChar: member.playerChar,
+                            userNickname: member.userNickname
+                        })),
+                    reason
+                },
+                status: 'abandoned'
+            }
+        }
+
+        if (state.game.session.status === 'idle' || !state.game.session.id) {
+            return null
+        }
+
+        return {
+            endedAt: nowIso(),
+            id: state.game.session.id,
+            resultSummary: {
+                players: state.members
+                    .filter(member => member.role === 'player')
+                    .map(member => ({
+                        id: member.id,
+                        playerScore: member.playerScore,
+                        userNickname: member.userNickname
+                    })),
+                reason
+            },
+            status: 'abandoned'
+        }
     }
 
     private refreshStoredMember(member: StoredLobbyMember, profile: IdentityProfile): void {

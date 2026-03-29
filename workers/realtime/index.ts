@@ -8,6 +8,7 @@ import { clearSessionCookie, createSessionCookie, readSessionToken } from './lib
 import { json } from './lib/json'
 import { listLobbies } from './lobbies/store'
 import { playgroundHtml } from './playground'
+import { listRoomSessions } from './room-sessions/store'
 import type { RealtimeWorkerEnv } from './types'
 
 function getLobbyRoomStub(env: RealtimeWorkerEnv, roomId: string) {
@@ -32,6 +33,18 @@ function parseRoomRoute(pathname: string): { roomId: string; targetPath: '/state
     return {
         roomId: decodeURIComponent(match[1]),
         targetPath: match[2] ? (`/${match[2]}` as '/state' | '/websocket' | '/health') : '/state'
+    }
+}
+
+function parseRoomHistoryRoute(pathname: string): { roomId: string } | null {
+    const match = pathname.match(/^\/rooms\/([^/]+)\/history\/?$/)
+
+    if (!match) {
+        return null
+    }
+
+    return {
+        roomId: decodeURIComponent(match[1])
     }
 }
 
@@ -283,6 +296,7 @@ const worker: ExportedHandler<RealtimeWorkerEnv> = {
                         presenceState: '/presence/state',
                         presenceWebSocketExample: '/presence/websocket',
                         roomStateExample: '/rooms/example-room/state',
+                        roomHistoryExample: '/rooms/example-room/history',
                         roomWebSocketExample: '/rooms/example-room/websocket'
                     }
                 })
@@ -617,6 +631,22 @@ const worker: ExportedHandler<RealtimeWorkerEnv> = {
                 }
 
                 return stub.fetch(toRoomRequest(request, lobbyRoute.roomId, lobbyRoute.action, auth.session))
+            }
+
+            const roomHistoryRoute = parseRoomHistoryRoute(url.pathname)
+
+            if (roomHistoryRoute) {
+                if (request.method !== 'GET') {
+                    return methodNotAllowed('GET')
+                }
+
+                const history = await listRoomSessions(env.IDENTITY_DB, roomHistoryRoute.roomId)
+
+                return json({
+                    ok: true,
+                    history,
+                    roomId: roomHistoryRoute.roomId
+                })
             }
 
             const roomRoute = parseRoomRoute(url.pathname)
