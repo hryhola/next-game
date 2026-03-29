@@ -238,25 +238,10 @@ async function handleWorkerApiRequest<E extends EndpointName>(endpoint: E, data:
                     return [undefined, new Error('Profile payload must be FormData')]
                 }
 
-                const image = request.get('image')
-
-                if (image instanceof File && image.size > 0) {
-                    return [
-                        {
-                            success: false,
-                            message: 'Avatar uploads are not supported in Cloudflare worker mode yet'
-                        } as Endpoints[E]['response'],
-                        undefined
-                    ]
-                }
-
                 const response = await fetch(getCloudflareRealtimeApiUrl('/auth/profile'), {
                     method: 'POST',
-                    headers: createWorkerAuthHeaders(),
-                    body: JSON.stringify({
-                        userColor: String(request.get('userColor') || '').trim() || undefined,
-                        userNickname: String(request.get('userNickname') || '').trim() || undefined
-                    })
+                    headers: createWorkerAuthHeaders(null),
+                    body: request
                 })
 
                 if (!response.ok) {

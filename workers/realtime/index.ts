@@ -1,5 +1,6 @@
 import type { RegisterIdentityRequest, UpdateIdentityProfileRequest } from '../../shared/contracts/identity'
 import type { CreateLobbyRequest } from '../../shared/contracts/realtime-lobby'
+import { R2AssetStore } from './assets/store'
 import { getIdentitySession, registerIdentity, revokeIdentitySession, updateIdentityProfile } from './auth/store'
 import { GlobalPresenceDO } from './durable-objects/GlobalPresenceDO'
 import { LobbyRoomDO } from './durable-objects/LobbyRoomDO'
@@ -31,6 +32,18 @@ function parseRoomRoute(pathname: string): { roomId: string; targetPath: '/state
     return {
         roomId: decodeURIComponent(match[1]),
         targetPath: match[2] ? (`/${match[2]}` as '/state' | '/websocket' | '/health') : '/state'
+    }
+}
+
+function parseAssetRoute(pathname: string): { assetId: string } | null {
+    const match = pathname.match(/^\/assets\/([^/]+)\/?$/)
+
+    if (!match) {
+        return null
+    }
+
+    return {
+        assetId: decodeURIComponent(match[1])
     }
 }
 
@@ -131,6 +144,40 @@ function toPresenceRequest(request: Request, session: NonNullable<Awaited<Return
     })
 }
 
+function isMultipartFormRequest(request: Request): boolean {
+    return (request.headers.get('content-type') || '').includes('multipart/form-data')
+}
+
+function readOptionalFormText(formData: FormData, key: string): string | undefined {
+    const value = formData.get(key)
+
+    if (typeof value !== 'string') {
+        return undefined
+    }
+
+    const trimmed = value.trim()
+
+    return trimmed || undefined
+}
+
+function createAssetStore(env: RealtimeWorkerEnv, request: Request): R2AssetStore {
+    return new R2AssetStore(env.IDENTITY_DB, env.ASSETS_BUCKET, new URL(request.url).origin)
+}
+
+function toRangeHeader(range: R2Range, size: number): string {
+    if ('suffix' in range) {
+        const start = Math.max(size - range.suffix, 0)
+        const end = Math.max(size - 1, 0)
+
+        return `bytes ${start}-${end}/${size}`
+    }
+
+    const start = range.offset || 0
+    const end = range.length ? Math.min(start + range.length - 1, size - 1) : Math.max(size - 1, 0)
+
+    return `bytes ${start}-${end}/${size}`
+}
+
 async function parseJsonBody<T>(request: Request): Promise<T | null> {
     try {
         return (await request.json()) as T
@@ -201,6 +248,7 @@ export { GlobalPresenceDO, LobbyRoomDO }
 const worker: ExportedHandler<RealtimeWorkerEnv> = {
     async fetch(request: Request, env: RealtimeWorkerEnv): Promise<Response> {
         const url = new URL(request.url)
+        const assetStore = createAssetStore(env, request)
 
         if (request.method === 'OPTIONS') {
             return withCors(request, new Response(null, { status: 204 }))
@@ -244,6 +292,44 @@ const worker: ExportedHandler<RealtimeWorkerEnv> = {
                 return json({
                     ok: true,
                     service: 'next-game-realtime'
+                })
+            }
+
+            const assetRoute = parseAssetRoute(url.pathname)
+
+            if (assetRoute) {
+                if (!['GET', 'HEAD'].includes(request.method)) {
+                    return methodNotAllowed('GET', 'HEAD')
+                }
+
+                const asset = await assetStore.getObjectRow(assetRoute.assetId)
+
+                if (!asset || asset.visibility !== 'public') {
+                    return errorResponse(404, 'Asset not found', 'asset_not_found')
+                }
+
+                const object = await env.ASSETS_BUCKET.get(asset.bucketKey, {
+                    onlyIf: request.headers,
+                    range: request.headers
+                })
+
+                if (object === null) {
+                    return errorResponse(404, 'Asset not found', 'asset_not_found')
+                }
+
+                const headers = new Headers()
+                object.writeHttpMetadata(headers)
+                headers.set('etag', object.httpEtag)
+                headers.set('accept-ranges', 'bytes')
+                headers.set('cache-control', headers.get('cache-control') || 'public, max-age=31536000, immutable')
+
+                if (object.range) {
+                    headers.set('content-range', toRangeHeader(object.range, asset.size))
+                }
+
+                return new Response('body' in object && request.method !== 'HEAD' ? object.body : undefined, {
+                    status: request.headers.has('range') && object.range ? 206 : 'body' in object ? 200 : 412,
+                    headers
                 })
             }
 
@@ -332,14 +418,81 @@ const worker: ExportedHandler<RealtimeWorkerEnv> = {
                     return auth.error
                 }
 
-                const body = await parseJsonBody<UpdateIdentityProfileRequest>(request)
+                let body: UpdateIdentityProfileRequest | null = null
+                let avatarFile: File | null = null
+
+                if (isMultipartFormRequest(request)) {
+                    const formData = await request.formData().catch(() => null)
+
+                    if (!formData) {
+                        return errorResponse(400, 'Invalid profile form payload', 'invalid_payload')
+                    }
+
+                    const image = formData.get('image')
+
+                    body = {
+                        userColor: readOptionalFormText(formData, 'userColor'),
+                        userNickname: readOptionalFormText(formData, 'userNickname')
+                    }
+
+                    if (image instanceof File && image.size > 0) {
+                        avatarFile = image
+                    }
+                } else {
+                    body = await parseJsonBody<UpdateIdentityProfileRequest>(request)
+                }
 
                 if (!body) {
                     return errorResponse(400, 'Invalid profile payload', 'invalid_payload')
                 }
 
                 try {
-                    const session = await updateIdentityProfile(env.IDENTITY_DB, auth.session, body)
+                    let nextPatch = body
+                    let uploadedAvatar: Awaited<ReturnType<R2AssetStore['put']>> | null = null
+
+                    if (avatarFile) {
+                        if (!avatarFile.type.startsWith('image/')) {
+                            return errorResponse(400, 'Avatar must be an image file', 'invalid_avatar_file')
+                        }
+
+                        if (avatarFile.size > 5 * 1024 * 1024) {
+                            return errorResponse(413, 'Avatar must be 5MB or smaller', 'avatar_too_large')
+                        }
+
+                        uploadedAvatar = await assetStore.put({
+                            body: avatarFile.stream(),
+                            contentType: avatarFile.type || 'application/octet-stream',
+                            fileName: avatarFile.name || 'avatar',
+                            kind: 'avatar',
+                            ownerId: auth.session.user.id,
+                            ownerType: 'user',
+                            size: avatarFile.size,
+                            uploadedByUserId: auth.session.user.id
+                        })
+
+                        nextPatch = {
+                            ...body,
+                            userAvatarUrl: uploadedAvatar.url
+                        }
+                    }
+
+                    let session
+
+                    try {
+                        session = await updateIdentityProfile(env.IDENTITY_DB, auth.session, nextPatch)
+                    } catch (error) {
+                        if (uploadedAvatar) {
+                            await assetStore.delete(uploadedAvatar.id).catch(() => undefined)
+                        }
+
+                        throw error
+                    }
+
+                    if (uploadedAvatar) {
+                        const ownerAssets = await assetStore.listActiveByOwner('user', auth.session.user.id, 'avatar')
+
+                        await Promise.allSettled(ownerAssets.filter(asset => asset.id !== uploadedAvatar!.id).map(asset => assetStore.delete(asset.id)))
+                    }
 
                     return json({
                         ok: true,
