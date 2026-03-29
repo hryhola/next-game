@@ -98,13 +98,11 @@ export const ProfileEditor: React.FC<Props> = props => {
                 )}
                 {isWorkerMode && (
                     <Grid item>
-                        <Alert severity="info">
-                            Worker mode currently supports nickname and color updates only. Avatar uploads stay on the legacy backend for now.
-                        </Alert>
+                        <Alert severity="info">Worker mode now stores avatars in R2. Larger lobby asset uploads will follow in the next migration steps.</Alert>
                     </Grid>
                 )}
                 <Grid item alignSelf="center">
-                    <ProfilePicture editable={!isWorkerMode} {...displayedImage} color={userColor} onChange={file => setImageFile(file)} />
+                    <ProfilePicture editable {...displayedImage} color={userColor} onChange={file => setImageFile(file)} />
                 </Grid>
                 <Grid item>
                     <Box sx={{ display: 'flex', alignItems: 'flex-end' }}>

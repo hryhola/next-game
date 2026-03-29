@@ -270,6 +270,7 @@ The repo now also has an additive bridge mode for local migration testing:
 Supported through the bridge:
 
 -   auth bootstrap and registration
+-   profile nickname, color, and avatar updates
 -   lobby list and preview
 -   TicTacToe and Clicker create/join/leave/destroy
 -   lobby chat
@@ -281,7 +282,6 @@ Still intentionally unsupported through the bridge:
 
 -   global chat
 -   global users list
--   avatar uploads
 -   Jeopardy
 -   isolating the Worker toolchain avoids forcing both runtimes into the same root package
 
@@ -490,10 +490,13 @@ Remove local filesystem assumptions from profile uploads and game assets.
 
 -   R2-backed uploads
 -   asset URLs detached from local disk
+-   reusable asset metadata model for future lobby-pack migration
 
 ### Done When
 
--   avatar and lobby asset flows no longer write to local filesystem
+-   avatar uploads no longer write to local filesystem
+-   public asset URLs are served through the worker instead of `/public/res/*`
+-   the next Jeopardy migration can reuse the same asset store and asset route
 
 ## Phase 9: Add D1 Only Where It Pays Off
 

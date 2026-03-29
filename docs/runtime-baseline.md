@@ -52,17 +52,17 @@ When the worker bridge flag is enabled:
 -   auth/session bootstrap comes from the worker `/auth/session` endpoint
 -   supported legacy UI flows are routed through the worker backend:
     -   login
+    -   profile nickname, color, and avatar updates
     -   lobby list and preview
-    -   TicTacToe create/join/leave/destroy
+    -   TicTacToe and Clicker create/join/leave/destroy
     -   lobby chat
     -   ready checks
     -   TicTacToe gameplay
+    -   Clicker gameplay
 -   unsupported legacy UI remains intentionally disabled:
     -   global chat
     -   global users list
-    -   avatar uploads
-    -   non-TicTacToe games
-    -   legacy timer-driven flows
+    -   Jeopardy
 
 ## Current Production Assumptions
 

@@ -25,6 +25,12 @@
             "migrations_dir": "./migrations"
         }
     ],
+    "r2_buckets": [
+        {
+            "binding": "ASSETS_BUCKET",
+            "bucket_name": "next-game-assets"
+        }
+    ],
     "migrations": [
         {
             "tag": "v1",
