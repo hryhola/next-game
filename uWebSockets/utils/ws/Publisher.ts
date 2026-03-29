@@ -1,6 +1,5 @@
 import { TemplatedApp } from 'uWebSockets.js'
-import { StateEvents } from 'uWebSockets/topicEvents'
-import { SocketMessage } from 'uWebSockets/uws.types'
+import type { SocketMessage, StateEvents } from 'shared/contracts'
 import { WSMessageResponseActions } from './wrappers'
 
 class Publisher {

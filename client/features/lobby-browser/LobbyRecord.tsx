@@ -1,5 +1,5 @@
 import { Button, ListItem, ListItemButton, ListItemText, Theme } from '@mui/material'
-import { LobbyBaseInfo } from 'uWebSockets/ws/Lobby-GetList'
+import type { LobbyBaseInfo } from 'shared/contracts/lobby'
 import LockIcon from '@mui/icons-material/Lock'
 import { LobbyPreview } from './LobbyPreview'
 import { MouseEventHandler, useState } from 'react'

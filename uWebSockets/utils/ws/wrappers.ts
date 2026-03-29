@@ -1,7 +1,6 @@
 import logger from 'logger'
 import { TemplatedApp, WebSocket } from 'uWebSockets.js'
-import { StateEvents } from 'uWebSockets/topicEvents'
-import { SocketMessage } from 'uWebSockets/uws.types'
+import type { SocketMessage, StateEvents } from 'shared/contracts'
 
 export class WSMessageResponseActions {
     ws: WebSocket<unknown>

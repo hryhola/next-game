@@ -1,9 +1,5 @@
 import { Handler } from 'uWebSockets/uws.types'
-
-export interface LobbyBaseInfo {
-    id: string
-    private: boolean
-}
+import type { LobbyBaseInfo } from 'shared/contracts/lobby'
 
 export interface Success {
     lobbies: LobbyBaseInfo[]

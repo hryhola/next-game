@@ -1,4 +1,4 @@
-import { StateEventName } from 'uWebSockets/topicEvents'
+import type { StateEventName } from 'shared/contracts'
 import { Handler } from '../uws.types'
 import logger from 'logger'
 
