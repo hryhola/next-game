@@ -1,0 +1,23 @@
+{
+    "$schema": "./node_modules/wrangler/config-schema.json",
+    "name": "next-game-realtime",
+    "main": "./index.ts",
+    "compatibility_date": "2026-03-29",
+    "observability": {
+        "enabled": true
+    },
+    "durable_objects": {
+        "bindings": [
+            {
+                "name": "LOBBY_ROOMS",
+                "class_name": "LobbyRoomDO"
+            }
+        ]
+    },
+    "migrations": [
+        {
+            "tag": "v1",
+            "new_sqlite_classes": ["LobbyRoomDO"]
+        }
+    ]
+}

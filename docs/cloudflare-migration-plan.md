@@ -250,6 +250,16 @@ Add the new runtime without switching the app over yet.
     -   R2
     -   D1, only if used in the first slice
 
+### Implementation Note
+
+The Worker scaffold lives in its own package under `workers/realtime`.
+
+Reason:
+
+-   the legacy app is currently pinned to Node 18 because of `uWebSockets.js`
+-   current `wrangler` tooling requires a newer Node runtime
+-   isolating the Worker toolchain avoids forcing both runtimes into the same root package
+
 ### First Objects To Introduce
 
 -   `LobbyRoomDO`
