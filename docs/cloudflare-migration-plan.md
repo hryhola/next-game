@@ -308,6 +308,15 @@ Use a thin auth layer first:
 -   reconnecting users are resolved without relying on the old `UserRegistry`
 -   presence survives frontend reconnects
 
+### Phase 4 Implementation Note
+
+The first migration slice for this phase can stay intentionally thin:
+
+-   add a D1-backed identity/session store for persistent profile metadata
+-   keep using an opaque cookie token named `token` during transition
+-   add a dedicated global presence Durable Object instead of coupling online users to room state
+-   leave full frontend cutover and lobby membership migration for Phase 5
+
 ## Phase 5: Migrate Lobby Lifecycle
 
 ### Objective
@@ -342,6 +351,16 @@ Move lobby creation, join/leave, ready checks, and chat to Durable Objects.
 -   users can create and join a lobby through the new runtime
 -   lobby list and room state no longer depend on `appState` in Next.js
 
+### Phase 5 Implementation Note
+
+The first useful localhost slice can expose:
+
+-   `GET /lobbies` backed by D1 for discovery
+-   `POST /lobbies` and `DELETE /lobbies/:roomId` for lifecycle control
+-   `GET /rooms/:roomId/state` for snapshot inspection
+-   `GET /rooms/:roomId/websocket` for join, leave, ready check, chat, and room sync
+-   a small worker-served playground page so this flow can be exercised before the full frontend cutover
+
 ## Phase 6: Migrate One Game End To End
 
 ### Objective
@@ -369,6 +388,18 @@ Why:
 ### Deliverables
 
 -   one lobby type with one game working entirely on the new backend
+
+### Phase 6 Implementation Note
+
+For local verification, the simplest successful slice is:
+
+1. register two users
+2. create a TicTacToe lobby
+3. connect both users to the room websocket
+4. run ready check
+5. start game
+6. play a full match
+7. verify chat and room destruction after the game
 
 ### Done When
 

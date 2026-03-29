@@ -1,28 +1,52 @@
-# Realtime Worker Scaffold
+# Realtime Worker
 
-This package contains the first Cloudflare Workers + Durable Objects scaffold for the migration.
+This package contains the active Cloudflare Workers + Durable Objects migration runtime.
 
 ## What Exists
 
 -   a Worker entrypoint in `index.ts`
--   one Durable Object class in `durable-objects/LobbyRoomDO.ts`
--   a `wrangler.jsonc` config with the first Durable Object binding and migration
+-   Durable Object classes in `durable-objects/LobbyRoomDO.ts` and `durable-objects/GlobalPresenceDO.ts`
+-   a D1-backed identity/session layer in `auth/store.ts`
+-   a D1-backed lobby index in `lobbies/store.ts`
+-   a local test playground served from `/playground`
+-   a `wrangler.jsonc` config with Durable Object bindings, D1 binding, and migrations
 -   a local TypeScript config for the worker package
 
 ## What It Does
 
-The scaffold intentionally stays small:
+The current worker already supports a real localhost migration slice:
 
 -   `GET /health` returns a worker health response
--   `GET /rooms/:roomId/state` returns basic room metadata from Durable Object storage
+-   `POST /auth/register` creates a persistent user profile and session token in D1
+-   `GET /auth/session` resolves the current cookie/bearer token to a persistent identity
+-   `POST /auth/logout` revokes the current session and clears the cookie
+-   `PATCH /auth/profile` updates nickname/color/avatar metadata in D1
+-   `GET /lobbies` lists active DO-backed lobbies from the D1 index
+-   `POST /lobbies` creates a DO-backed TicTacToe lobby
+-   `DELETE /lobbies/:roomId` destroys a lobby
+-   `GET /presence/state` returns the current DO-managed online user snapshot
+-   `GET /presence/websocket` upgrades to a global presence websocket backed by a Durable Object
+-   `GET /rooms/:roomId/state` returns the authoritative room snapshot from Durable Object storage
 -   `GET /rooms/:roomId/health` returns room health
 -   `GET /rooms/:roomId/websocket` upgrades to a websocket handled by the room Durable Object
+-   `GET /playground` serves a local browser-based test harness for the new flow
 
-The room object currently:
+The new identity/presence layer currently:
 
--   initializes persistent room metadata in Durable Object storage
--   tracks active websocket connections in memory
--   broadcasts basic presence and echo messages
+-   stores user profiles and session references in D1
+-   reuses the legacy `token` cookie name for an easier frontend migration
+-   keeps online presence in a dedicated Durable Object instead of Node process memory
+-   broadcasts websocket presence snapshots that survive reconnects within the worker runtime
+
+The room object currently owns the Phase 5 and 6 slice:
+
+-   lobby creation and destruction
+-   join and leave flow
+-   member tracking and reconnect-aware connection state
+-   ready checks
+-   lobby chat
+-   TicTacToe session lifecycle and move validation
+-   room snapshot fanout over websocket
 
 ## Node Version
 
@@ -40,13 +64,24 @@ Run these inside `workers/realtime`:
 ```bash
 nvm use
 npm install
+npm run db:migrate:local
 npm run typegen
 npm run check
 npm run dev
 ```
 
+Then open:
+
+```bash
+http://localhost:8787/playground
+```
+
+Use separate browser tabs to simulate two players. The playground stores the auth token in per-tab `sessionStorage`, so tabs can act as different users on the same local worker.
+
 ## Notes
 
--   R2 and D1 bindings are not added yet because the first scaffold slice only needs Durable Objects
--   this package is not wired into the frontend yet
--   the current room logic is only a runtime scaffold, not the migrated game/lobby domain logic
+-   D1 is now used only for low-frequency identity/session metadata
+-   D1 also keeps the lobby discovery index for active rooms
+-   R2 is still intentionally deferred to the later upload migration phase
+-   the legacy Next.js frontend is still not cut over to this runtime yet
+-   `/playground` is the intended local test harness until the real frontend migration lands

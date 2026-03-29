@@ -11,13 +11,28 @@
             {
                 "name": "LOBBY_ROOMS",
                 "class_name": "LobbyRoomDO"
+            },
+            {
+                "name": "GLOBAL_PRESENCE",
+                "class_name": "GlobalPresenceDO"
             }
         ]
     },
+    "d1_databases": [
+        {
+            "binding": "IDENTITY_DB",
+            "database_name": "next-game-identity",
+            "migrations_dir": "./migrations"
+        }
+    ],
     "migrations": [
         {
             "tag": "v1",
             "new_sqlite_classes": ["LobbyRoomDO"]
+        },
+        {
+            "tag": "v2",
+            "new_sqlite_classes": ["GlobalPresenceDO"]
         }
     ]
 }
