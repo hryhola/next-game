@@ -1,6 +1,8 @@
 import { DurableObject } from 'cloudflare:workers'
 import type { IdentityProfile, PresenceSnapshot, PresenceUser } from '../../../shared/contracts/identity'
+import type { RealtimeChatMessage, RealtimeLobbyListItem } from '../../../shared/contracts/realtime-lobby'
 import { json } from '../lib/json'
+import { listLobbies } from '../lobbies/store'
 import type { RealtimeWorkerEnv } from '../types'
 
 type PresenceAttachment = {
@@ -10,6 +12,12 @@ type PresenceAttachment = {
 }
 
 type PresenceHeaders = PresenceAttachment
+
+type GlobalChatRequest = {
+    text?: string
+}
+
+const GLOBAL_CHAT_STORAGE_KEY = 'global-chat'
 
 function readPresenceHeaders(request: Request): PresenceHeaders | null {
     const sessionId = request.headers.get('x-session-id')
@@ -67,6 +75,28 @@ export class GlobalPresenceDO extends DurableObject<RealtimeWorkerEnv> {
             })
         }
 
+        if (url.pathname === '/chat') {
+            return this.handleChatRequest(request)
+        }
+
+        if (url.pathname === '/events/lobbies-updated') {
+            if (request.method !== 'POST') {
+                return json(
+                    {
+                        ok: false,
+                        message: 'Method not allowed'
+                    },
+                    { status: 405 }
+                )
+            }
+
+            await this.broadcastLobbyList()
+
+            return json({
+                ok: true
+            })
+        }
+
         if (url.pathname === '/websocket') {
             return this.handleWebSocket(request)
         }
@@ -80,31 +110,101 @@ export class GlobalPresenceDO extends DurableObject<RealtimeWorkerEnv> {
         )
     }
 
-    webSocketMessage(ws: WebSocket, message: string | ArrayBuffer): void {
+    async webSocketMessage(ws: WebSocket, message: string | ArrayBuffer): Promise<void> {
         const textMessage = typeof message === 'string' ? message : new TextDecoder().decode(message)
 
         if (textMessage === 'ping') {
-            ws.send(JSON.stringify({ type: 'presence.pong' }))
+            ws.send(JSON.stringify({ type: 'pong' }))
             return
         }
 
-        ws.send(
-            JSON.stringify({
-                type: 'presence.snapshot',
-                payload: this.buildSnapshot()
-            })
-        )
+        try {
+            const parsed = JSON.parse(textMessage) as { type?: string }
+
+            if (parsed.type === 'ping') {
+                ws.send(JSON.stringify({ type: 'pong' }))
+                return
+            }
+        } catch (_error) {
+            return
+        }
+
+        await this.sendInitialState(ws)
     }
 
     webSocketClose(): void {
-        this.broadcastSnapshot()
+        this.broadcastPresenceSnapshot()
     }
 
     webSocketError(): void {
-        this.broadcastSnapshot()
+        this.broadcastPresenceSnapshot()
     }
 
-    private handleWebSocket(request: Request): Response {
+    private async handleChatRequest(request: Request): Promise<Response> {
+        if (request.method === 'GET') {
+            return json({
+                ok: true,
+                messages: this.getRecentChatMessages(await this.getChatMessages())
+            })
+        }
+
+        if (request.method !== 'POST') {
+            return json(
+                {
+                    ok: false,
+                    message: 'Method not allowed'
+                },
+                { status: 405 }
+            )
+        }
+
+        const presenceHeaders = readPresenceHeaders(request)
+
+        if (!presenceHeaders) {
+            return json(
+                {
+                    ok: false,
+                    message: 'Missing authenticated chat headers'
+                },
+                { status: 400 }
+            )
+        }
+
+        const body = (await request.json().catch(() => null)) as GlobalChatRequest | null
+        const text = body?.text?.trim()
+
+        if (!text) {
+            return json(
+                {
+                    ok: false,
+                    message: 'Message cannot be empty'
+                },
+                { status: 400 }
+            )
+        }
+
+        const nextMessage: RealtimeChatMessage = {
+            createdAt: new Date().toISOString(),
+            from: presenceHeaders.user.userNickname,
+            fromColor: presenceHeaders.user.userColor,
+            fromUserId: presenceHeaders.user.id,
+            id: crypto.randomUUID(),
+            text
+        }
+
+        const messages = await this.getChatMessages()
+        messages.push(nextMessage)
+
+        await this.ctx.storage.put(GLOBAL_CHAT_STORAGE_KEY, messages.slice(-100))
+        this.broadcastGlobalChatMessage(nextMessage)
+
+        return json({
+            ok: true,
+            message: nextMessage
+        })
+    }
+
+    private async handleWebSocket(request: Request): Promise<Response> {
         if (request.headers.get('Upgrade') !== 'websocket') {
             return new Response('Expected Upgrade: websocket', { status: 426 })
         }
@@ -127,19 +227,53 @@ export class GlobalPresenceDO extends DurableObject<RealtimeWorkerEnv> {
         server.serializeAttachment(presenceHeaders)
         this.ctx.acceptWebSocket(server, [presenceHeaders.user.id, presenceHeaders.sessionId])
 
-        server.send(
+        await this.sendInitialState(server)
+
+        this.broadcastPresenceSnapshot()
+
+        return new Response(null, {
+            status: 101,
+            webSocket: client
+        } as ResponseInit & { webSocket: WebSocket })
+    }
+
+    private async getChatMessages(): Promise<RealtimeChatMessage[]> {
+        return (await this.ctx.storage.get<RealtimeChatMessage[]>(GLOBAL_CHAT_STORAGE_KEY)) || []
+    }
+
+    private getRecentChatMessages(messages: RealtimeChatMessage[]): RealtimeChatMessage[] {
+        return messages.slice(-50).reverse()
+    }
+
+    private async getLobbyList(): Promise<RealtimeLobbyListItem[]> {
+        return listLobbies(this.env.IDENTITY_DB)
+    }
+
+    private async sendInitialState(ws: WebSocket): Promise<void> {
+        ws.send(
             JSON.stringify({
                 type: 'presence.snapshot',
                 payload: this.buildSnapshot()
             })
         )
 
-        this.broadcastSnapshot()
+        ws.send(
+            JSON.stringify({
+                type: 'global.chat.snapshot',
+                payload: {
+                    messages: this.getRecentChatMessages(await this.getChatMessages())
+                }
+            })
+        )
 
-        return new Response(null, {
-            status: 101,
-            webSocket: client
-        } as ResponseInit & { webSocket: WebSocket })
+        ws.send(
+            JSON.stringify({
+                type: 'global.lobbies.updated',
+                payload: {
+                    lobbies: await this.getLobbyList()
+                }
+            })
+        )
     }
 
     private buildSnapshot(): PresenceSnapshot {
@@ -172,12 +306,52 @@ export class GlobalPresenceDO extends DurableObject<RealtimeWorkerEnv> {
         }
     }
 
-    private broadcastSnapshot(): void {
+    private broadcastPresenceSnapshot(): void {
         const payload = JSON.stringify({
             type: 'presence.snapshot',
             payload: this.buildSnapshot()
         })
 
+        const staleSockets: WebSocket[] = []
+
+        this.ctx.getWebSockets().forEach(socket => {
+            try {
+                socket.send(payload)
+            } catch (_error) {
+                staleSockets.push(socket)
+            }
+        })
+
+        staleSockets.forEach(socket => {
+            try {
+                socket.close(1011, 'stale socket')
+            } catch (_error) {
+                return
+            }
+        })
+    }
+
+    private broadcastGlobalChatMessage(message: RealtimeChatMessage): void {
+        const payload = JSON.stringify({
+            type: 'global.chat.message',
+            payload: message
+        })
+
+        this.broadcastToSockets(payload)
+    }
+
+    private async broadcastLobbyList(): Promise<void> {
+        const payload = JSON.stringify({
+            type: 'global.lobbies.updated',
+            payload: {
+                lobbies: await this.getLobbyList()
+            }
+        })
+
+        this.broadcastToSockets(payload)
+    }
+
+    private broadcastToSockets(payload: string): void {
         const staleSockets: WebSocket[] = []
 
         this.ctx.getWebSockets().forEach(socket => {

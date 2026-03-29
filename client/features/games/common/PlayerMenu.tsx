@@ -79,10 +79,6 @@ export const PlayerMenu: React.FC<Props> = props => {
 
     let options: string[][] = []
 
-    if (isWorkerMode) {
-        return <></>
-    }
-
     if (props.player.userNickname !== user.userNickname && lobby.myRole !== 'spectator') {
         options = [...options, ['tip', 'Tip']]
     }
@@ -94,7 +90,7 @@ export const PlayerMenu: React.FC<Props> = props => {
             options = [...options, ['kick', 'Kick']]
         }
 
-        if (game.isSessionStarted) {
+        if (!isWorkerMode && game.isSessionStarted) {
             options = [...options, ['set-score', 'Set score']]
         }
     }

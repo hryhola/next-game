@@ -271,17 +271,18 @@ Supported through the bridge:
 
 -   auth bootstrap and registration
 -   profile nickname, color, and avatar updates
--   lobby list and preview
+-   lobby list, preview, and live list updates
+-   global chat
+-   global users list and count
 -   TicTacToe and Clicker create/join/leave/destroy
 -   lobby chat
+-   lobby tip and kick actions
 -   ready check
 -   TicTacToe moves and session flow
 -   Clicker timed session flow
 
 Still intentionally unsupported through the bridge:
 
--   global chat
--   global users list
 -   Jeopardy
 -   isolating the Worker toolchain avoids forcing both runtimes into the same root package
 

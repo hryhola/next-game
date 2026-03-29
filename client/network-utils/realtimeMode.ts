@@ -29,3 +29,15 @@ export function getCloudflareRoomWebSocketUrl(roomId: string, token?: string, cu
 
     return url.toString()
 }
+
+export function getCloudflareGlobalWebSocketUrl(token?: string, currentOrigin?: string): string {
+    const url = new URL(getCloudflareRealtimeApiUrl('/presence/websocket', currentOrigin))
+
+    url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
+
+    if (token) {
+        url.searchParams.set('token', token)
+    }
+
+    return url.toString()
+}

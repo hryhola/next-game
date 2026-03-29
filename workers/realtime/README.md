@@ -99,14 +99,15 @@ Use separate browser tabs to simulate two players. The playground stores the aut
 -   the legacy UI bridge currently supports:
     -   auth/register/logout/session bootstrap
     -   profile nickname/color/avatar updates
-    -   lobby list and preview
+    -   lobby list, preview, and live list updates
+    -   global chat
+    -   global users list and count
     -   TicTacToe and Clicker lobby create/join/leave/destroy
     -   lobby chat
+    -   lobby tip and kick actions
     -   ready checks
     -   TicTacToe gameplay
     -   Clicker gameplay, including timed click-enable and cooldown flow
 -   the legacy UI bridge intentionally does not support:
-    -   global chat
-    -   global users
     -   Jeopardy
 -   `/playground` remains the fastest low-level worker test harness
