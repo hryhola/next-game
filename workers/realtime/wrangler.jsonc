@@ -22,6 +22,7 @@
         {
             "binding": "IDENTITY_DB",
             "database_name": "next-game-identity",
+            "database_id": "6e534e11-9c93-415a-8723-f3446aa553ea",
             "migrations_dir": "./migrations"
         }
     ],
