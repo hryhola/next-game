@@ -108,7 +108,7 @@ export class JeopardySession extends GameSession<JeopardySessionState> {
             data: sessionData
         }
 
-        master.member.user.ws.send(
+        master.member.user.connection.send(
             JSON.stringify({
                 ctx: 'Game-SessionUpdate',
                 data

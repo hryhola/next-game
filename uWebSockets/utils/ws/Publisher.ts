@@ -1,8 +1,9 @@
 import { TemplatedApp } from 'uWebSockets.js'
 import type { SocketMessage, StateEvents } from 'shared/contracts'
+import type { RealtimeBus } from 'shared/domain'
 import { WSMessageResponseActions } from './wrappers'
 
-class Publisher {
+class Publisher implements RealtimeBus {
     app: TemplatedApp
 
     constructor(app: TemplatedApp) {

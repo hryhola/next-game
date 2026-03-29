@@ -102,7 +102,7 @@ export abstract class GameSession<State extends { internal: any } = any> {
             const actors = this.game.players.filter(actionHandler.publishingActorFilter)
 
             actors.forEach(a =>
-                a.member.user.ws.send(
+                a.member.user.connection.send(
                     JSON.stringify({
                         ctx: 'Game-SessionAction',
                         data: eventData

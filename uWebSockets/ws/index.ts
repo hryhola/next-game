@@ -3,6 +3,7 @@ import util from 'util'
 import { SocketMessage, ResponseActions } from '../uws.types'
 import logger from 'logger'
 import { WSMessageResponseActions } from 'uWebSockets/utils/ws/wrappers'
+import { UWSRealtimeConnection } from 'uWebSockets/utils/ws/UWSRealtimeConnection'
 import { State } from 'state'
 
 // @index('./*.ts', f => `import { handler as ${f.name.replaceAll('-', '')} } from '${f.path}'`)
@@ -90,8 +91,8 @@ export const WSHandlerRegister = (app: uws.TemplatedApp, state: State) => {
                 if (request.token) {
                     const user = state.users.getByToken(request.token)
 
-                    if (user && user.ws !== ws) {
-                        user.ws = ws
+                    if (user && !user.connection.matches(ws)) {
+                        user.connection = new UWSRealtimeConnection(ws)
                     }
                 }
 
