@@ -4,7 +4,6 @@ import { useLobby } from 'client/context/list'
 import { useClientRouter } from 'client/route/ClientRouter'
 import { LoadingOverlay } from 'client/ui'
 import { api } from 'client/network-utils/api'
-import { isCloudflareRealtimeEnabled } from 'client/network-utils/realtimeMode'
 import { GameName } from 'state/games'
 import { HomeContext } from 'client/context/list/homeCtx'
 import { InitialGameDataSchema } from 'state/common/game/GameInitialData'
@@ -15,7 +14,6 @@ export const LobbyCreator: React.FC = () => {
     const lobby = useLobby()
 
     const formRef = useRef<HTMLFormElement | null>(null)
-    const isWorkerMode = isCloudflareRealtimeEnabled()
 
     const [lobbyId, setLobbyId] = useState('')
     const [password, setPassword] = useState('')
@@ -83,13 +81,6 @@ export const LobbyCreator: React.FC = () => {
                         <Alert severity="error">{error}</Alert>
                     </Grid>
                 )}
-                {isWorkerMode && (
-                    <Grid item>
-                        <Alert severity="info">
-                            Worker mode supports TicTacToe, Clicker, and Jeopardy. Jeopardy runs only on the Cloudflare worker backend.
-                        </Alert>
-                    </Grid>
-                )}
                 <Grid item>
                     <TextField required label="Lobby name" name="lobbyId" value={lobbyId} onChange={e => setLobbyId(e.target.value)} fullWidth />
                 </Grid>
@@ -109,7 +100,7 @@ export const LobbyCreator: React.FC = () => {
                         >
                             <MenuItem value="TicTacToe">Tic Tac Toe</MenuItem>
                             <MenuItem value="Clicker">Clicker</MenuItem>
-                            {isWorkerMode && <MenuItem value="Jeopardy">[PRE-ALPHA] Jeopardy</MenuItem>}
+                            <MenuItem value="Jeopardy">Jeopardy</MenuItem>
                         </Select>
                     </FormControl>
                 </Grid>

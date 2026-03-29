@@ -5,7 +5,6 @@ import { useRef } from 'react'
 import { PlayerData } from 'state'
 import { v4 } from 'uuid'
 import { useGame } from './GameFactory'
-import { isCloudflareRealtimeEnabled } from 'client/network-utils/realtimeMode'
 
 type Props = {
     playerMenuAnchor: Element | null
@@ -20,7 +19,6 @@ export const PlayerMenu: React.FC<Props> = props => {
     const lobby = useLobby()
     const ws = useWS()
     const game = useGame()
-    const isWorkerMode = isCloudflareRealtimeEnabled()
 
     const scoreInputRef = useRef<HTMLInputElement | null>(null)
 
@@ -90,7 +88,7 @@ export const PlayerMenu: React.FC<Props> = props => {
             options = [...options, ['kick', 'Kick']]
         }
 
-        if (!isWorkerMode && game.isSessionStarted) {
+        if (game.isSessionStarted) {
             options = [...options, ['set-score', 'Set score']]
         }
     }

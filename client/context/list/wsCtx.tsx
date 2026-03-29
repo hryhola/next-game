@@ -4,26 +4,27 @@ import type {
     LobbyRoomClientMessage,
     LobbyRoomServerMessage,
     PresenceSnapshot,
+    RequestData,
+    RequestHandler,
     RealtimeChatMessage,
     RealtimeLobbyListItem,
     RealtimeLobbySnapshot,
-    SocketMessage,
     StateEventName,
+    TopicEventHandler,
     WSRequestContext
 } from 'shared/contracts'
-import type { TopicEventHandler, RequestData, RequestHandler } from 'uWebSockets/uws.types'
 import { getCookie } from 'cookies-next'
-import { getCloudflareGlobalWebSocketUrl, getCloudflareRealtimeApiUrl, isCloudflareRealtimeEnabled } from 'client/network-utils/realtimeMode'
+import { getCloudflareGlobalWebSocketUrl, getCloudflareRealtimeApiUrl } from 'client/network-utils/realtimeMode'
 import {
-    deriveLegacyEventsFromSnapshot,
-    toLegacyChatMessages,
+    deriveAppEventsFromSnapshot,
+    toAppChatMessages,
     getWorkerErrorMessage,
-    toLegacyGameActionEvent,
-    toLegacyLobbyBaseInfo,
-    toLegacyLobbyChatMessages,
-    toLegacyLobbyData,
-    toLegacyLobbyMember
-} from 'client/network-utils/workerCompat'
+    toAppGameActionEvent,
+    toAppLobbyBaseInfo,
+    toAppLobbyChatMessages,
+    toAppLobbyData,
+    toAppLobbyMember
+} from 'client/network-utils/realtimeAdapter'
 import { useUser } from './userCtx'
 
 type HandlerOn = <C extends StateEventName | WSRequestContext>(context: C, handler: Function) => void
@@ -62,7 +63,6 @@ export const WSProvider: React.FC<Props> = props => {
     const workerRoomIdRef = useRef('')
 
     const [isConnected, setIsConnected] = useState<boolean | null>(null)
-    const isWorkerMode = isCloudflareRealtimeEnabled()
 
     const emit = (context: string, data: unknown) => {
         if (!(context in listeners.current)) {
@@ -115,7 +115,7 @@ export const WSProvider: React.FC<Props> = props => {
         workerLobbyListRef.current = lobbies
 
         emit('Lobby-ListUpdated', {
-            lobbies: lobbies.map(toLegacyLobbyBaseInfo)
+            lobbies: lobbies.map(toAppLobbyBaseInfo)
         })
     }
 
@@ -216,7 +216,7 @@ export const WSProvider: React.FC<Props> = props => {
             return
         }
 
-        deriveLegacyEventsFromSnapshot(previousSnapshot, snapshot).forEach(event => emit(event.ctx, event.data))
+        deriveAppEventsFromSnapshot(previousSnapshot, snapshot).forEach(event => emit(event.ctx, event.data))
     }
 
     const sendWorkerRoomMessage = (message: LobbyRoomClientMessage) => {
@@ -270,7 +270,7 @@ export const WSProvider: React.FC<Props> = props => {
                     const lobbies = await readWorkerLobbyList()
 
                     emit('Lobby-GetList', {
-                        lobbies: lobbies.map(toLegacyLobbyBaseInfo)
+                        lobbies: lobbies.map(toAppLobbyBaseInfo)
                     })
                     return
                 }
@@ -280,7 +280,7 @@ export const WSProvider: React.FC<Props> = props => {
 
                     emit('Lobby-GetPublicInfo', {
                         success: true,
-                        lobbyData: toLegacyLobbyData(snapshot)
+                        lobbyData: toAppLobbyData(snapshot)
                     })
                     return
                 }
@@ -292,7 +292,7 @@ export const WSProvider: React.FC<Props> = props => {
 
                         emit('Chat-Get', {
                             success: true,
-                            messages: toLegacyChatMessages(messages),
+                            messages: toAppChatMessages(messages),
                             scope: 'global'
                         })
                         return
@@ -307,7 +307,7 @@ export const WSProvider: React.FC<Props> = props => {
                     emit('Chat-Get', {
                         success: true,
                         lobbyId: payload.lobbyId,
-                        messages: toLegacyLobbyChatMessages(snapshot),
+                        messages: toAppLobbyChatMessages(snapshot),
                         scope: 'lobby'
                     })
                     return
@@ -419,7 +419,7 @@ export const WSProvider: React.FC<Props> = props => {
                         return
                     }
 
-                    console.warn(`Action ${payload.actionName} is not supported in Cloudflare worker mode yet`)
+                    console.warn(`Action ${payload.actionName} is not supported by the realtime API yet`)
                     return
                 }
                 case 'Universal-Subscription': {
@@ -453,7 +453,7 @@ export const WSProvider: React.FC<Props> = props => {
                     return
                 }
                 default: {
-                    console.warn(`WS context ${context} is not supported in Cloudflare worker mode yet`, data)
+                    console.warn(`WS context ${context} is not supported by the realtime API yet`, data)
                     return
                 }
             }
@@ -517,7 +517,7 @@ export const WSProvider: React.FC<Props> = props => {
 
             emit('Chat-Get', {
                 success: true,
-                messages: toLegacyChatMessages(workerMessage.payload.messages),
+                messages: toAppChatMessages(workerMessage.payload.messages),
                 scope: 'global'
             })
             return
@@ -530,7 +530,7 @@ export const WSProvider: React.FC<Props> = props => {
             ].slice(0, 100)
 
             emit('Chat-NewMessage', {
-                message: toLegacyChatMessages([workerMessage.payload])[0],
+                message: toAppChatMessages([workerMessage.payload])[0],
                 scope: 'global'
             })
             return
@@ -576,7 +576,7 @@ export const WSProvider: React.FC<Props> = props => {
 
             emit('Lobby-Kicked', {
                 lobbyId: snapshot.roomId,
-                member: toLegacyLobbyMember(snapshot.members[memberIndex], memberIndex)
+                member: toAppLobbyMember(snapshot.members[memberIndex], memberIndex)
             })
             return
         }
@@ -591,7 +591,7 @@ export const WSProvider: React.FC<Props> = props => {
                 return
             }
 
-            emit('Game-SessionAction', toLegacyGameActionEvent(workerRoomIdRef.current, workerMessage.payload))
+            emit('Game-SessionAction', toAppGameActionEvent(workerRoomIdRef.current, workerMessage.payload))
             return
         }
 
@@ -633,30 +633,7 @@ export const WSProvider: React.FC<Props> = props => {
     }
 
     const send: HandlerSend = (context, data) => {
-        if (isWorkerMode) {
-            void handleWorkerSend(context, data)
-            return
-        }
-
-        if (!wsRef.current) {
-            console.error('Cannot send because ws is not defined', context, data)
-            return
-        }
-
-        const message: SocketMessage = {
-            ctx: context,
-            data: data || null
-        }
-
-        console.log('%c' + context + ' %csend', 'color: Chartreuse', '', message.data)
-
-        const token = getCookie('token') as string | undefined
-
-        if (token) {
-            message.token = token
-        }
-
-        wsRef.current.send(JSON.stringify(message))
+        void handleWorkerSend(context, data)
     }
 
     const messageHandler = (event: MessageEvent<any>) => {
@@ -664,22 +641,13 @@ export const WSProvider: React.FC<Props> = props => {
             return
         }
 
-        const message = JSON.parse(event.data)
-
-        if (isWorkerMode) {
-            handleWorkerRoomMessage(message as LobbyRoomServerMessage)
-            return
-        }
-
-        if (message.ctx in listeners.current) {
-            listeners.current[message.ctx].forEach(listener => listener(message.data))
-        }
+        handleWorkerRoomMessage(JSON.parse(event.data) as LobbyRoomServerMessage)
     }
 
     if (wsRef.current) wsRef.current.onmessage = messageHandler
 
     useEffect(() => {
-        if (!isWorkerMode || !user.id) {
+        if (!user.id) {
             workerGlobalShouldReconnectRef.current = false
 
             if (workerGlobalReconnectRef.current) {
@@ -757,13 +725,7 @@ export const WSProvider: React.FC<Props> = props => {
                 workerGlobalReconnectRef.current = setTimeout(() => {
                     const nextToken = getCookie('token')
 
-                    if (
-                        workerGlobalShouldReconnectRef.current &&
-                        isCloudflareRealtimeEnabled() &&
-                        user.id &&
-                        typeof nextToken === 'string' &&
-                        nextToken.length
-                    ) {
+                    if (workerGlobalShouldReconnectRef.current && user.id && typeof nextToken === 'string' && nextToken.length) {
                         connectWorkerGlobalSocket()
                     }
                 }, 1500)
@@ -799,7 +761,7 @@ export const WSProvider: React.FC<Props> = props => {
                 }
             }
         }
-    }, [isWorkerMode, user.id])
+    }, [user.id])
 
     return <WSContext.Provider value={{ wsRef, isConnected, setIsConnected, on, send, unsubscribe }}>{props.children}</WSContext.Provider>
 }

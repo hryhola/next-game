@@ -3005,6 +3005,54 @@ export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
                     success: true
                 }
             }
+            case '$SetScore': {
+                if (!isMaster) {
+                    return {
+                        code: 'forbidden',
+                        message: 'Only the Jeopardy master can set scores',
+                        success: false
+                    }
+                }
+
+                const payload = actionPayload as { playerID?: string; score?: number | string } | null
+                const nextScore = Number(payload?.score)
+
+                if (!payload?.playerID || !Number.isFinite(nextScore)) {
+                    return {
+                        code: 'invalid_payload',
+                        message: 'Player id and score are required',
+                        success: false
+                    }
+                }
+
+                const player = state.members.find(member => member.id === payload.playerID && member.role === 'player')
+
+                if (!player) {
+                    return {
+                        code: 'player_not_found',
+                        message: `Player with ID ${payload.playerID} not found`,
+                        success: false
+                    }
+                }
+
+                player.playerScore = nextScore
+
+                return {
+                    action: this.createSuccessfulGameAction(
+                        {
+                            id: actor.id,
+                            type: 'player'
+                        },
+                        '$SetScore',
+                        {
+                            playerID: payload.playerID,
+                            score: nextScore
+                        }
+                    ),
+                    stateChanged: true,
+                    success: true
+                }
+            }
             case '$SkipVote': {
                 if (!isMaster) {
                     return {
