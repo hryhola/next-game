@@ -526,6 +526,17 @@ Keep active session state in Durable Objects. Use D1 for lookup, recovery, and m
 
 -   minimal schema
 -   clear ownership rules for what goes to D1 and what stays in room memory
+-   one concrete low-frequency metadata slice that is useful in local migration testing
+
+### Current Implementation
+
+Phase 9 is now grounded by `room_sessions` in D1:
+
+-   a room session row is created when a migrated game session starts
+-   the row is finalized when the session completes or is abandoned
+-   `GET /rooms/:roomId/history` exposes the durable summary for debugging and future UI/statistics work
+
+This keeps D1 valuable without moving authoritative live room state out of Durable Objects.
 
 ### Done When
 
