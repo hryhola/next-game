@@ -24,6 +24,8 @@ The current worker already supports a real localhost migration slice:
 -   `GET /lobbies` lists active DO-backed lobbies from the D1 index
 -   `POST /lobbies` creates a DO-backed TicTacToe lobby
 -   `DELETE /lobbies/:roomId` destroys a lobby
+-   `POST /lobbies/:roomId/join` joins a lobby over HTTP for the legacy frontend bridge
+-   `POST /lobbies/:roomId/leave` leaves a lobby over HTTP for the legacy frontend bridge
 -   `GET /presence/state` returns the current DO-managed online user snapshot
 -   `GET /presence/websocket` upgrades to a global presence websocket backed by a Durable Object
 -   `GET /rooms/:roomId/state` returns the authoritative room snapshot from Durable Object storage
@@ -83,5 +85,20 @@ Use separate browser tabs to simulate two players. The playground stores the aut
 -   D1 is now used only for low-frequency identity/session metadata
 -   D1 also keeps the lobby discovery index for active rooms
 -   R2 is still intentionally deferred to the later upload migration phase
--   the legacy Next.js frontend is still not cut over to this runtime yet
--   `/playground` is the intended local test harness until the real frontend migration lands
+-   the legacy Next.js frontend can now be started against this worker with:
+    -   `yarn dev:worker-api` from the repo root
+    -   plus `npm run dev` inside `workers/realtime`
+-   the legacy UI bridge currently supports:
+    -   auth/register/logout/session bootstrap
+    -   lobby list and preview
+    -   TicTacToe lobby create/join/leave/destroy
+    -   lobby chat
+    -   ready checks
+    -   TicTacToe gameplay
+-   the legacy UI bridge intentionally does not support:
+    -   global chat
+    -   global users
+    -   avatar uploads
+    -   Clicker
+    -   Jeopardy
+-   `/playground` remains the fastest low-level worker test harness

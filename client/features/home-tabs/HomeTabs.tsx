@@ -11,6 +11,7 @@ import { headerHeight } from '../header/Header'
 import { chatInputHeight } from 'client/ui'
 import { GlobalUsersList } from '../global-users-list/GlobalUsersList'
 import { GlobalUsersListTitle } from '../global-users-list/GlobalUsersListTitle'
+import { isCloudflareRealtimeEnabled } from 'client/network-utils/realtimeMode'
 
 interface TabPanelProps {
     children?: React.ReactNode
@@ -41,6 +42,7 @@ export const tabsHeaderHeight = '48px'
 
 export const HomeTabs: React.FC<BoxProps> = props => {
     const theme = useTheme()
+    const isWorkerMode = isCloudflareRealtimeEnabled()
 
     const [value, setValue] = React.useState(0)
 
@@ -61,6 +63,14 @@ export const HomeTabs: React.FC<BoxProps> = props => {
     }
 
     const headersHeight = `(${tabsHeaderHeight} + ${headerHeight})`
+
+    if (isWorkerMode) {
+        return (
+            <Box {...props} sx={sx}>
+                <LobbyBrowser />
+            </Box>
+        )
+    }
 
     return (
         <Box {...props} sx={sx}>

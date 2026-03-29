@@ -4,6 +4,7 @@ import { useLobby } from 'client/context/list'
 import { useClientRouter } from 'client/route/ClientRouter'
 import { LoadingOverlay } from 'client/ui'
 import { api } from 'client/network-utils/api'
+import { isCloudflareRealtimeEnabled } from 'client/network-utils/realtimeMode'
 import { GameName } from 'state/games'
 import { HomeContext } from 'client/context/list/homeCtx'
 import { InitialGameDataSchema } from 'state/common/game/GameInitialData'
@@ -14,15 +15,21 @@ export const LobbyCreator: React.FC = () => {
     const lobby = useLobby()
 
     const formRef = useRef<HTMLFormElement | null>(null)
+    const isWorkerMode = isCloudflareRealtimeEnabled()
 
     const [lobbyId, setLobbyId] = useState('')
     const [password, setPassword] = useState('')
     const [error, setError] = useState('')
-    const [gameName, setGameName] = useState<GameName>('Clicker')
+    const [gameName, setGameName] = useState<GameName>(isWorkerMode ? 'TicTacToe' : 'Clicker')
     const [isLoading, setIsLoading] = useState(false)
     const [initialDataScheme, setInitialDataScheme] = useState<InitialGameDataSchema>([])
 
     const updateGameSchema = async (gameName: GameName) => {
+        if (isWorkerMode) {
+            setInitialDataScheme([])
+            return
+        }
+
         const [response, error] = await api.post('game-get-schema', { gameName })
 
         if (!response) {
@@ -81,6 +88,11 @@ export const LobbyCreator: React.FC = () => {
                         <Alert severity="error">{error}</Alert>
                     </Grid>
                 )}
+                {isWorkerMode && (
+                    <Grid item>
+                        <Alert severity="info">Worker mode currently supports TicTacToe only. File-based game setup is disabled for now.</Alert>
+                    </Grid>
+                )}
                 <Grid item>
                     <TextField required label="Lobby name" name="lobbyId" value={lobbyId} onChange={e => setLobbyId(e.target.value)} fullWidth />
                 </Grid>
@@ -97,10 +109,11 @@ export const LobbyCreator: React.FC = () => {
                             name="gameName"
                             label="Game"
                             fullWidth
+                            disabled={isWorkerMode}
                         >
-                            <MenuItem value="Jeopardy">[PRE-ALPHA] Jeopardy</MenuItem>
-                            <MenuItem value="Clicker">Clicker</MenuItem>
                             <MenuItem value="TicTacToe">Tic Tac Toe</MenuItem>
+                            {!isWorkerMode && <MenuItem value="Clicker">Clicker</MenuItem>}
+                            {!isWorkerMode && <MenuItem value="Jeopardy">[PRE-ALPHA] Jeopardy</MenuItem>}
                         </Select>
                     </FormControl>
                 </Grid>

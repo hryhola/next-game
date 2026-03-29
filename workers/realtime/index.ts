@@ -34,16 +34,50 @@ function parseRoomRoute(pathname: string): { roomId: string; targetPath: '/state
     }
 }
 
-function parseLobbyItemRoute(pathname: string): { roomId: string } | null {
-    const match = pathname.match(/^\/lobbies\/([^/]+)\/?$/)
+type LobbyActionPath = '/join' | '/leave' | '/destroy'
+
+function parseLobbyItemRoute(pathname: string): { roomId: string; action: LobbyActionPath } | null {
+    const match = pathname.match(/^\/lobbies\/([^/]+)(?:\/(join|leave))?\/?$/)
 
     if (!match) {
         return null
     }
 
     return {
-        roomId: decodeURIComponent(match[1])
+        roomId: decodeURIComponent(match[1]),
+        action: match[2] ? (`/${match[2]}` as LobbyActionPath) : '/destroy'
     }
+}
+
+function createCorsHeaders(request: Request): Headers {
+    const headers = new Headers()
+    const origin = request.headers.get('origin')
+
+    headers.set('access-control-allow-origin', origin || '*')
+    headers.set('access-control-allow-methods', 'GET,POST,PATCH,DELETE,OPTIONS')
+    headers.set('access-control-allow-headers', 'authorization,content-type')
+    headers.set('access-control-expose-headers', 'content-type,set-cookie')
+    headers.set('vary', 'origin')
+
+    return headers
+}
+
+function withCors(request: Request, response: Response): Response {
+    if (response.status === 101) {
+        return response
+    }
+
+    const headers = new Headers(response.headers)
+
+    createCorsHeaders(request).forEach((value, key) => {
+        headers.set(key, value)
+    })
+
+    return new Response(response.body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers
+    })
 }
 
 function appendSessionHeaders(headers: Headers, session: ResolvedSession): Headers {
@@ -168,273 +202,294 @@ const worker: ExportedHandler<RealtimeWorkerEnv> = {
     async fetch(request: Request, env: RealtimeWorkerEnv): Promise<Response> {
         const url = new URL(request.url)
 
+        if (request.method === 'OPTIONS') {
+            return withCors(request, new Response(null, { status: 204 }))
+        }
+
         if (url.pathname === '/playground') {
-            return new Response(playgroundHtml, {
-                headers: {
-                    'content-type': 'text/html; charset=utf-8'
-                }
-            })
-        }
-
-        if (url.pathname === '/') {
-            return json({
-                ok: true,
-                service: 'next-game-realtime',
-                endpoints: {
-                    playground: '/playground',
-                    health: '/health',
-                    authRegister: '/auth/register',
-                    authSession: '/auth/session',
-                    authProfile: '/auth/profile',
-                    lobbiesList: '/lobbies',
-                    lobbiesCreate: '/lobbies',
-                    presenceState: '/presence/state',
-                    presenceWebSocketExample: '/presence/websocket',
-                    roomStateExample: '/rooms/example-room/state',
-                    roomWebSocketExample: '/rooms/example-room/websocket'
-                }
-            })
-        }
-
-        if (url.pathname === '/health') {
-            return json({
-                ok: true,
-                service: 'next-game-realtime'
-            })
-        }
-
-        if (url.pathname === '/auth/register') {
-            if (request.method !== 'POST') {
-                return methodNotAllowed('POST')
-            }
-
-            const body = await parseJsonBody<RegisterIdentityRequest>(request)
-
-            if (!body || typeof body.userNickname !== 'string') {
-                return errorResponse(400, 'Invalid register payload', 'invalid_payload')
-            }
-
-            try {
-                const { session, sessionToken } = await registerIdentity(env.IDENTITY_DB, body.userNickname)
-
-                return json(
-                    {
-                        ok: true,
-                        session,
-                        sessionToken
-                    },
-                    {
-                        headers: {
-                            'set-cookie': createSessionCookie(sessionToken)
-                        }
-                    }
-                )
-            } catch (error) {
-                const message = error instanceof Error ? error.message : 'Failed to register identity'
-                const status = message === 'Nickname already exists' ? 409 : 400
-
-                return errorResponse(status, message, status === 409 ? 'nickname_taken' : 'register_failed')
-            }
-        }
-
-        if (url.pathname === '/auth/session') {
-            if (request.method !== 'GET') {
-                return methodNotAllowed('GET')
-            }
-
-            const auth = await requireSession(request, env)
-
-            if (!auth.ok) {
-                return auth.error
-            }
-
-            return json({
-                ok: true,
-                session: auth.session
-            })
-        }
-
-        if (url.pathname === '/auth/logout') {
-            if (request.method !== 'POST') {
-                return methodNotAllowed('POST')
-            }
-
-            const sessionToken = readSessionToken(request)
-
-            if (sessionToken) {
-                await revokeIdentitySession(env.IDENTITY_DB, sessionToken)
-            }
-
-            return json(
-                {
-                    ok: true
-                },
-                {
+            return withCors(
+                request,
+                new Response(playgroundHtml, {
                     headers: {
-                        'set-cookie': clearSessionCookie()
+                        'content-type': 'text/html; charset=utf-8'
                     }
-                }
+                })
             )
         }
 
-        if (url.pathname === '/auth/profile') {
-            if (!['PATCH', 'POST'].includes(request.method)) {
-                return methodNotAllowed('PATCH', 'POST')
-            }
-
-            const auth = await requireSession(request, env)
-
-            if (!auth.ok) {
-                return auth.error
-            }
-
-            const body = await parseJsonBody<UpdateIdentityProfileRequest>(request)
-
-            if (!body) {
-                return errorResponse(400, 'Invalid profile payload', 'invalid_payload')
-            }
-
-            try {
-                const session = await updateIdentityProfile(env.IDENTITY_DB, auth.session, body)
-
+        const response = await (async () => {
+            if (url.pathname === '/') {
                 return json({
                     ok: true,
-                    session
-                })
-            } catch (error) {
-                const message = error instanceof Error ? error.message : 'Failed to update profile'
-                const status = message === 'Nickname already exists' ? 409 : 400
-
-                return errorResponse(status, message, status === 409 ? 'nickname_taken' : 'profile_update_failed')
-            }
-        }
-
-        if (url.pathname === '/presence/state') {
-            if (request.method !== 'GET') {
-                return methodNotAllowed('GET')
-            }
-
-            const stub = getGlobalPresenceStub(env)
-
-            return stub.fetch(new Request('https://presence.internal/state'))
-        }
-
-        if (url.pathname === '/presence/health') {
-            if (request.method !== 'GET') {
-                return methodNotAllowed('GET')
-            }
-
-            const stub = getGlobalPresenceStub(env)
-
-            return stub.fetch(new Request('https://presence.internal/health'))
-        }
-
-        if (url.pathname === '/presence/websocket') {
-            if (request.method !== 'GET') {
-                return methodNotAllowed('GET')
-            }
-
-            const auth = await requireSession(request, env)
-
-            if (!auth.ok) {
-                return auth.error
-            }
-
-            const stub = getGlobalPresenceStub(env)
-
-            return stub.fetch(toPresenceRequest(request, auth.session))
-        }
-
-        if (url.pathname === '/lobbies') {
-            if (request.method === 'GET') {
-                const lobbies = await listLobbies(env.IDENTITY_DB)
-
-                return json({
-                    ok: true,
-                    lobbies
+                    service: 'next-game-realtime',
+                    endpoints: {
+                        playground: '/playground',
+                        health: '/health',
+                        authRegister: '/auth/register',
+                        authSession: '/auth/session',
+                        authProfile: '/auth/profile',
+                        lobbiesList: '/lobbies',
+                        lobbiesCreate: '/lobbies',
+                        lobbyJoinExample: '/lobbies/example-room/join',
+                        lobbyLeaveExample: '/lobbies/example-room/leave',
+                        presenceState: '/presence/state',
+                        presenceWebSocketExample: '/presence/websocket',
+                        roomStateExample: '/rooms/example-room/state',
+                        roomWebSocketExample: '/rooms/example-room/websocket'
+                    }
                 })
             }
 
-            if (request.method === 'POST') {
+            if (url.pathname === '/health') {
+                return json({
+                    ok: true,
+                    service: 'next-game-realtime'
+                })
+            }
+
+            if (url.pathname === '/auth/register') {
+                if (request.method !== 'POST') {
+                    return methodNotAllowed('POST')
+                }
+
+                const body = await parseJsonBody<RegisterIdentityRequest>(request)
+
+                if (!body || typeof body.userNickname !== 'string') {
+                    return errorResponse(400, 'Invalid register payload', 'invalid_payload')
+                }
+
+                try {
+                    const { session, sessionToken } = await registerIdentity(env.IDENTITY_DB, body.userNickname)
+
+                    return json(
+                        {
+                            ok: true,
+                            session,
+                            sessionToken
+                        },
+                        {
+                            headers: {
+                                'set-cookie': createSessionCookie(sessionToken)
+                            }
+                        }
+                    )
+                } catch (error) {
+                    const message = error instanceof Error ? error.message : 'Failed to register identity'
+                    const status = message === 'Nickname already exists' ? 409 : 400
+
+                    return errorResponse(status, message, status === 409 ? 'nickname_taken' : 'register_failed')
+                }
+            }
+
+            if (url.pathname === '/auth/session') {
+                if (request.method !== 'GET') {
+                    return methodNotAllowed('GET')
+                }
+
                 const auth = await requireSession(request, env)
 
                 if (!auth.ok) {
                     return auth.error
                 }
 
-                const body = await parseJsonBody<CreateLobbyRequest>(request)
+                return json({
+                    ok: true,
+                    session: auth.session
+                })
+            }
 
-                if (!body || typeof body.roomId !== 'string' || !body.roomId.trim()) {
-                    return errorResponse(400, 'Lobby id is required', 'invalid_payload')
+            if (url.pathname === '/auth/logout') {
+                if (request.method !== 'POST') {
+                    return methodNotAllowed('POST')
                 }
 
-                const roomId = body.roomId.trim()
-                const stub = getLobbyRoomStub(env, roomId)
+                const sessionToken = readSessionToken(request)
 
-                return stub.fetch(
-                    toRoomRequest(
-                        new Request(request.url, {
-                            method: 'POST',
-                            headers: request.headers,
-                            body: JSON.stringify({
-                                ...body,
-                                gameName: 'TicTacToe',
-                                roomId
-                            })
-                        }),
-                        roomId,
-                        '/create',
-                        auth.session
-                    )
+                if (sessionToken) {
+                    await revokeIdentitySession(env.IDENTITY_DB, sessionToken)
+                }
+
+                return json(
+                    {
+                        ok: true
+                    },
+                    {
+                        headers: {
+                            'set-cookie': clearSessionCookie()
+                        }
+                    }
                 )
             }
 
-            return methodNotAllowed('GET', 'POST')
-        }
+            if (url.pathname === '/auth/profile') {
+                if (!['PATCH', 'POST'].includes(request.method)) {
+                    return methodNotAllowed('PATCH', 'POST')
+                }
 
-        const lobbyRoute = parseLobbyItemRoute(url.pathname)
+                const auth = await requireSession(request, env)
 
-        if (lobbyRoute) {
-            if (request.method !== 'DELETE') {
-                return methodNotAllowed('DELETE')
+                if (!auth.ok) {
+                    return auth.error
+                }
+
+                const body = await parseJsonBody<UpdateIdentityProfileRequest>(request)
+
+                if (!body) {
+                    return errorResponse(400, 'Invalid profile payload', 'invalid_payload')
+                }
+
+                try {
+                    const session = await updateIdentityProfile(env.IDENTITY_DB, auth.session, body)
+
+                    return json({
+                        ok: true,
+                        session
+                    })
+                } catch (error) {
+                    const message = error instanceof Error ? error.message : 'Failed to update profile'
+                    const status = message === 'Nickname already exists' ? 409 : 400
+
+                    return errorResponse(status, message, status === 409 ? 'nickname_taken' : 'profile_update_failed')
+                }
             }
 
-            const auth = await requireSession(request, env)
+            if (url.pathname === '/presence/state') {
+                if (request.method !== 'GET') {
+                    return methodNotAllowed('GET')
+                }
 
-            if (!auth.ok) {
-                return auth.error
+                const stub = getGlobalPresenceStub(env)
+
+                return stub.fetch(new Request('https://presence.internal/state'))
             }
 
-            const stub = getLobbyRoomStub(env, lobbyRoute.roomId)
+            if (url.pathname === '/presence/health') {
+                if (request.method !== 'GET') {
+                    return methodNotAllowed('GET')
+                }
 
-            return stub.fetch(toRoomRequest(request, lobbyRoute.roomId, '/destroy', auth.session))
-        }
+                const stub = getGlobalPresenceStub(env)
 
-        const roomRoute = parseRoomRoute(url.pathname)
-
-        if (!roomRoute) {
-            return json(
-                {
-                    ok: false,
-                    message: `Unknown route: ${url.pathname}`
-                },
-                { status: 404 }
-            )
-        }
-
-        const stub = getLobbyRoomStub(env, roomRoute.roomId)
-
-        if (roomRoute.targetPath === '/websocket') {
-            const auth = await requireSession(request, env)
-
-            if (!auth.ok) {
-                return auth.error
+                return stub.fetch(new Request('https://presence.internal/health'))
             }
 
-            return stub.fetch(toRoomRequest(request, roomRoute.roomId, roomRoute.targetPath, auth.session))
-        }
+            if (url.pathname === '/presence/websocket') {
+                if (request.method !== 'GET') {
+                    return methodNotAllowed('GET')
+                }
 
-        return stub.fetch(toRoomRequest(request, roomRoute.roomId, roomRoute.targetPath))
+                const auth = await requireSession(request, env)
+
+                if (!auth.ok) {
+                    return auth.error
+                }
+
+                const stub = getGlobalPresenceStub(env)
+
+                return stub.fetch(toPresenceRequest(request, auth.session))
+            }
+
+            if (url.pathname === '/lobbies') {
+                if (request.method === 'GET') {
+                    const lobbies = await listLobbies(env.IDENTITY_DB)
+
+                    return json({
+                        ok: true,
+                        lobbies
+                    })
+                }
+
+                if (request.method === 'POST') {
+                    const auth = await requireSession(request, env)
+
+                    if (!auth.ok) {
+                        return auth.error
+                    }
+
+                    const body = await parseJsonBody<CreateLobbyRequest>(request)
+
+                    if (!body || typeof body.roomId !== 'string' || !body.roomId.trim()) {
+                        return errorResponse(400, 'Lobby id is required', 'invalid_payload')
+                    }
+
+                    const roomId = body.roomId.trim()
+                    const stub = getLobbyRoomStub(env, roomId)
+
+                    return stub.fetch(
+                        toRoomRequest(
+                            new Request(request.url, {
+                                method: 'POST',
+                                headers: request.headers,
+                                body: JSON.stringify({
+                                    ...body,
+                                    gameName: 'TicTacToe',
+                                    roomId
+                                })
+                            }),
+                            roomId,
+                            '/create',
+                            auth.session
+                        )
+                    )
+                }
+
+                return methodNotAllowed('GET', 'POST')
+            }
+
+            const lobbyRoute = parseLobbyItemRoute(url.pathname)
+
+            if (lobbyRoute) {
+                const auth = await requireSession(request, env)
+
+                if (!auth.ok) {
+                    return auth.error
+                }
+
+                const stub = getLobbyRoomStub(env, lobbyRoute.roomId)
+
+                if (lobbyRoute.action === '/destroy') {
+                    if (request.method !== 'DELETE') {
+                        return methodNotAllowed('DELETE')
+                    }
+
+                    return stub.fetch(toRoomRequest(request, lobbyRoute.roomId, '/destroy', auth.session))
+                }
+
+                if (request.method !== 'POST') {
+                    return methodNotAllowed('POST')
+                }
+
+                return stub.fetch(toRoomRequest(request, lobbyRoute.roomId, lobbyRoute.action, auth.session))
+            }
+
+            const roomRoute = parseRoomRoute(url.pathname)
+
+            if (!roomRoute) {
+                return json(
+                    {
+                        ok: false,
+                        message: `Unknown route: ${url.pathname}`
+                    },
+                    { status: 404 }
+                )
+            }
+
+            const stub = getLobbyRoomStub(env, roomRoute.roomId)
+
+            if (roomRoute.targetPath === '/websocket') {
+                const auth = await requireSession(request, env)
+
+                if (!auth.ok) {
+                    return auth.error
+                }
+
+                return stub.fetch(toRoomRequest(request, roomRoute.roomId, roomRoute.targetPath, auth.session))
+            }
+
+            return stub.fetch(toRoomRequest(request, roomRoute.roomId, roomRoute.targetPath))
+        })()
+
+        return withCors(request, response)
     }
 }
 

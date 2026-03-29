@@ -7,6 +7,7 @@
     },
     "scripts": {
         "dev": "next dev",
+        "dev:worker-api": "cross-env NEXT_PUBLIC_USE_CLOUDFLARE_REALTIME=true NEXT_PUBLIC_REALTIME_API_ORIGIN=http://localhost:8787 npx -y node@18 ./node_modules/next/dist/bin/next dev",
         "build": "next build",
         "prod": "node prod-server.js",
         "lint": "next lint",

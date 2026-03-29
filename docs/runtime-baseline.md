@@ -28,13 +28,41 @@ Reason:
     -   used by the uWebSockets server bootstrap
     -   used by generated local `wsapi` URLs
 
+### Optional Migration Flags
+
+-   `NEXT_PUBLIC_USE_CLOUDFLARE_REALTIME`
+    -   when `true`, the legacy Next.js frontend uses the new Cloudflare worker API for supported flows
+    -   when `false`, the app keeps using legacy `uWebSockets`
+-   `NEXT_PUBLIC_REALTIME_API_ORIGIN`
+    -   points the legacy frontend at the worker entrypoint
+    -   local default for `wrangler dev`: `http://localhost:8787`
+
 An example file now exists at `.env.example`.
 
 ## Current Local Development Assumptions
 
 -   `yarn dev` starts Next.js
+-   `yarn dev:worker-api` starts Next.js with the worker bridge enabled
 -   the realtime server is initialized from `pages/index.tsx` server-side execution
 -   local uploads write into `public/res`
+
+When the worker bridge flag is enabled:
+
+-   `pages/index.tsx` skips legacy socket bootstrap
+-   auth/session bootstrap comes from the worker `/auth/session` endpoint
+-   supported legacy UI flows are routed through the worker backend:
+    -   login
+    -   lobby list and preview
+    -   TicTacToe create/join/leave/destroy
+    -   lobby chat
+    -   ready checks
+    -   TicTacToe gameplay
+-   unsupported legacy UI remains intentionally disabled:
+    -   global chat
+    -   global users list
+    -   avatar uploads
+    -   non-TicTacToe games
+    -   legacy timer-driven flows
 
 ## Current Production Assumptions
 

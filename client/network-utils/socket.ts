@@ -31,16 +31,18 @@ export const connectToWebSocket = async (callbacks?: WebSocketCallbacks) => {
 
     isHandlingConnectRequest = true
 
-    console.log('WS url is', URL.WS)
+    const socketUrl = callbacks?.url || URL.WS
 
-    const ws = new WebSocket(URL.WS)
+    console.log('WS url is', socketUrl)
+
+    const ws = new WebSocket(socketUrl)
 
     ws.onopen = () => {
         ws.addEventListener('message', messageLogger)
 
         callbacks?.onOpen(ws!)
 
-        pingIntervals.push(setInterval(() => ws.send('ping'), 2000))
+        pingIntervals.push(setInterval(() => ws.send(callbacks?.pingMessage || 'ping'), 2000))
     }
 
     ws.onclose = () => {
