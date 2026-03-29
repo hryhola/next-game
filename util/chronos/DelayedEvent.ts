@@ -4,6 +4,7 @@ export class DelayedEvent {
     private delayInSeconds: number
     private callback?: () => void
     private job: Job | null
+    private isCompleted: boolean
     private resolvePromise!: (value: unknown) => void
     public completion: Promise<unknown>
     private startTimestamp: number
@@ -21,6 +22,7 @@ export class DelayedEvent {
         this.delayInSeconds = delayInSeconds
         this.callback = callback
         this.job = null
+        this.isCompleted = false
         this.startTimestamp = 0
         this.elapsedTime = 0
         this.completion = new Promise(resolve => {
@@ -33,18 +35,41 @@ export class DelayedEvent {
         return Math.max(remainingTime, 0)
     }
 
+    private complete(): void {
+        if (this.isCompleted) {
+            return
+        }
+
+        this.isCompleted = true
+        this.job = null
+        this.startTimestamp = 0
+        this.elapsedTime = 0
+
+        if (this.callback) {
+            this.callback()
+        }
+
+        this.resolvePromise(null)
+    }
+
     private createJob(timeLeft: number): void {
+        if (timeLeft === 0) {
+            this.complete()
+            return
+        }
+
         this.job = scheduleJob(new Date(Date.now() + timeLeft), () => {
-            if (this.callback) {
-                this.callback()
-            }
-            this.resolvePromise(null)
+            this.complete()
         })
     }
 
     start(): this {
         if (this.job) {
             throw new Error('Cannot start a DelayedEvent that is already started')
+        }
+
+        if (this.isCompleted) {
+            throw new Error('Cannot start a completed DelayedEvent')
         }
 
         this.startTimestamp = Date.now()
@@ -92,16 +117,8 @@ export class DelayedEvent {
     resolve(): void {
         if (this.job) {
             this.job.cancel()
-            this.job = null
         }
 
-        this.startTimestamp = 0
-        this.elapsedTime = 0
-
-        if (this.callback) {
-            this.callback()
-        }
-
-        this.resolvePromise(null)
+        this.complete()
     }
 }
