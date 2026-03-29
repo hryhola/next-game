@@ -387,6 +387,17 @@ export const WSProvider: React.FC<Props> = props => {
                 case 'Game-SendAction': {
                     const payload = data as RequestData<'Game-SendAction'>
 
+                    if (workerRoomSnapshotRef.current?.game.name === 'Jeopardy') {
+                        sendWorkerRoomMessage({
+                            type: 'jeopardy.action',
+                            payload: {
+                                actionName: payload.actionName,
+                                actionPayload: payload.actionPayload
+                            }
+                        })
+                        return
+                    }
+
                     if (payload.actionName === '$Move') {
                         sendWorkerRoomMessage({
                             type: 'tictactoe.move',
@@ -581,6 +592,43 @@ export const WSProvider: React.FC<Props> = props => {
             }
 
             emit('Game-SessionAction', toLegacyGameActionEvent(workerRoomIdRef.current, workerMessage.payload))
+            return
+        }
+
+        if (workerMessage.type === 'game.session.start') {
+            if (!workerRoomIdRef.current) {
+                return
+            }
+
+            emit('Game-SessionStart', {
+                lobbyId: workerRoomIdRef.current,
+                session: workerMessage.payload.session
+            })
+            return
+        }
+
+        if (workerMessage.type === 'game.session.update') {
+            if (!workerRoomIdRef.current) {
+                return
+            }
+
+            emit('Game-SessionUpdate', {
+                lobbyId: workerRoomIdRef.current,
+                data: workerMessage.payload.data
+            })
+            return
+        }
+
+        if (workerMessage.type === 'game.session.end') {
+            if (!workerRoomIdRef.current) {
+                return
+            }
+
+            emit('Game-SessionEnd', {
+                lobbyId: workerRoomIdRef.current,
+                players: workerMessage.payload.players as any[],
+                session: workerMessage.payload.session
+            })
         }
     }
 

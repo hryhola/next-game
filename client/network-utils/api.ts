@@ -25,7 +25,7 @@ async function handleWorkerApiRequest<E extends EndpointName>(endpoint: E, data:
             case 'game-get-schema': {
                 const request = data as Endpoints['game-get-schema']['request']
 
-                if (!['TicTacToe', 'Clicker'].includes(request.gameName)) {
+                if (!['TicTacToe', 'Clicker', 'Jeopardy'].includes(request.gameName)) {
                     return [
                         {
                             success: false,
@@ -38,7 +38,20 @@ async function handleWorkerApiRequest<E extends EndpointName>(endpoint: E, data:
                 return [
                     {
                         success: true,
-                        gameName: request.gameName
+                        gameName: request.gameName,
+                        initialDataScheme:
+                            request.gameName === 'Jeopardy'
+                                ? [
+                                      {
+                                          accept: ['.siq'],
+                                          label: 'Pack',
+                                          name: 'pack',
+                                          public: true,
+                                          required: true,
+                                          type: 'file'
+                                      }
+                                  ]
+                                : []
                     } as Endpoints[E]['response'],
                     undefined
                 ]
@@ -65,7 +78,7 @@ async function handleWorkerApiRequest<E extends EndpointName>(endpoint: E, data:
                     ]
                 }
 
-                if (!['TicTacToe', 'Clicker'].includes(gameName)) {
+                if (!['TicTacToe', 'Clicker', 'Jeopardy'].includes(gameName)) {
                     return [
                         {
                             success: false,
@@ -75,7 +88,7 @@ async function handleWorkerApiRequest<E extends EndpointName>(endpoint: E, data:
                     ]
                 }
 
-                if (hasInitialData) {
+                if (gameName !== 'Jeopardy' && hasInitialData) {
                     return [
                         {
                             success: false,
@@ -85,16 +98,23 @@ async function handleWorkerApiRequest<E extends EndpointName>(endpoint: E, data:
                     ]
                 }
 
-                const response = await fetch(getCloudflareRealtimeApiUrl('/lobbies'), {
-                    method: 'POST',
-                    headers: createWorkerAuthHeaders(),
-                    body: JSON.stringify({
-                        gameName,
-                        name: lobbyId,
-                        password,
-                        roomId: lobbyId
-                    })
-                })
+                const response =
+                    gameName === 'Jeopardy'
+                        ? await fetch(getCloudflareRealtimeApiUrl('/lobbies'), {
+                              method: 'POST',
+                              headers: createWorkerAuthHeaders(null),
+                              body: request
+                          })
+                        : await fetch(getCloudflareRealtimeApiUrl('/lobbies'), {
+                              method: 'POST',
+                              headers: createWorkerAuthHeaders(),
+                              body: JSON.stringify({
+                                  gameName,
+                                  name: lobbyId,
+                                  password,
+                                  roomId: lobbyId
+                              })
+                          })
 
                 if (!response.ok) {
                     return [
@@ -142,7 +162,7 @@ async function handleWorkerApiRequest<E extends EndpointName>(endpoint: E, data:
                 return [
                     {
                         success: true,
-                        game: toLegacyGameData(snapshot),
+                        game: toLegacyGameData(snapshot, body.sessionInternal || null),
                         lobby: toLegacyLobbyData(snapshot)
                     } as Endpoints[E]['response'],
                     undefined

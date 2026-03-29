@@ -25,11 +25,6 @@ export const LobbyCreator: React.FC = () => {
     const [initialDataScheme, setInitialDataScheme] = useState<InitialGameDataSchema>([])
 
     const updateGameSchema = async (gameName: GameName) => {
-        if (isWorkerMode) {
-            setInitialDataScheme([])
-            return
-        }
-
         const [response, error] = await api.post('game-get-schema', { gameName })
 
         if (!response) {
@@ -90,7 +85,9 @@ export const LobbyCreator: React.FC = () => {
                 )}
                 {isWorkerMode && (
                     <Grid item>
-                        <Alert severity="info">Worker mode currently supports TicTacToe and Clicker. File-based game setup is still disabled for now.</Alert>
+                        <Alert severity="info">
+                            Worker mode supports TicTacToe, Clicker, and Jeopardy. Jeopardy runs only on the Cloudflare worker backend.
+                        </Alert>
                     </Grid>
                 )}
                 <Grid item>
@@ -112,7 +109,7 @@ export const LobbyCreator: React.FC = () => {
                         >
                             <MenuItem value="TicTacToe">Tic Tac Toe</MenuItem>
                             <MenuItem value="Clicker">Clicker</MenuItem>
-                            {!isWorkerMode && <MenuItem value="Jeopardy">[PRE-ALPHA] Jeopardy</MenuItem>}
+                            {isWorkerMode && <MenuItem value="Jeopardy">[PRE-ALPHA] Jeopardy</MenuItem>}
                         </Select>
                     </FormControl>
                 </Grid>
