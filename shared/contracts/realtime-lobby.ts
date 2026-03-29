@@ -158,6 +158,21 @@ export interface LobbyRoomClickerClickMessage {
     type: 'clicker.click'
 }
 
+export interface LobbyRoomTipClientMessage {
+    payload: {
+        id: string
+        toUserId: string
+    }
+    type: 'room.tip'
+}
+
+export interface LobbyRoomKickClientMessage {
+    payload: {
+        userId: string
+    }
+    type: 'room.kick'
+}
+
 export interface LobbyRoomPingMessage {
     type: 'ping'
 }
@@ -167,11 +182,13 @@ export type LobbyRoomClientMessage =
     | LobbyRoomClickerClickMessage
     | LobbyRoomGameStartMessage
     | LobbyRoomJoinMessage
+    | LobbyRoomKickClientMessage
     | LobbyRoomLeaveMessage
     | LobbyRoomPingMessage
     | LobbyRoomReadySetMessage
     | LobbyRoomReadyStartMessage
     | LobbyRoomSyncMessage
+    | LobbyRoomTipClientMessage
     | LobbyRoomTicTacToeMoveMessage
 
 export interface LobbyRoomSnapshotMessage {
@@ -211,9 +228,28 @@ export interface LobbyRoomGameActionMessage {
     type: 'game.action'
 }
 
+export interface LobbyRoomTipServerMessage {
+    payload: {
+        from: string
+        id: string
+        lobbyId: string
+        to: string
+    }
+    type: 'room.tip'
+}
+
+export interface LobbyRoomKickServerMessage {
+    payload: {
+        memberId: string
+    }
+    type: 'room.kick'
+}
+
 export type LobbyRoomServerMessage =
     | LobbyRoomErrorMessage
     | LobbyRoomGameActionMessage
+    | LobbyRoomKickServerMessage
     | LobbyRoomNoticeMessage
     | LobbyRoomPongMessage
     | LobbyRoomSnapshotMessage
+    | LobbyRoomTipServerMessage

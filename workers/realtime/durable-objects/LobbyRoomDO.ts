@@ -103,6 +103,10 @@ type ScheduledTaskResult = {
     stateChanged: boolean
 }
 
+type PersistStateOptions = {
+    notifyLobbyList?: boolean
+}
+
 export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
     private readonly scheduler: RoomScheduler<RoomScheduledTaskPayload>
 
@@ -214,7 +218,9 @@ export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
                     return
                 }
 
-                await this.persistState(state)
+                await this.persistState(state, {
+                    notifyLobbyList: true
+                })
                 this.send(ws, {
                     type: 'room.notice',
                     payload: {
@@ -247,7 +253,9 @@ export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
                     return
                 }
 
-                await this.persistState(state)
+                await this.persistState(state, {
+                    notifyLobbyList: true
+                })
                 this.send(ws, {
                     type: 'room.notice',
                     payload: {
@@ -260,6 +268,41 @@ export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
                 } catch (_error) {
                     return
                 }
+                return
+            }
+            case 'room.tip': {
+                const tipResult = this.tipMember(state, attachment.user.id, request.payload.id, request.payload.toUserId)
+
+                if (!tipResult.success) {
+                    this.sendError(ws, tipResult.message, tipResult.code)
+                    return
+                }
+
+                this.broadcastServerMessage({
+                    type: 'room.tip',
+                    payload: tipResult.tip
+                })
+                return
+            }
+            case 'room.kick': {
+                const kickResult = await this.kickMember(state, attachment.user.id, request.payload.userId)
+
+                if (!kickResult.success) {
+                    this.sendError(ws, kickResult.message, kickResult.code)
+                    return
+                }
+
+                await this.persistState(state, {
+                    notifyLobbyList: true
+                })
+                this.broadcastServerMessage({
+                    type: 'room.kick',
+                    payload: {
+                        memberId: kickResult.memberId
+                    }
+                })
+                this.broadcastSnapshot(state)
+                this.closeUserSockets(kickResult.memberId, 1008, 'kicked from room')
                 return
             }
             case 'chat.send': {
@@ -311,7 +354,9 @@ export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
                 }
 
                 if (gameStartResult.stateChanged) {
-                    await this.persistState(state)
+                    await this.persistState(state, {
+                        notifyLobbyList: true
+                    })
                 }
 
                 if (gameStartResult.startedSession) {
@@ -329,7 +374,9 @@ export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
                     return
                 }
 
-                await this.persistState(state)
+                await this.persistState(state, {
+                    notifyLobbyList: Boolean(moveResult.finalizedSession)
+                })
                 await this.persistFinalizedRoomSession(moveResult.finalizedSession)
                 this.broadcastSnapshot(state)
                 return
@@ -476,7 +523,9 @@ export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
             updatedAt: createdAt
         }
 
-        await this.persistState(state)
+        await this.persistState(state, {
+            notifyLobbyList: true
+        })
 
         return json({
             ok: true,
@@ -563,7 +612,9 @@ export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
             )
         }
 
-        await this.persistState(state)
+        await this.persistState(state, {
+            notifyLobbyList: true
+        })
 
         return json({
             ok: true,
@@ -626,7 +677,9 @@ export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
             })
         }
 
-        await this.persistState(state)
+        await this.persistState(state, {
+            notifyLobbyList: true
+        })
 
         return json({
             ok: true,
@@ -724,10 +777,14 @@ export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
         return (await this.ctx.storage.get<StoredLobbyState>('state')) || null
     }
 
-    private async persistState(state: StoredLobbyState): Promise<void> {
+    private async persistState(state: StoredLobbyState, options: PersistStateOptions = {}): Promise<void> {
         state.updatedAt = nowIso()
         await this.ctx.storage.put('state', state)
         await this.syncLobbyMetadata(state)
+
+        if (options.notifyLobbyList) {
+            await this.notifyGlobalLobbyListUpdated()
+        }
     }
 
     private async destroyRoom(roomId: string, state?: StoredLobbyState): Promise<void> {
@@ -753,6 +810,7 @@ export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
         })
 
         await markLobbyDeleted(this.env.IDENTITY_DB, roomId, deletedAt)
+        await this.notifyGlobalLobbyListUpdated()
         await this.scheduler.clear()
         await this.ctx.storage.deleteAll()
     }
@@ -843,26 +901,18 @@ export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
     }
 
     private broadcastSnapshot(state: StoredLobbyState): void {
-        const payload = JSON.stringify({
+        this.broadcastServerMessage({
             type: 'room.snapshot',
             payload: this.buildSnapshot(state)
-        } as LobbyRoomServerMessage)
-
-        this.ctx.getWebSockets().forEach(socket => {
-            try {
-                socket.send(payload)
-            } catch (_error) {
-                try {
-                    socket.close(1011, 'broadcast failed')
-                } catch (_nestedError) {
-                    return
-                }
-            }
         })
     }
 
     private broadcastGameAction(message: LobbyRoomGameActionMessage): void {
-        const payload = JSON.stringify(message as LobbyRoomServerMessage)
+        this.broadcastServerMessage(message)
+    }
+
+    private broadcastServerMessage(message: LobbyRoomServerMessage): void {
+        const payload = JSON.stringify(message)
 
         this.ctx.getWebSockets().forEach(socket => {
             try {
@@ -974,6 +1024,50 @@ export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
         }
     }
 
+    private tipMember(
+        state: StoredLobbyState,
+        fromUserId: string,
+        tipId: string,
+        toUserId: string
+    ): { success: true; tip: { from: string; id: string; lobbyId: string; to: string } } | { success: false; message: string; code: string } {
+        const fromMember = state.members.find(member => member.id === fromUserId)
+        const toMember = state.members.find(member => member.id === toUserId)
+
+        if (!fromMember) {
+            return {
+                success: false,
+                message: 'Join the room before tipping',
+                code: 'not_in_room'
+            }
+        }
+
+        if (!toMember) {
+            return {
+                success: false,
+                message: 'Tip target is not in this room',
+                code: 'tip_target_missing'
+            }
+        }
+
+        if (fromMember.id === toMember.id) {
+            return {
+                success: false,
+                message: 'You cannot tip yourself',
+                code: 'cannot_tip_self'
+            }
+        }
+
+        return {
+            success: true,
+            tip: {
+                from: fromMember.userNickname,
+                id: tipId,
+                lobbyId: state.roomId,
+                to: toMember.userNickname
+            }
+        }
+    }
+
     private async leaveRoom(
         state: StoredLobbyState,
         userId: string
@@ -1010,27 +1104,7 @@ export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
         }
 
         if (member.role === 'player') {
-            if (state.game.name === 'TicTacToe' && state.game.session.status === 'active') {
-                await this.persistFinalizedRoomSession(this.createAbandonedRoomSessionRecord(state, 'player_left'))
-                state.game.session = createIdleTicTacToeSession()
-            }
-
-            if (state.game.name === 'Clicker' && state.game.session.status !== 'idle') {
-                const activePlayersLeft = state.members.some(item => item.role === 'player')
-
-                if (!activePlayersLeft) {
-                    const sessionId = state.game.session.id
-                    const abandonedSession = this.createAbandonedRoomSessionRecord(state, 'all_players_left')
-
-                    state.game.session = createIdleClickerSession()
-
-                    if (sessionId) {
-                        await this.cancelClickerSessionTasks(sessionId)
-                    }
-
-                    await this.persistFinalizedRoomSession(abandonedSession)
-                }
-            }
+            await this.handleRemovedPlayerSideEffects(state, 'player_left')
         }
 
         this.normalizePlayerAssignments(state)
@@ -1039,6 +1113,52 @@ export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
         return {
             success: true,
             message: `${member.userNickname} left the room`
+        }
+    }
+
+    private async kickMember(
+        state: StoredLobbyState,
+        actorUserId: string,
+        targetUserId: string
+    ): Promise<{ success: true; memberId: string } | { success: false; message: string; code: string }> {
+        if (state.creatorUserId !== actorUserId) {
+            return {
+                success: false,
+                message: 'Only the lobby creator can kick players',
+                code: 'forbidden'
+            }
+        }
+
+        const member = state.members.find(item => item.id === targetUserId)
+
+        if (!member) {
+            return {
+                success: false,
+                message: 'Member not found',
+                code: 'member_not_found'
+            }
+        }
+
+        if (member.isCreator) {
+            return {
+                success: false,
+                message: 'The lobby creator cannot be kicked',
+                code: 'cannot_kick_creator'
+            }
+        }
+
+        state.members = state.members.filter(item => item.id !== targetUserId)
+
+        if (member.role === 'player') {
+            await this.handleRemovedPlayerSideEffects(state, 'player_kicked')
+        }
+
+        this.normalizePlayerAssignments(state)
+        this.resetReadyCheck(state)
+
+        return {
+            success: true,
+            memberId: member.id
         }
     }
 
@@ -1663,7 +1783,9 @@ export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
         }
 
         if (stateChanged) {
-            await this.persistState(state)
+            await this.persistState(state, {
+                notifyLobbyList: finalizedSessions.length > 0
+            })
         }
 
         await this.scheduler.complete(completedKeys)
@@ -1788,6 +1910,58 @@ export class LobbyRoomDO extends DurableObject<RealtimeWorkerEnv> {
 
     private async cancelClickerSessionTasks(sessionId: string): Promise<void> {
         await this.scheduler.cancelByPrefix(this.getClickerSessionTaskPrefix(sessionId))
+    }
+
+    private async handleRemovedPlayerSideEffects(state: StoredLobbyState, removalReason: 'player_kicked' | 'player_left'): Promise<void> {
+        if (state.game.name === 'TicTacToe' && state.game.session.status === 'active') {
+            await this.persistFinalizedRoomSession(this.createAbandonedRoomSessionRecord(state, removalReason))
+            state.game.session = createIdleTicTacToeSession()
+            return
+        }
+
+        if (state.game.name !== 'Clicker' || state.game.session.status === 'idle') {
+            return
+        }
+
+        const activePlayersLeft = state.members.some(item => item.role === 'player')
+
+        if (!activePlayersLeft) {
+            const sessionId = state.game.session.id
+            const abandonedSession = this.createAbandonedRoomSessionRecord(state, removalReason === 'player_kicked' ? 'all_players_kicked' : 'all_players_left')
+
+            state.game.session = createIdleClickerSession()
+
+            if (sessionId) {
+                await this.cancelClickerSessionTasks(sessionId)
+            }
+
+            await this.persistFinalizedRoomSession(abandonedSession)
+        }
+    }
+
+    private closeUserSockets(userId: string, code: number, reason: string): void {
+        this.ctx.getWebSockets(userTag(userId)).forEach(socket => {
+            try {
+                socket.close(code, reason)
+            } catch (_error) {
+                return
+            }
+        })
+    }
+
+    private async notifyGlobalLobbyListUpdated(): Promise<void> {
+        try {
+            const id = this.env.GLOBAL_PRESENCE.idFromName('global')
+            const stub = this.env.GLOBAL_PRESENCE.get(id)
+
+            await stub.fetch(
+                new Request('https://presence.internal/events/lobbies-updated', {
+                    method: 'POST'
+                })
+            )
+        } catch (error) {
+            console.error('Failed to notify global lobby list update', error)
+        }
     }
 
     private async persistStartedRoomSession(state: StoredLobbyState, session: StartedRoomSession): Promise<void> {

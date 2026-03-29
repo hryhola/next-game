@@ -145,16 +145,32 @@ function toRoomRequest(request: Request, roomId: string, targetPath: string, ses
     return new Request(url.toString(), init)
 }
 
-function toPresenceRequest(request: Request, session: NonNullable<Awaited<ReturnType<typeof getIdentitySession>>>): Request {
+function toGlobalPresenceRequest(
+    request: Request,
+    targetPath: '/chat' | '/websocket',
+    session?: NonNullable<Awaited<ReturnType<typeof getIdentitySession>>>
+): Request {
     const url = new URL(request.url)
-    url.pathname = '/websocket'
+    url.pathname = targetPath
 
-    const headers = appendSessionHeaders(new Headers(request.headers), session)
+    const headers = new Headers(request.headers)
 
-    return new Request(url.toString(), {
+    headers.delete('authorization')
+
+    if (session) {
+        appendSessionHeaders(headers, session)
+    }
+
+    const init: RequestInit = {
         method: request.method,
         headers
-    })
+    }
+
+    if (!['GET', 'HEAD'].includes(request.method)) {
+        init.body = request.body
+    }
+
+    return new Request(url.toString(), init)
 }
 
 function isMultipartFormRequest(request: Request): boolean {
@@ -289,6 +305,7 @@ const worker: ExportedHandler<RealtimeWorkerEnv> = {
                         authRegister: '/auth/register',
                         authSession: '/auth/session',
                         authProfile: '/auth/profile',
+                        globalChat: '/chat/global',
                         lobbiesList: '/lobbies',
                         lobbiesCreate: '/lobbies',
                         lobbyJoinExample: '/lobbies/example-room/join',
@@ -553,7 +570,27 @@ const worker: ExportedHandler<RealtimeWorkerEnv> = {
 
                 const stub = getGlobalPresenceStub(env)
 
-                return stub.fetch(toPresenceRequest(request, auth.session))
+                return stub.fetch(toGlobalPresenceRequest(request, '/websocket', auth.session))
+            }
+
+            if (url.pathname === '/chat/global') {
+                const stub = getGlobalPresenceStub(env)
+
+                if (request.method === 'GET') {
+                    return stub.fetch(toGlobalPresenceRequest(request, '/chat'))
+                }
+
+                if (request.method !== 'POST') {
+                    return methodNotAllowed('GET', 'POST')
+                }
+
+                const auth = await requireSession(request, env)
+
+                if (!auth.ok) {
+                    return auth.error
+                }
+
+                return stub.fetch(toGlobalPresenceRequest(request, '/chat', auth.session))
             }
 
             if (url.pathname === '/lobbies') {

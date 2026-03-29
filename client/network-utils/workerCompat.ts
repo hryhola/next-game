@@ -24,7 +24,7 @@ type LegacyPlayerData = PlayerData & {
     playerIsClickAllowed?: boolean
 }
 
-function toLegacyChatMessage(message: RealtimeChatMessage): TChatMessage {
+export function toLegacyChatMessage(message: RealtimeChatMessage): TChatMessage {
     return {
         id: message.id,
         from: message.from,
@@ -33,7 +33,11 @@ function toLegacyChatMessage(message: RealtimeChatMessage): TChatMessage {
     }
 }
 
-function toLegacyLobbyMember(member: RealtimeLobbyMember, memberPosition: number): LobbyMemberData {
+export function toLegacyChatMessages(messages: RealtimeChatMessage[]): TChatMessage[] {
+    return messages.map(toLegacyChatMessage)
+}
+
+export function toLegacyLobbyMember(member: RealtimeLobbyMember, memberPosition: number): LobbyMemberData {
     return {
         id: member.id,
         memberIsCreator: member.isCreator,
@@ -203,7 +207,7 @@ export function toLegacyGameData(snapshot: RealtimeLobbySnapshot): GameData {
 }
 
 export function toLegacyLobbyChatMessages(snapshot: RealtimeLobbySnapshot): TChatMessage[] {
-    return snapshot.chat.slice(-50).reverse().map(toLegacyChatMessage)
+    return toLegacyChatMessages(snapshot.chat.slice(-50).reverse())
 }
 
 export function toLegacyGameActionEvent(lobbyId: string, payload: LobbyRoomGameActionMessage['payload']): StateEvents['Game-SessionAction'] {

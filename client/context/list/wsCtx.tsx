@@ -1,16 +1,30 @@
 import React, { useState, createContext, useContext, useRef, MutableRefObject, useEffect } from 'react'
-import type { LobbyRoomClientMessage, LobbyRoomServerMessage, RealtimeLobbySnapshot, SocketMessage, StateEventName, WSRequestContext } from 'shared/contracts'
+import type {
+    GlobalRealtimeServerMessage,
+    LobbyRoomClientMessage,
+    LobbyRoomServerMessage,
+    PresenceSnapshot,
+    RealtimeChatMessage,
+    RealtimeLobbyListItem,
+    RealtimeLobbySnapshot,
+    SocketMessage,
+    StateEventName,
+    WSRequestContext
+} from 'shared/contracts'
 import type { TopicEventHandler, RequestData, RequestHandler } from 'uWebSockets/uws.types'
 import { getCookie } from 'cookies-next'
-import { getCloudflareRealtimeApiUrl, isCloudflareRealtimeEnabled } from 'client/network-utils/realtimeMode'
+import { getCloudflareGlobalWebSocketUrl, getCloudflareRealtimeApiUrl, isCloudflareRealtimeEnabled } from 'client/network-utils/realtimeMode'
 import {
     deriveLegacyEventsFromSnapshot,
+    toLegacyChatMessages,
     getWorkerErrorMessage,
     toLegacyGameActionEvent,
     toLegacyLobbyBaseInfo,
     toLegacyLobbyChatMessages,
-    toLegacyLobbyData
+    toLegacyLobbyData,
+    toLegacyLobbyMember
 } from 'client/network-utils/workerCompat'
+import { useUser } from './userCtx'
 
 type HandlerOn = <C extends StateEventName | WSRequestContext>(context: C, handler: Function) => void
 type HandlerSend = <H extends WSRequestContext>(context: H, data?: RequestData<H>) => void
@@ -34,8 +48,16 @@ interface Props {
 }
 
 export const WSProvider: React.FC<Props> = props => {
+    const user = useUser()
     const wsRef = useRef<WebSocket | null>(null)
+    const workerGlobalSocketRef = useRef<WebSocket | null>(null)
+    const workerGlobalPingRef = useRef<ReturnType<typeof setInterval> | null>(null)
+    const workerGlobalReconnectRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+    const workerGlobalShouldReconnectRef = useRef(false)
     const listeners = useRef({} as Record<string, Set<Function>>)
+    const workerGlobalPresenceRef = useRef<PresenceSnapshot | null>(null)
+    const workerGlobalChatMessagesRef = useRef<RealtimeChatMessage[] | null>(null)
+    const workerLobbyListRef = useRef<RealtimeLobbyListItem[] | null>(null)
     const workerRoomSnapshotRef = useRef<RealtimeLobbySnapshot | null>(null)
     const workerRoomIdRef = useRef('')
 
@@ -75,6 +97,92 @@ export const WSProvider: React.FC<Props> = props => {
         }
 
         return headers
+    }
+
+    const emitPresenceSnapshot = (snapshot: PresenceSnapshot) => {
+        workerGlobalPresenceRef.current = snapshot
+
+        emit('UserRegistry-OnlineUpdate', {
+            scope: 'global',
+            list: snapshot.onlineUsers.map(onlineUser => ({
+                id: onlineUser.id,
+                userNickname: onlineUser.userNickname
+            }))
+        })
+    }
+
+    const emitLobbyList = (lobbies: RealtimeLobbyListItem[]) => {
+        workerLobbyListRef.current = lobbies
+
+        emit('Lobby-ListUpdated', {
+            lobbies: lobbies.map(toLegacyLobbyBaseInfo)
+        })
+    }
+
+    const readWorkerPresenceSnapshot = async (preferCached: boolean = true) => {
+        if (preferCached && workerGlobalPresenceRef.current) {
+            return workerGlobalPresenceRef.current
+        }
+
+        const response = await fetch(getCloudflareRealtimeApiUrl('/presence/state'), {
+            method: 'GET',
+            headers: createWorkerAuthHeaders(null)
+        })
+
+        if (!response.ok) {
+            throw new Error(await getWorkerErrorMessage(response, 'Failed to load online users'))
+        }
+
+        const body = await response.json()
+        const snapshot = body.presence as PresenceSnapshot
+
+        workerGlobalPresenceRef.current = snapshot
+
+        return snapshot
+    }
+
+    const readWorkerGlobalChatMessages = async (preferCached: boolean = true) => {
+        if (preferCached && workerGlobalChatMessagesRef.current) {
+            return workerGlobalChatMessagesRef.current
+        }
+
+        const response = await fetch(getCloudflareRealtimeApiUrl('/chat/global'), {
+            method: 'GET',
+            headers: createWorkerAuthHeaders(null)
+        })
+
+        if (!response.ok) {
+            throw new Error(await getWorkerErrorMessage(response, 'Failed to load global chat'))
+        }
+
+        const body = await response.json()
+        const messages = (body.messages || []) as RealtimeChatMessage[]
+
+        workerGlobalChatMessagesRef.current = messages
+
+        return messages
+    }
+
+    const readWorkerLobbyList = async (preferCached: boolean = true) => {
+        if (preferCached && workerLobbyListRef.current) {
+            return workerLobbyListRef.current
+        }
+
+        const response = await fetch(getCloudflareRealtimeApiUrl('/lobbies'), {
+            method: 'GET',
+            headers: createWorkerAuthHeaders(null)
+        })
+
+        if (!response.ok) {
+            throw new Error(await getWorkerErrorMessage(response, 'Failed to load lobbies'))
+        }
+
+        const body = await response.json()
+        const lobbies = (body.lobbies || []) as RealtimeLobbyListItem[]
+
+        workerLobbyListRef.current = lobbies
+
+        return lobbies
     }
 
     const readWorkerRoomSnapshot = async (lobbyId: string, shouldCache: boolean = false) => {
@@ -159,23 +267,10 @@ export const WSProvider: React.FC<Props> = props => {
                     return
                 }
                 case 'Lobby-GetList': {
-                    const response = await fetch(getCloudflareRealtimeApiUrl('/lobbies'), {
-                        method: 'GET',
-                        headers: createWorkerAuthHeaders(null)
-                    })
-
-                    if (!response.ok) {
-                        console.error(await getWorkerErrorMessage(response, 'Failed to load lobbies'))
-                        emit('Lobby-GetList', {
-                            lobbies: []
-                        })
-                        return
-                    }
-
-                    const body = await response.json()
+                    const lobbies = await readWorkerLobbyList()
 
                     emit('Lobby-GetList', {
-                        lobbies: (body.lobbies || []).map(toLegacyLobbyBaseInfo)
+                        lobbies: lobbies.map(toLegacyLobbyBaseInfo)
                     })
                     return
                 }
@@ -193,9 +288,12 @@ export const WSProvider: React.FC<Props> = props => {
                     const payload = data as RequestData<'Chat-Get'>
 
                     if (payload.scope === 'global') {
+                        const messages = await readWorkerGlobalChatMessages()
+
                         emit('Chat-Get', {
-                            success: false,
-                            message: 'Global chat is not supported in Cloudflare worker mode yet'
+                            success: true,
+                            messages: toLegacyChatMessages(messages),
+                            scope: 'global'
                         })
                         return
                     }
@@ -217,8 +315,18 @@ export const WSProvider: React.FC<Props> = props => {
                 case 'Chat-Send': {
                     const payload = data as RequestData<'Chat-Send'>
 
-                    if (payload.scope !== 'lobby') {
-                        console.warn('Global chat is not supported in Cloudflare worker mode yet')
+                    if (payload.scope === 'global') {
+                        const response = await fetch(getCloudflareRealtimeApiUrl('/chat/global'), {
+                            method: 'POST',
+                            headers: createWorkerAuthHeaders(),
+                            body: JSON.stringify({
+                                text: payload.message.text
+                            })
+                        })
+
+                        if (!response.ok) {
+                            console.error(await getWorkerErrorMessage(response, 'Failed to send global chat message'))
+                        }
                         return
                     }
 
@@ -226,6 +334,29 @@ export const WSProvider: React.FC<Props> = props => {
                         type: 'chat.send',
                         payload: {
                             text: payload.message.text
+                        }
+                    })
+                    return
+                }
+                case 'Lobby-Tip': {
+                    const payload = data as RequestData<'Lobby-Tip'>
+
+                    sendWorkerRoomMessage({
+                        type: 'room.tip',
+                        payload: {
+                            id: payload.id,
+                            toUserId: payload.to ? workerRoomSnapshotRef.current?.members.find(member => member.userNickname === payload.to)?.id || '' : ''
+                        }
+                    })
+                    return
+                }
+                case 'Lobby-Kick': {
+                    const payload = data as RequestData<'Lobby-Kick'>
+
+                    sendWorkerRoomMessage({
+                        type: 'room.kick',
+                        payload: {
+                            userId: payload.userId
                         }
                     })
                     return
@@ -283,6 +414,33 @@ export const WSProvider: React.FC<Props> = props => {
                 case 'Universal-Subscription': {
                     return
                 }
+                case 'Users-Get': {
+                    const snapshot = await readWorkerPresenceSnapshot()
+
+                    emit('Users-Get', {
+                        success: true,
+                        count: snapshot.onlineUsers.length,
+                        data: snapshot.onlineUsers.map(onlineUser => ({
+                            id: onlineUser.id,
+                            userAvatarUrl: onlineUser.userAvatarUrl,
+                            userColor: onlineUser.userColor,
+                            userIsOnline: true,
+                            userNickname: onlineUser.userNickname
+                        })),
+                        scope: 'global'
+                    })
+                    return
+                }
+                case 'Users-GetCount': {
+                    const snapshot = await readWorkerPresenceSnapshot()
+
+                    emit('Users-GetCount', {
+                        success: true,
+                        count: snapshot.onlineUsers.length,
+                        scope: 'global'
+                    })
+                    return
+                }
                 default: {
                     console.warn(`WS context ${context} is not supported in Cloudflare worker mode yet`, data)
                     return
@@ -304,6 +462,125 @@ export const WSProvider: React.FC<Props> = props => {
                     message: error instanceof Error ? error.message : 'Failed to load chat'
                 })
             }
+
+            if (context === 'Lobby-GetList') {
+                emit('Lobby-GetList', {
+                    lobbies: []
+                })
+            }
+
+            if (context === 'Users-Get') {
+                emit('Users-Get', {
+                    success: false,
+                    message: error instanceof Error ? error.message : 'Failed to load users'
+                })
+            }
+
+            if (context === 'Users-GetCount') {
+                emit('Users-GetCount', {
+                    success: false,
+                    message: error instanceof Error ? error.message : 'Failed to load users count'
+                })
+            }
+        }
+    }
+
+    const handleWorkerGlobalMessage = (event: MessageEvent<any>) => {
+        if (event.data === 'pong') {
+            return
+        }
+
+        const workerMessage = JSON.parse(event.data) as GlobalRealtimeServerMessage
+
+        if (workerMessage.type === 'pong') {
+            return
+        }
+
+        if (workerMessage.type === 'presence.snapshot') {
+            emitPresenceSnapshot(workerMessage.payload)
+            return
+        }
+
+        if (workerMessage.type === 'global.chat.snapshot') {
+            workerGlobalChatMessagesRef.current = workerMessage.payload.messages
+
+            emit('Chat-Get', {
+                success: true,
+                messages: toLegacyChatMessages(workerMessage.payload.messages),
+                scope: 'global'
+            })
+            return
+        }
+
+        if (workerMessage.type === 'global.chat.message') {
+            workerGlobalChatMessagesRef.current = [
+                workerMessage.payload,
+                ...(workerGlobalChatMessagesRef.current || []).filter(message => message.id !== workerMessage.payload.id)
+            ].slice(0, 100)
+
+            emit('Chat-NewMessage', {
+                message: toLegacyChatMessages([workerMessage.payload])[0],
+                scope: 'global'
+            })
+            return
+        }
+
+        if (workerMessage.type === 'global.lobbies.updated') {
+            emitLobbyList(workerMessage.payload.lobbies)
+        }
+    }
+
+    const handleWorkerRoomMessage = (workerMessage: LobbyRoomServerMessage) => {
+        if (workerMessage.type === 'pong') {
+            return
+        }
+
+        if (workerMessage.type === 'room.error') {
+            console.error('Worker room error', workerMessage.payload)
+            return
+        }
+
+        if (workerMessage.type === 'room.notice') {
+            if (workerMessage.payload.message.includes('destroyed') && workerRoomIdRef.current) {
+                emit('Lobby-Destroy', {
+                    lobbyId: workerRoomIdRef.current
+                })
+            }
+
+            return
+        }
+
+        if (workerMessage.type === 'room.tip') {
+            emit('Lobby-Tipped', workerMessage.payload)
+            return
+        }
+
+        if (workerMessage.type === 'room.kick') {
+            const snapshot = workerRoomSnapshotRef.current
+            const memberIndex = snapshot?.members.findIndex(member => member.id === workerMessage.payload.memberId) ?? -1
+
+            if (!snapshot || memberIndex < 0) {
+                return
+            }
+
+            emit('Lobby-Kicked', {
+                lobbyId: snapshot.roomId,
+                member: toLegacyLobbyMember(snapshot.members[memberIndex], memberIndex)
+            })
+            return
+        }
+
+        if (workerMessage.type === 'room.snapshot') {
+            applyWorkerSnapshot(workerMessage.payload)
+            return
+        }
+
+        if (workerMessage.type === 'game.action') {
+            if (!workerRoomIdRef.current) {
+                return
+            }
+
+            emit('Game-SessionAction', toLegacyGameActionEvent(workerRoomIdRef.current, workerMessage.payload))
         }
     }
 
@@ -342,40 +619,7 @@ export const WSProvider: React.FC<Props> = props => {
         const message = JSON.parse(event.data)
 
         if (isWorkerMode) {
-            const workerMessage = message as LobbyRoomServerMessage
-
-            if (workerMessage.type === 'pong') {
-                return
-            }
-
-            if (workerMessage.type === 'room.error') {
-                console.error('Worker room error', workerMessage.payload)
-                return
-            }
-
-            if (workerMessage.type === 'room.notice') {
-                if (workerMessage.payload.message.includes('destroyed') && workerRoomIdRef.current) {
-                    emit('Lobby-Destroy', {
-                        lobbyId: workerRoomIdRef.current
-                    })
-                }
-
-                return
-            }
-
-            if (workerMessage.type === 'room.snapshot') {
-                applyWorkerSnapshot(workerMessage.payload)
-                return
-            }
-
-            if (workerMessage.type === 'game.action') {
-                if (!workerRoomIdRef.current) {
-                    return
-                }
-
-                emit('Game-SessionAction', toLegacyGameActionEvent(workerRoomIdRef.current, workerMessage.payload))
-            }
-
+            handleWorkerRoomMessage(message as LobbyRoomServerMessage)
             return
         }
 
@@ -385,6 +629,129 @@ export const WSProvider: React.FC<Props> = props => {
     }
 
     if (wsRef.current) wsRef.current.onmessage = messageHandler
+
+    useEffect(() => {
+        if (!isWorkerMode || !user.id) {
+            workerGlobalShouldReconnectRef.current = false
+
+            if (workerGlobalReconnectRef.current) {
+                clearTimeout(workerGlobalReconnectRef.current)
+                workerGlobalReconnectRef.current = null
+            }
+
+            if (workerGlobalPingRef.current) {
+                clearInterval(workerGlobalPingRef.current)
+                workerGlobalPingRef.current = null
+            }
+
+            if (workerGlobalSocketRef.current) {
+                try {
+                    workerGlobalSocketRef.current.close()
+                } catch (_error) {
+                    return
+                } finally {
+                    workerGlobalSocketRef.current = null
+                }
+            }
+
+            workerGlobalPresenceRef.current = null
+            workerGlobalChatMessagesRef.current = null
+            workerLobbyListRef.current = null
+            return
+        }
+
+        const token = getCookie('token')
+
+        if (typeof token !== 'string' || !token.length) {
+            workerGlobalShouldReconnectRef.current = false
+            return
+        }
+
+        workerGlobalShouldReconnectRef.current = true
+
+        const connectWorkerGlobalSocket = () => {
+            if (workerGlobalSocketRef.current && [WebSocket.CONNECTING, WebSocket.OPEN].includes(workerGlobalSocketRef.current.readyState)) {
+                return
+            }
+
+            const socket = new WebSocket(getCloudflareGlobalWebSocketUrl(token))
+
+            workerGlobalSocketRef.current = socket
+
+            socket.onopen = () => {
+                if (workerGlobalPingRef.current) {
+                    clearInterval(workerGlobalPingRef.current)
+                }
+
+                workerGlobalPingRef.current = setInterval(() => {
+                    if (socket.readyState === WebSocket.OPEN) {
+                        socket.send(JSON.stringify({ type: 'ping' }))
+                    }
+                }, 2000)
+            }
+
+            socket.onmessage = handleWorkerGlobalMessage
+
+            socket.onclose = () => {
+                if (workerGlobalSocketRef.current === socket) {
+                    workerGlobalSocketRef.current = null
+                }
+
+                if (workerGlobalPingRef.current) {
+                    clearInterval(workerGlobalPingRef.current)
+                    workerGlobalPingRef.current = null
+                }
+
+                if (workerGlobalReconnectRef.current) {
+                    clearTimeout(workerGlobalReconnectRef.current)
+                }
+
+                workerGlobalReconnectRef.current = setTimeout(() => {
+                    const nextToken = getCookie('token')
+
+                    if (
+                        workerGlobalShouldReconnectRef.current &&
+                        isCloudflareRealtimeEnabled() &&
+                        user.id &&
+                        typeof nextToken === 'string' &&
+                        nextToken.length
+                    ) {
+                        connectWorkerGlobalSocket()
+                    }
+                }, 1500)
+            }
+
+            socket.onerror = error => {
+                console.error('Worker global socket error', error)
+            }
+        }
+
+        connectWorkerGlobalSocket()
+
+        return () => {
+            workerGlobalShouldReconnectRef.current = false
+
+            if (workerGlobalReconnectRef.current) {
+                clearTimeout(workerGlobalReconnectRef.current)
+                workerGlobalReconnectRef.current = null
+            }
+
+            if (workerGlobalPingRef.current) {
+                clearInterval(workerGlobalPingRef.current)
+                workerGlobalPingRef.current = null
+            }
+
+            if (workerGlobalSocketRef.current) {
+                try {
+                    workerGlobalSocketRef.current.close()
+                } catch (_error) {
+                    return
+                } finally {
+                    workerGlobalSocketRef.current = null
+                }
+            }
+        }
+    }, [isWorkerMode, user.id])
 
     return <WSContext.Provider value={{ wsRef, isConnected, setIsConnected, on, send, unsubscribe }}>{props.children}</WSContext.Provider>
 }
