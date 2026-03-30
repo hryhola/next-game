@@ -1,5 +1,6 @@
 const initAnimation = () => {
     var canvas, ctx, circ, nodes, mouse, SENSITIVITY, SIBLINGS_LIMIT, DENSITY, NODES_QTY, ANCHOR_LENGTH, MOUSE_RADIUS
+    var nodeColorBase
 
     // how close next node must be to activate connection (in px)
     // shorter distance == better connection (line width)
@@ -15,6 +16,7 @@ const initAnimation = () => {
     ANCHOR_LENGTH = 20
     // highlight radius
     MOUSE_RADIUS = 200
+    nodeColorBase = '167, 139, 250'
 
     circ = 2 * Math.PI
     nodes = []
@@ -45,7 +47,7 @@ const initAnimation = () => {
     }
 
     Node.prototype.drawNode = function () {
-        var color = 'rgba(255, 0, 0, ' + this.brightness + ')'
+        var color = 'rgba(' + nodeColorBase + ', ' + this.brightness + ')'
         ctx.beginPath()
         ctx.arc(this.x, this.y, 2 * this.radius + (2 * this.siblings.length) / SIBLINGS_LIMIT, 0, circ)
         ctx.fillStyle = color
@@ -54,7 +56,7 @@ const initAnimation = () => {
 
     Node.prototype.drawConnections = function () {
         for (var i = 0; i < this.siblings.length; i++) {
-            var color = 'rgba(255, 0, 0, ' + this.brightness + ')'
+            var color = 'rgba(' + nodeColorBase + ', ' + this.brightness + ')'
             ctx.beginPath()
             ctx.moveTo(this.x, this.y)
             ctx.lineTo(this.siblings[i].x, this.siblings[i].y)
