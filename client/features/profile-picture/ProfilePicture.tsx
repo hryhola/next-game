@@ -86,7 +86,7 @@ export const ProfilePicture: React.FC<Props> = props => {
 
     if (props.editable) {
         return (
-            <label className={sharedClassName} style={sizeProps}>
+            <label className={cn(sharedClassName, 'cursor-pointer')} style={sizeProps}>
                 {content}
             </label>
         )

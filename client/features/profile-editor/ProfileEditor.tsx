@@ -93,15 +93,26 @@ export const ProfileEditor: React.FC<Props> = props => {
                     <ProfilePicture editable {...displayedImage} color={userColor} onChange={file => setImageFile(file)} />
                 </div>
                 <div className="flex items-center gap-3">
-                    <Button type="button" variant="secondary" size="icon" onClick={() => setNicknameColor(randomColor())}>
-                        <Sparkles className="size-4" style={{ color: userColor }} />
+                    <Button
+                        type="button"
+                        variant="secondary"
+                        size="icon"
+                        className="relative overflow-hidden"
+                        onClick={() => setNicknameColor(randomColor())}
+                        aria-label="Change nickname color"
+                    >
+                        <span className="absolute inset-[6px] rounded-full border border-white/10" style={{ backgroundColor: userColor }} />
+                        <Sparkles className="relative z-10 size-4 text-white" />
                     </Button>
                     <Input placeholder="Nickname" name="userNickname" value={nickname} onChange={e => setNickname(e.target.value)} />
                 </div>
                 <div className="mt-auto flex flex-col gap-3">
+                    <Button className="w-full" size="lg" type="submit">
+                        Update
+                    </Button>
                     <Button
                         className="w-full"
-                        variant="danger"
+                        variant="outlineDanger"
                         onClick={() =>
                             globalModel.confirm({
                                 title: 'Log out',
@@ -112,9 +123,6 @@ export const ProfileEditor: React.FC<Props> = props => {
                         }
                     >
                         Log out
-                    </Button>
-                    <Button className="w-full" size="lg" type="submit">
-                        Update
                     </Button>
                 </div>
             </form>

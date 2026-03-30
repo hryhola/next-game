@@ -15,6 +15,7 @@ export const buttonVariants = cva(
                 secondary: 'glass-panel px-5 text-slate-100 hover:border-violet-200/30 hover:bg-white/8',
                 ghost: 'px-4 text-slate-200 hover:bg-white/8',
                 outline: 'border border-white/15 bg-slate-950/25 px-5 text-slate-100 hover:border-violet-300/35 hover:bg-violet-500/10',
+                outlineDanger: 'border border-rose-400/20 bg-transparent px-5 text-rose-200 hover:border-rose-300/35 hover:bg-rose-500/8',
                 danger: 'bg-rose-500/90 px-5 text-white shadow-[0_12px_28px_rgba(244,63,94,0.28)] hover:bg-rose-400'
             },
             size: {
