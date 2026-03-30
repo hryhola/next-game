@@ -3,19 +3,19 @@ import type { CreateLobbyRequest } from '../../shared/contracts/realtime-lobby'
 import { R2AssetStore } from './assets/store'
 import { getIdentitySession, registerIdentity, revokeIdentitySession, updateIdentityProfile } from './auth/store'
 import { GlobalPresenceDO } from './durable-objects/GlobalPresenceDO'
-import { LobbyRoomDO } from './durable-objects/LobbyRoomDO'
+import { LobbyDO } from './durable-objects/LobbyDO'
 import { parseJeopardyPackArchive } from './jeopardy/pack'
 import { clearSessionCookie, createSessionCookie, readSessionToken } from './lib/cookies'
 import { json } from './lib/json'
 import { listLobbies } from './lobbies/store'
 import { playgroundHtml } from './playground'
-import { listRoomSessions } from './room-sessions/store'
+import { listLobbySessions } from './lobby-sessions/store'
 import type { RealtimeWorkerEnv } from './types'
 
-function getLobbyRoomStub(env: RealtimeWorkerEnv, roomId: string) {
-    const id = env.LOBBY_ROOMS.idFromName(roomId)
+function getLobbyStub(env: RealtimeWorkerEnv, lobbyId: string) {
+    const id = env.LOBBIES.idFromName(lobbyId)
 
-    return env.LOBBY_ROOMS.get(id)
+    return env.LOBBIES.get(id)
 }
 
 function getGlobalPresenceStub(env: RealtimeWorkerEnv) {
@@ -24,28 +24,28 @@ function getGlobalPresenceStub(env: RealtimeWorkerEnv) {
     return env.GLOBAL_PRESENCE.get(id)
 }
 
-function parseRoomRoute(pathname: string): { roomId: string; targetPath: '/state' | '/websocket' | '/health' } | null {
-    const match = pathname.match(/^\/rooms\/([^/]+)(?:\/(state|websocket|health))?\/?$/)
+function parseLobbyRoute(pathname: string): { lobbyId: string; targetPath: '/state' | '/websocket' | '/health' } | null {
+    const match = pathname.match(/^\/lobbies\/([^/]+)(?:\/(state|websocket|health))?\/?$/)
 
     if (!match) {
         return null
     }
 
     return {
-        roomId: decodeURIComponent(match[1]),
+        lobbyId: decodeURIComponent(match[1]),
         targetPath: match[2] ? (`/${match[2]}` as '/state' | '/websocket' | '/health') : '/state'
     }
 }
 
-function parseRoomHistoryRoute(pathname: string): { roomId: string } | null {
-    const match = pathname.match(/^\/rooms\/([^/]+)\/history\/?$/)
+function parseLobbyHistoryRoute(pathname: string): { lobbyId: string } | null {
+    const match = pathname.match(/^\/lobbies\/([^/]+)\/history\/?$/)
 
     if (!match) {
         return null
     }
 
     return {
-        roomId: decodeURIComponent(match[1])
+        lobbyId: decodeURIComponent(match[1])
     }
 }
 
@@ -63,7 +63,7 @@ function parseAssetRoute(pathname: string): { assetId: string } | null {
 
 type LobbyActionPath = '/join' | '/leave' | '/destroy'
 
-function parseLobbyItemRoute(pathname: string): { roomId: string; action: LobbyActionPath } | null {
+function parseLobbyItemRoute(pathname: string): { lobbyId: string; action: LobbyActionPath } | null {
     const match = pathname.match(/^\/lobbies\/([^/]+)(?:\/(join|leave))?\/?$/)
 
     if (!match) {
@@ -71,7 +71,7 @@ function parseLobbyItemRoute(pathname: string): { roomId: string; action: LobbyA
     }
 
     return {
-        roomId: decodeURIComponent(match[1]),
+        lobbyId: decodeURIComponent(match[1]),
         action: match[2] ? (`/${match[2]}` as LobbyActionPath) : '/destroy'
     }
 }
@@ -122,12 +122,12 @@ function appendSessionHeaders(headers: Headers, session: ResolvedSession): Heade
     return headers
 }
 
-function toRoomRequest(request: Request, roomId: string, targetPath: string, session?: ResolvedSession): Request {
+function toLobbyRequest(request: Request, lobbyId: string, targetPath: string, session?: ResolvedSession): Request {
     const url = new URL(request.url)
     url.pathname = targetPath
 
     const headers = new Headers(request.headers)
-    headers.set('x-room-id', roomId)
+    headers.set('x-lobby-id', lobbyId)
     headers.delete('authorization')
 
     if (session) {
@@ -188,6 +188,16 @@ function readOptionalFormText(formData: FormData, key: string): string | undefin
     const trimmed = value.trim()
 
     return trimmed || undefined
+}
+
+function readOptionalFormFile(formData: FormData, key: string): File | undefined {
+    const value = formData.get(key)
+
+    if (!(value instanceof File) || !value.size || !value.name.trim()) {
+        return undefined
+    }
+
+    return value
 }
 
 function createAssetStore(env: RealtimeWorkerEnv, request: Request): R2AssetStore {
@@ -273,7 +283,7 @@ async function requireSession(request: Request, env: RealtimeWorkerEnv): Promise
     }
 }
 
-export { GlobalPresenceDO, LobbyRoomDO }
+export { GlobalPresenceDO, LobbyDO }
 
 const worker: ExportedHandler<RealtimeWorkerEnv> = {
     async fetch(request: Request, env: RealtimeWorkerEnv): Promise<Response> {
@@ -313,9 +323,9 @@ const worker: ExportedHandler<RealtimeWorkerEnv> = {
                         lobbyLeaveExample: '/lobbies/example-room/leave',
                         presenceState: '/presence/state',
                         presenceWebSocketExample: '/presence/websocket',
-                        roomStateExample: '/rooms/example-room/state',
-                        roomHistoryExample: '/rooms/example-room/history',
-                        roomWebSocketExample: '/rooms/example-room/websocket'
+                        lobbyStateExample: '/lobbies/example-room/state',
+                        lobbyHistoryExample: '/lobbies/example-room/history',
+                        lobbyWebSocketExample: '/lobbies/example-room/websocket'
                     }
                 })
             }
@@ -613,97 +623,153 @@ const worker: ExportedHandler<RealtimeWorkerEnv> = {
 
                     if (isMultipartFormRequest(request)) {
                         const formData = await request.formData()
-                        const roomId = String(formData.get('lobbyId') || '').trim()
+                        const lobbyId = String(formData.get('lobbyId') || '').trim()
                         const name = String(formData.get('lobbyId') || '').trim()
                         const password = readOptionalFormText(formData, 'password')
                         const gameName = String(formData.get('gameName') || '').trim()
 
-                        if (!roomId) {
+                        if (!lobbyId) {
                             return errorResponse(400, 'Lobby id is required', 'invalid_payload')
                         }
 
-                        if (gameName !== 'Jeopardy') {
-                            return errorResponse(400, `Multipart lobby creation is only supported for Jeopardy`, 'invalid_game')
-                        }
-
-                        const packFile = formData.get('initialData-pack')
-
-                        if (!(packFile instanceof File)) {
-                            return errorResponse(400, 'Jeopardy pack is required', 'missing_pack')
-                        }
-
-                        const packBytes = await packFile.arrayBuffer()
-                        const parsedPack = await parseJeopardyPackArchive(packBytes)
                         const assetStore = createAssetStore(env, request)
-                        const storedPack = await assetStore.put({
-                            body: packBytes,
-                            contentType: packFile.type || 'application/octet-stream',
-                            fileName: packFile.name,
-                            kind: 'jeopardy-pack',
-                            ownerId: roomId,
-                            ownerType: 'lobby',
-                            size: packFile.size,
-                            uploadedByUserId: auth.session.user.id
-                        })
+                        const stub = getLobbyStub(env, lobbyId)
 
-                        const stub = getLobbyRoomStub(env, roomId)
+                        if (gameName === 'Jeopardy') {
+                            const packFile = readOptionalFormFile(formData, 'initialData-pack')
 
-                        return stub.fetch(
-                            toRoomRequest(
-                                new Request(request.url, {
-                                    method: 'POST',
-                                    headers: {
-                                        'content-type': 'application/json'
-                                    },
-                                    body: JSON.stringify({
-                                        gameName: 'Jeopardy',
-                                        initialData: {
-                                            pack: {
-                                                assetId: storedPack.id,
-                                                author: parsedPack.author,
-                                                dateCreated: parsedPack.dateCreated,
-                                                declaration: parsedPack.declaration,
-                                                fileName: storedPack.fileName,
-                                                value: storedPack.url
-                                            }
+                            if (!packFile) {
+                                return errorResponse(400, 'Jeopardy pack is required', 'missing_pack')
+                            }
+
+                            const packBytes = await packFile.arrayBuffer()
+                            const parsedPack = await parseJeopardyPackArchive(packBytes)
+                            const storedPack = await assetStore.put({
+                                body: packBytes,
+                                contentType: packFile.type || 'application/octet-stream',
+                                fileName: packFile.name,
+                                kind: 'jeopardy-pack',
+                                ownerId: lobbyId,
+                                ownerType: 'lobby',
+                                size: packFile.size,
+                                uploadedByUserId: auth.session.user.id
+                            })
+
+                            return stub.fetch(
+                                toLobbyRequest(
+                                    new Request(request.url, {
+                                        method: 'POST',
+                                        headers: {
+                                            'content-type': 'application/json'
                                         },
-                                        name,
-                                        password,
-                                        roomId
-                                    } as CreateLobbyRequest)
-                                }),
-                                roomId,
-                                '/create',
-                                auth.session
+                                        body: JSON.stringify({
+                                            game: {
+                                                kind: 'Jeopardy',
+                                                config: {
+                                                    pack: {
+                                                        public: true,
+                                                        value: storedPack.url
+                                                    },
+                                                    packAssetId: storedPack.id,
+                                                    packAuthor: parsedPack.author,
+                                                    packDateCreated: parsedPack.dateCreated,
+                                                    packDeclaration: parsedPack.declaration,
+                                                    packFileName: storedPack.fileName
+                                                }
+                                            },
+                                            name,
+                                            password,
+                                            lobbyId
+                                        } as CreateLobbyRequest)
+                                    }),
+                                    lobbyId,
+                                    '/create',
+                                    auth.session
+                                )
                             )
-                        )
+                        }
+
+                        if (gameName === 'Clicker') {
+                            const backgroundFile = readOptionalFormFile(formData, 'initialData-background')
+                            let backgroundUrl: string | undefined
+
+                            if (backgroundFile) {
+                                const backgroundBytes = await backgroundFile.arrayBuffer()
+                                const storedBackground = await assetStore.put({
+                                    body: backgroundBytes,
+                                    contentType: backgroundFile.type || 'application/octet-stream',
+                                    fileName: backgroundFile.name,
+                                    kind: 'clicker-background',
+                                    ownerId: lobbyId,
+                                    ownerType: 'lobby',
+                                    size: backgroundFile.size,
+                                    uploadedByUserId: auth.session.user.id
+                                })
+
+                                backgroundUrl = storedBackground.url
+                            }
+
+                            return stub.fetch(
+                                toLobbyRequest(
+                                    new Request(request.url, {
+                                        method: 'POST',
+                                        headers: {
+                                            'content-type': 'application/json'
+                                        },
+                                        body: JSON.stringify({
+                                            game: {
+                                                kind: 'Clicker',
+                                                config: backgroundUrl
+                                                    ? {
+                                                          backgroundUrl
+                                                      }
+                                                    : {}
+                                            },
+                                            name,
+                                            password,
+                                            lobbyId
+                                        } as CreateLobbyRequest)
+                                    }),
+                                    lobbyId,
+                                    '/create',
+                                    auth.session
+                                )
+                            )
+                        }
+
+                        return errorResponse(400, `Multipart lobby creation is not supported for ${gameName}`, 'invalid_game')
                     }
 
                     const body = await parseJsonBody<CreateLobbyRequest>(request)
 
-                    if (!body || typeof body.roomId !== 'string' || !body.roomId.trim()) {
+                    if (!body || typeof body.lobbyId !== 'string' || !body.lobbyId.trim()) {
                         return errorResponse(400, 'Lobby id is required', 'invalid_payload')
                     }
 
-                    if (body.gameName && !['TicTacToe', 'Clicker', 'Jeopardy'].includes(body.gameName)) {
-                        return errorResponse(400, `Unsupported game: ${body.gameName}`, 'invalid_game')
+                    const gameKind = body?.game?.kind
+
+                    if (!gameKind || !['TicTacToe', 'Clicker', 'Jeopardy'].includes(gameKind)) {
+                        return errorResponse(400, `Unsupported game: ${gameKind}`, 'invalid_game')
                     }
 
-                    const roomId = body.roomId.trim()
-                    const stub = getLobbyRoomStub(env, roomId)
+                    const lobbyId = body.lobbyId.trim()
+                    const stub = getLobbyStub(env, lobbyId)
 
                     return stub.fetch(
-                        toRoomRequest(
+                        toLobbyRequest(
                             new Request(request.url, {
                                 method: 'POST',
                                 headers: request.headers,
                                 body: JSON.stringify({
                                     ...body,
-                                    gameName: body.gameName === 'Clicker' ? 'Clicker' : body.gameName === 'Jeopardy' ? 'Jeopardy' : 'TicTacToe',
-                                    roomId
+                                    game: {
+                                        ...body.game,
+                                        kind: gameKind
+                                    },
+                                    lobbyId
                                 })
                             }),
-                            roomId,
+                            lobbyId,
                             '/create',
                             auth.session
                         )
@@ -722,42 +788,42 @@ const worker: ExportedHandler<RealtimeWorkerEnv> = {
                     return auth.error
                 }
 
-                const stub = getLobbyRoomStub(env, lobbyRoute.roomId)
+                const stub = getLobbyStub(env, lobbyRoute.lobbyId)
 
                 if (lobbyRoute.action === '/destroy') {
                     if (request.method !== 'DELETE') {
                         return methodNotAllowed('DELETE')
                     }
 
-                    return stub.fetch(toRoomRequest(request, lobbyRoute.roomId, '/destroy', auth.session))
+                    return stub.fetch(toLobbyRequest(request, lobbyRoute.lobbyId, '/destroy', auth.session))
                 }
 
                 if (request.method !== 'POST') {
                     return methodNotAllowed('POST')
                 }
 
-                return stub.fetch(toRoomRequest(request, lobbyRoute.roomId, lobbyRoute.action, auth.session))
+                return stub.fetch(toLobbyRequest(request, lobbyRoute.lobbyId, lobbyRoute.action, auth.session))
             }
 
-            const roomHistoryRoute = parseRoomHistoryRoute(url.pathname)
+            const lobbyHistoryRoute = parseLobbyHistoryRoute(url.pathname)
 
-            if (roomHistoryRoute) {
+            if (lobbyHistoryRoute) {
                 if (request.method !== 'GET') {
                     return methodNotAllowed('GET')
                 }
 
-                const history = await listRoomSessions(env.IDENTITY_DB, roomHistoryRoute.roomId)
+                const history = await listLobbySessions(env.IDENTITY_DB, lobbyHistoryRoute.lobbyId)
 
                 return json({
                     ok: true,
                     history,
-                    roomId: roomHistoryRoute.roomId
+                    lobbyId: lobbyHistoryRoute.lobbyId
                 })
             }
 
-            const roomRoute = parseRoomRoute(url.pathname)
+            const lobbyStateRoute = parseLobbyRoute(url.pathname)
 
-            if (!roomRoute) {
+            if (!lobbyStateRoute) {
                 return json(
                     {
                         ok: false,
@@ -767,31 +833,31 @@ const worker: ExportedHandler<RealtimeWorkerEnv> = {
                 )
             }
 
-            const stub = getLobbyRoomStub(env, roomRoute.roomId)
+            const stub = getLobbyStub(env, lobbyStateRoute.lobbyId)
 
-            if (roomRoute.targetPath === '/websocket') {
+            if (lobbyStateRoute.targetPath === '/websocket') {
                 const auth = await requireSession(request, env)
 
                 if (!auth.ok) {
                     return auth.error
                 }
 
-                return stub.fetch(toRoomRequest(request, roomRoute.roomId, roomRoute.targetPath, auth.session))
+                return stub.fetch(toLobbyRequest(request, lobbyStateRoute.lobbyId, lobbyStateRoute.targetPath, auth.session))
             }
 
-            if (roomRoute.targetPath === '/state') {
+            if (lobbyStateRoute.targetPath === '/state') {
                 const sessionToken = readSessionToken(request)
 
                 if (sessionToken) {
                     const session = await getIdentitySession(env.IDENTITY_DB, sessionToken)
 
                     if (session) {
-                        return stub.fetch(toRoomRequest(request, roomRoute.roomId, roomRoute.targetPath, session))
+                        return stub.fetch(toLobbyRequest(request, lobbyStateRoute.lobbyId, lobbyStateRoute.targetPath, session))
                     }
                 }
             }
 
-            return stub.fetch(toRoomRequest(request, roomRoute.roomId, roomRoute.targetPath))
+            return stub.fetch(toLobbyRequest(request, lobbyStateRoute.lobbyId, lobbyStateRoute.targetPath))
         })()
 
         return withCors(request, response)

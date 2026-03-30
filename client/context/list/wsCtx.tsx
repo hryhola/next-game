@@ -1,8 +1,8 @@
 import React, { useState, createContext, useContext, useRef, MutableRefObject, useEffect } from 'react'
 import type {
     GlobalRealtimeServerMessage,
-    LobbyRoomClientMessage,
-    LobbyRoomServerMessage,
+    LobbyClientMessage,
+    LobbyServerMessage,
     PresenceSnapshot,
     RequestData,
     RequestHandler,
@@ -59,8 +59,8 @@ export const WSProvider: React.FC<Props> = props => {
     const workerGlobalPresenceRef = useRef<PresenceSnapshot | null>(null)
     const workerGlobalChatMessagesRef = useRef<RealtimeChatMessage[] | null>(null)
     const workerLobbyListRef = useRef<RealtimeLobbyListItem[] | null>(null)
-    const workerRoomSnapshotRef = useRef<RealtimeLobbySnapshot | null>(null)
-    const workerRoomIdRef = useRef('')
+    const workerLobbySnapshotRef = useRef<RealtimeLobbySnapshot | null>(null)
+    const workerLobbyIdRef = useRef('')
 
     const [isConnected, setIsConnected] = useState<boolean | null>(null)
 
@@ -185,8 +185,8 @@ export const WSProvider: React.FC<Props> = props => {
         return lobbies
     }
 
-    const readWorkerRoomSnapshot = async (lobbyId: string, shouldCache: boolean = false) => {
-        const response = await fetch(getCloudflareRealtimeApiUrl(`/rooms/${encodeURIComponent(lobbyId)}/state`), {
+    const readWorkerLobbySnapshot = async (lobbyId: string, shouldCache: boolean = false) => {
+        const response = await fetch(getCloudflareRealtimeApiUrl(`/lobbies/${encodeURIComponent(lobbyId)}/state`), {
             method: 'GET',
             headers: createWorkerAuthHeaders(null)
         })
@@ -196,21 +196,21 @@ export const WSProvider: React.FC<Props> = props => {
         }
 
         const body = await response.json()
-        const snapshot = body.room as RealtimeLobbySnapshot
+        const snapshot = body.lobby as RealtimeLobbySnapshot
 
         if (shouldCache) {
-            workerRoomSnapshotRef.current = snapshot
-            workerRoomIdRef.current = snapshot.roomId
+            workerLobbySnapshotRef.current = snapshot
+            workerLobbyIdRef.current = snapshot.lobbyId
         }
 
         return snapshot
     }
 
     const applyWorkerSnapshot = (snapshot: RealtimeLobbySnapshot) => {
-        const previousSnapshot = workerRoomSnapshotRef.current?.roomId === snapshot.roomId ? workerRoomSnapshotRef.current : null
+        const previousSnapshot = workerLobbySnapshotRef.current?.lobbyId === snapshot.lobbyId ? workerLobbySnapshotRef.current : null
 
-        workerRoomSnapshotRef.current = snapshot
-        workerRoomIdRef.current = snapshot.roomId
+        workerLobbySnapshotRef.current = snapshot
+        workerLobbyIdRef.current = snapshot.lobbyId
 
         if (!previousSnapshot) {
             return
@@ -219,9 +219,9 @@ export const WSProvider: React.FC<Props> = props => {
         deriveAppEventsFromSnapshot(previousSnapshot, snapshot).forEach(event => emit(event.ctx, event.data))
     }
 
-    const sendWorkerRoomMessage = (message: LobbyRoomClientMessage) => {
+    const sendWorkerLobbyMessage = (message: LobbyClientMessage) => {
         if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
-            console.warn('Cannot send worker room message because room websocket is not connected yet', message)
+            console.warn('Cannot send worker lobby message because the lobby websocket is not connected yet', message)
             return
         }
 
@@ -276,7 +276,7 @@ export const WSProvider: React.FC<Props> = props => {
                 }
                 case 'Lobby-GetPublicInfo': {
                     const lobbyId = (data as RequestData<'Lobby-GetPublicInfo'>).id
-                    const snapshot = await readWorkerRoomSnapshot(lobbyId)
+                    const snapshot = await readWorkerLobbySnapshot(lobbyId)
 
                     emit('Lobby-GetPublicInfo', {
                         success: true,
@@ -298,11 +298,11 @@ export const WSProvider: React.FC<Props> = props => {
                         return
                     }
 
-                    const shouldCache = workerRoomIdRef.current === payload.lobbyId || !workerRoomIdRef.current
+                    const shouldCache = workerLobbyIdRef.current === payload.lobbyId || !workerLobbyIdRef.current
                     const snapshot =
-                        workerRoomSnapshotRef.current?.roomId === payload.lobbyId
-                            ? workerRoomSnapshotRef.current
-                            : await readWorkerRoomSnapshot(payload.lobbyId, shouldCache)
+                        workerLobbySnapshotRef.current?.lobbyId === payload.lobbyId
+                            ? workerLobbySnapshotRef.current
+                            : await readWorkerLobbySnapshot(payload.lobbyId, shouldCache)
 
                     emit('Chat-Get', {
                         success: true,
@@ -330,10 +330,13 @@ export const WSProvider: React.FC<Props> = props => {
                         return
                     }
 
-                    sendWorkerRoomMessage({
-                        type: 'chat.send',
+                    sendWorkerLobbyMessage({
+                        type: 'lobby.command',
                         payload: {
-                            text: payload.message.text
+                            commandName: 'chat.send',
+                            commandPayload: {
+                                text: payload.message.text
+                            }
                         }
                     })
                     return
@@ -341,11 +344,14 @@ export const WSProvider: React.FC<Props> = props => {
                 case 'Lobby-Tip': {
                     const payload = data as RequestData<'Lobby-Tip'>
 
-                    sendWorkerRoomMessage({
-                        type: 'room.tip',
+                    sendWorkerLobbyMessage({
+                        type: 'lobby.command',
                         payload: {
-                            id: payload.id,
-                            toUserId: payload.to ? workerRoomSnapshotRef.current?.members.find(member => member.userNickname === payload.to)?.id || '' : ''
+                            commandName: 'tip',
+                            commandPayload: {
+                                id: payload.id,
+                                toUserId: payload.to ? workerLobbySnapshotRef.current?.members.find(member => member.userNickname === payload.to)?.id || '' : ''
+                            }
                         }
                     })
                     return
@@ -353,73 +359,59 @@ export const WSProvider: React.FC<Props> = props => {
                 case 'Lobby-Kick': {
                     const payload = data as RequestData<'Lobby-Kick'>
 
-                    sendWorkerRoomMessage({
-                        type: 'room.kick',
+                    sendWorkerLobbyMessage({
+                        type: 'lobby.command',
                         payload: {
-                            userId: payload.userId
+                            commandName: 'kick',
+                            commandPayload: {
+                                userId: payload.userId
+                            }
                         }
                     })
                     return
                 }
                 case 'Lobby-StartReadyCheck': {
-                    sendWorkerRoomMessage({
-                        type: 'ready.start'
+                    sendWorkerLobbyMessage({
+                        type: 'lobby.command',
+                        payload: {
+                            commandName: 'ready.start'
+                        }
                     })
                     return
                 }
                 case 'ReadyCheck-Response': {
                     const payload = data as RequestData<'ReadyCheck-Response'>
 
-                    sendWorkerRoomMessage({
-                        type: 'ready.set',
+                    sendWorkerLobbyMessage({
+                        type: 'lobby.command',
                         payload: {
-                            ready: payload.ready
+                            commandName: 'ready.set',
+                            commandPayload: {
+                                ready: payload.ready
+                            }
                         }
                     })
                     return
                 }
                 case 'Game-Start': {
-                    sendWorkerRoomMessage({
-                        type: 'game.start'
+                    sendWorkerLobbyMessage({
+                        type: 'lobby.command',
+                        payload: {
+                            commandName: 'game.start'
+                        }
                     })
                     return
                 }
                 case 'Game-SendAction': {
                     const payload = data as RequestData<'Game-SendAction'>
 
-                    if (workerRoomSnapshotRef.current?.game.name === 'Jeopardy') {
-                        sendWorkerRoomMessage({
-                            type: 'jeopardy.action',
-                            payload: {
-                                actionName: payload.actionName,
-                                actionPayload: payload.actionPayload
-                            }
-                        })
-                        return
-                    }
-
-                    if (payload.actionName === '$Move') {
-                        sendWorkerRoomMessage({
-                            type: 'tictactoe.move',
-                            payload: {
-                                cell: (payload.actionPayload as { cell: [number, number] }).cell
-                            }
-                        })
-                        return
-                    }
-
-                    if (payload.actionName === '$Click') {
-                        sendWorkerRoomMessage({
-                            type: 'clicker.click',
-                            payload: {
-                                x: (payload.actionPayload as { x: number; y: number }).x,
-                                y: (payload.actionPayload as { x: number; y: number }).y
-                            }
-                        })
-                        return
-                    }
-
-                    console.warn(`Action ${payload.actionName} is not supported by the realtime API yet`)
+                    sendWorkerLobbyMessage({
+                        type: 'game.command',
+                        payload: {
+                            commandName: payload.actionName,
+                            commandPayload: payload.actionPayload
+                        }
+                    })
                     return
                 }
                 case 'Universal-Subscription': {
@@ -541,94 +533,59 @@ export const WSProvider: React.FC<Props> = props => {
         }
     }
 
-    const handleWorkerRoomMessage = (workerMessage: LobbyRoomServerMessage) => {
+    const handleWorkerLobbyMessage = (workerMessage: LobbyServerMessage) => {
         if (workerMessage.type === 'pong') {
             return
         }
 
-        if (workerMessage.type === 'room.error') {
-            console.error('Worker room error', workerMessage.payload)
+        if (workerMessage.type === 'lobby.error') {
+            console.error('Worker lobby error', workerMessage.payload)
             return
         }
 
-        if (workerMessage.type === 'room.notice') {
-            if (workerMessage.payload.message.includes('destroyed') && workerRoomIdRef.current) {
+        if (workerMessage.type === 'lobby.notice') {
+            if (workerMessage.payload.message.includes('destroyed') && workerLobbyIdRef.current) {
                 emit('Lobby-Destroy', {
-                    lobbyId: workerRoomIdRef.current
+                    lobbyId: workerLobbyIdRef.current
                 })
             }
 
             return
         }
 
-        if (workerMessage.type === 'room.tip') {
-            emit('Lobby-Tipped', workerMessage.payload)
-            return
-        }
+        if (workerMessage.type === 'lobby.event') {
+            if (workerMessage.payload.eventName === 'tip') {
+                emit('Lobby-Tipped', workerMessage.payload.eventPayload)
+                return
+            }
 
-        if (workerMessage.type === 'room.kick') {
-            const snapshot = workerRoomSnapshotRef.current
-            const memberIndex = snapshot?.members.findIndex(member => member.id === workerMessage.payload.memberId) ?? -1
+            const kickPayload = workerMessage.payload.eventPayload as { memberId: string }
+            const snapshot = workerLobbySnapshotRef.current
+            const memberIndex = snapshot?.members.findIndex(member => member.id === kickPayload.memberId) ?? -1
 
             if (!snapshot || memberIndex < 0) {
                 return
             }
 
             emit('Lobby-Kicked', {
-                lobbyId: snapshot.roomId,
+                lobbyId: snapshot.lobbyId,
                 member: toAppLobbyMember(snapshot.members[memberIndex], memberIndex)
             })
             return
         }
 
-        if (workerMessage.type === 'room.snapshot') {
+        if (workerMessage.type === 'lobby.state') {
             applyWorkerSnapshot(workerMessage.payload)
             return
         }
 
-        if (workerMessage.type === 'game.action') {
-            if (!workerRoomIdRef.current) {
+        if (workerMessage.type === 'game.event') {
+            if (!workerLobbyIdRef.current) {
                 return
             }
 
-            emit('Game-SessionAction', toAppGameActionEvent(workerRoomIdRef.current, workerMessage.payload))
+            emit('Game-SessionAction', toAppGameActionEvent(workerLobbyIdRef.current, workerMessage.payload))
             return
-        }
-
-        if (workerMessage.type === 'game.session.start') {
-            if (!workerRoomIdRef.current) {
-                return
-            }
-
-            emit('Game-SessionStart', {
-                lobbyId: workerRoomIdRef.current,
-                session: workerMessage.payload.session
-            })
-            return
-        }
-
-        if (workerMessage.type === 'game.session.update') {
-            if (!workerRoomIdRef.current) {
-                return
-            }
-
-            emit('Game-SessionUpdate', {
-                lobbyId: workerRoomIdRef.current,
-                data: workerMessage.payload.data
-            })
-            return
-        }
-
-        if (workerMessage.type === 'game.session.end') {
-            if (!workerRoomIdRef.current) {
-                return
-            }
-
-            emit('Game-SessionEnd', {
-                lobbyId: workerRoomIdRef.current,
-                players: workerMessage.payload.players as any[],
-                session: workerMessage.payload.session
-            })
         }
     }
 
@@ -641,7 +598,7 @@ export const WSProvider: React.FC<Props> = props => {
             return
         }
 
-        handleWorkerRoomMessage(JSON.parse(event.data) as LobbyRoomServerMessage)
+        handleWorkerLobbyMessage(JSON.parse(event.data) as LobbyServerMessage)
     }
 
     if (wsRef.current) wsRef.current.onmessage = messageHandler

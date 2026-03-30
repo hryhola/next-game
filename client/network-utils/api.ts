@@ -55,8 +55,6 @@ async function handleWorkerApiRequest<E extends EndpointName>(endpoint: E, data:
                 const lobbyId = String(request.get('lobbyId') || '').trim()
                 const gameName = String(request.get('gameName') || '').trim()
                 const password = String(request.get('password') || '').trim() || undefined
-                const hasInitialData = Array.from(request.keys()).some(key => key.startsWith('initialData-'))
-
                 if (!lobbyId) {
                     return [
                         {
@@ -77,18 +75,8 @@ async function handleWorkerApiRequest<E extends EndpointName>(endpoint: E, data:
                     ]
                 }
 
-                if (gameName !== 'Jeopardy' && hasInitialData) {
-                    return [
-                        {
-                            success: false,
-                            message: 'Initial game files are not supported by the realtime API yet'
-                        } as Endpoints[E]['response'],
-                        undefined
-                    ]
-                }
-
                 const response =
-                    gameName === 'Jeopardy'
+                    gameName === 'Jeopardy' || gameName === 'Clicker'
                         ? await fetch(getCloudflareRealtimeApiUrl('/lobbies'), {
                               method: 'POST',
                               headers: createWorkerAuthHeaders(null),
@@ -98,10 +86,13 @@ async function handleWorkerApiRequest<E extends EndpointName>(endpoint: E, data:
                               method: 'POST',
                               headers: createWorkerAuthHeaders(),
                               body: JSON.stringify({
-                                  gameName,
+                                  game: {
+                                      kind: gameName,
+                                      config: {}
+                                  },
                                   name: lobbyId,
                                   password,
-                                  roomId: lobbyId
+                                  lobbyId: lobbyId
                               })
                           })
 
@@ -130,7 +121,7 @@ async function handleWorkerApiRequest<E extends EndpointName>(endpoint: E, data:
             }
             case 'lobby-data': {
                 const request = data as Endpoints['lobby-data']['request']
-                const response = await fetch(getCloudflareRealtimeApiUrl(`/rooms/${encodeURIComponent(request.lobbyId)}/state`), {
+                const response = await fetch(getCloudflareRealtimeApiUrl(`/lobbies/${encodeURIComponent(request.lobbyId)}/state`), {
                     method: 'GET',
                     headers: createWorkerAuthHeaders(null)
                 })
@@ -146,7 +137,7 @@ async function handleWorkerApiRequest<E extends EndpointName>(endpoint: E, data:
                 }
 
                 const body = await response.json()
-                const snapshot = body.room
+                const snapshot = body.lobby
 
                 return [
                     {

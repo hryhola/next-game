@@ -1,47 +1,47 @@
-import type { RealtimeRoomSessionSummary } from '../../../shared/contracts/room-history'
+import type { RealtimeLobbySessionSummary } from '../../../shared/contracts/lobby-history'
 import type { RealtimeLobbyGameName } from '../../../shared/contracts/realtime-lobby'
 
-type RoomSessionRow = {
+type LobbySessionRow = {
     endedAt: string | null
     gameName: RealtimeLobbyGameName
     id: string
     initiatedByUserId: string
     resultSummaryJson: string | null
-    roomId: string
-    roomName: string
+    lobbyId: string
+    lobbyName: string
     startedAt: string
-    status: RealtimeRoomSessionSummary['status']
+    status: RealtimeLobbySessionSummary['status']
     winnerNickname: string | null
     winnerUserId: string | null
 }
 
-export interface CreateRoomSessionInput {
+export interface CreateLobbySessionInput {
     gameName: RealtimeLobbyGameName
     id: string
     initiatedByUserId: string
-    roomId: string
-    roomName: string
+    lobbyId: string
+    lobbyName: string
     startedAt: string
 }
 
-export interface FinalizeRoomSessionInput {
+export interface FinalizeLobbySessionInput {
     endedAt: string
     id: string
     resultSummary?: Record<string, unknown> | null
-    status: Extract<RealtimeRoomSessionSummary['status'], 'completed' | 'abandoned'>
+    status: Extract<RealtimeLobbySessionSummary['status'], 'completed' | 'abandoned'>
     winnerNickname?: string | null
     winnerUserId?: string | null
 }
 
-function mapRoomSessionRow(row: RoomSessionRow): RealtimeRoomSessionSummary {
+function mapLobbySessionRow(row: LobbySessionRow): RealtimeLobbySessionSummary {
     return {
         endedAt: row.endedAt,
         gameName: row.gameName,
         id: row.id,
         initiatedByUserId: row.initiatedByUserId,
         resultSummary: row.resultSummaryJson ? (JSON.parse(row.resultSummaryJson) as Record<string, unknown>) : null,
-        roomId: row.roomId,
-        roomName: row.roomName,
+        lobbyId: row.lobbyId,
+        lobbyName: row.lobbyName,
         startedAt: row.startedAt,
         status: row.status,
         ...(row.winnerNickname ? { winnerNickname: row.winnerNickname } : {}),
@@ -49,14 +49,14 @@ function mapRoomSessionRow(row: RoomSessionRow): RealtimeRoomSessionSummary {
     }
 }
 
-export async function createRoomSession(db: D1Database, input: CreateRoomSessionInput): Promise<void> {
+export async function createLobbySession(db: D1Database, input: CreateLobbySessionInput): Promise<void> {
     await db
         .prepare(
             `
-                INSERT INTO room_sessions (
+                INSERT INTO lobby_sessions (
                     id,
-                    room_id,
-                    room_name,
+                    lobby_id,
+                    lobby_name,
                     game_name,
                     initiated_by_user_id,
                     status,
@@ -71,15 +71,15 @@ export async function createRoomSession(db: D1Database, input: CreateRoomSession
                 VALUES (?1, ?2, ?3, ?4, ?5, 'active', NULL, NULL, NULL, ?6, NULL, ?6, ?6)
             `
         )
-        .bind(input.id, input.roomId, input.roomName, input.gameName, input.initiatedByUserId, input.startedAt)
+        .bind(input.id, input.lobbyId, input.lobbyName, input.gameName, input.initiatedByUserId, input.startedAt)
         .run()
 }
 
-export async function finalizeRoomSession(db: D1Database, input: FinalizeRoomSessionInput): Promise<void> {
+export async function finalizeLobbySession(db: D1Database, input: FinalizeLobbySessionInput): Promise<void> {
     await db
         .prepare(
             `
-                UPDATE room_sessions
+                UPDATE lobby_sessions
                 SET
                     status = ?1,
                     winner_user_id = ?2,
@@ -101,14 +101,14 @@ export async function finalizeRoomSession(db: D1Database, input: FinalizeRoomSes
         .run()
 }
 
-export async function getActiveRoomSession(db: D1Database, roomId: string): Promise<RealtimeRoomSessionSummary | null> {
+export async function getActiveLobbySession(db: D1Database, lobbyId: string): Promise<RealtimeLobbySessionSummary | null> {
     const row = await db
         .prepare(
             `
                 SELECT
                     id,
-                    room_id as roomId,
-                    room_name as roomName,
+                    lobby_id as lobbyId,
+                    lobby_name as lobbyName,
                     game_name as gameName,
                     initiated_by_user_id as initiatedByUserId,
                     status,
@@ -117,28 +117,28 @@ export async function getActiveRoomSession(db: D1Database, roomId: string): Prom
                     result_summary_json as resultSummaryJson,
                     started_at as startedAt,
                     ended_at as endedAt
-                FROM room_sessions
-                WHERE room_id = ?1
+                FROM lobby_sessions
+                WHERE lobby_id = ?1
                     AND status = 'active'
                 ORDER BY started_at DESC
                 LIMIT 1
             `
         )
-        .bind(roomId)
-        .first<RoomSessionRow>()
+        .bind(lobbyId)
+        .first<LobbySessionRow>()
 
-    return row ? mapRoomSessionRow(row) : null
+    return row ? mapLobbySessionRow(row) : null
 }
 
-export async function listRoomSessions(db: D1Database, roomId: string, limit: number = 20): Promise<RealtimeRoomSessionSummary[]> {
+export async function listLobbySessions(db: D1Database, lobbyId: string, limit: number = 20): Promise<RealtimeLobbySessionSummary[]> {
     const normalizedLimit = Math.max(1, Math.min(limit, 100))
     const result = await db
         .prepare(
             `
                 SELECT
                     id,
-                    room_id as roomId,
-                    room_name as roomName,
+                    lobby_id as lobbyId,
+                    lobby_name as lobbyName,
                     game_name as gameName,
                     initiated_by_user_id as initiatedByUserId,
                     status,
@@ -147,14 +147,14 @@ export async function listRoomSessions(db: D1Database, roomId: string, limit: nu
                     result_summary_json as resultSummaryJson,
                     started_at as startedAt,
                     ended_at as endedAt
-                FROM room_sessions
-                WHERE room_id = ?1
+                FROM lobby_sessions
+                WHERE lobby_id = ?1
                 ORDER BY started_at DESC
                 LIMIT ?2
             `
         )
-        .bind(roomId, normalizedLimit)
-        .all<RoomSessionRow>()
+        .bind(lobbyId, normalizedLimit)
+        .all<LobbySessionRow>()
 
-    return (result.results || []).map(mapRoomSessionRow)
+    return (result.results || []).map(mapLobbySessionRow)
 }

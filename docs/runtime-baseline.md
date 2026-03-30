@@ -35,9 +35,9 @@ An example file exists at `.env.example`.
 
 ## Current Production Assumptions
 
-- the frontend talks to the Worker API for realtime, uploads, and room state
-- Durable Objects hold authoritative live room state
-- D1 stores low-frequency metadata such as identity, lobby discovery, and room session history
+- the frontend talks to the Worker API for realtime, uploads, and lobby state
+- Durable Objects hold authoritative live lobby state
+- D1 stores low-frequency metadata such as identity, lobby discovery, and lobby session history
 - R2 stores public uploaded assets
 
 ## Known Constraints

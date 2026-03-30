@@ -44,8 +44,8 @@ export function getCloudflareRealtimeApiUrl(pathname: string, currentOrigin?: st
     return new URL(pathname, getCloudflareRealtimeApiOrigin(currentOrigin)).toString()
 }
 
-export function getCloudflareRoomWebSocketUrl(roomId: string, token?: string, currentOrigin?: string): string {
-    const url = new URL(getCloudflareRealtimeApiUrl(`/rooms/${encodeURIComponent(roomId)}/websocket`, currentOrigin))
+export function getCloudflareLobbyWebSocketUrl(lobbyId: string, token?: string, currentOrigin?: string): string {
+    const url = new URL(getCloudflareRealtimeApiUrl(`/lobbies/${encodeURIComponent(lobbyId)}/websocket`, currentOrigin))
 
     url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
 

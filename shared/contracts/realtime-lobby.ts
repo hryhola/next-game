@@ -1,5 +1,5 @@
 import type { IdentityProfile } from './identity'
-import type { JeopardyDeclaration, RealtimeJeopardyPublicSession } from './jeopardy'
+import type { JeopardyDeclaration, RealtimeJeopardyPublicSession, RealtimeJeopardySessionInternal } from './jeopardy'
 import type { LobbyBaseInfo } from './lobby'
 
 export type RealtimeLobbyGameName = 'TicTacToe' | 'Clicker' | 'Jeopardy'
@@ -24,11 +24,6 @@ export interface RealtimeLobbyMember extends IdentityProfile {
     connected: boolean
     isCreator: boolean
     joinedAt: string
-    playerChar?: TicTacToePlayerChar
-    playerIsClickAllowed?: boolean
-    playerIsMaster?: boolean
-    playerScore?: number
-    ready: boolean | null
     role: RealtimeLobbyMemberRole
 }
 
@@ -36,6 +31,7 @@ export interface RealtimeReadyCheckState {
     participants: string[]
     status: ReadyCheckStatus
     updatedAt: string | null
+    votes: Record<string, boolean | null>
 }
 
 export interface RealtimeTicTacToeSession {
@@ -59,44 +55,93 @@ export interface RealtimeClickerSession {
     winnerUserId: string | null
 }
 
-export interface RealtimeTicTacToeGame {
+export interface RealtimeTicTacToeParticipantView {
+    memberId: string
+    seat: TicTacToePlayerChar
+}
+
+export interface RealtimeClickerParticipantView {
+    isClickAllowed: boolean
+    memberId: string
+    score: number
+}
+
+export interface RealtimeJeopardyParticipantView {
+    isMaster: boolean
+    memberId: string
+    score: number
+}
+
+export type LobbyGameParticipantView = RealtimeClickerParticipantView | RealtimeJeopardyParticipantView | RealtimeTicTacToeParticipantView
+
+export type LobbyGameSessionView = RealtimeClickerSession | RealtimeJeopardyPublicSession | RealtimeTicTacToeSession | null
+
+export interface RealtimeTicTacToeGameConfig {
+    [key: string]: never
+}
+
+export interface RealtimeClickerGameConfig {
+    backgroundUrl?: string
+}
+
+export interface RealtimeJeopardyGameConfig {
+    pack: {
+        public: true
+        value: string
+    }
+}
+
+export type LobbyGameConfigInput = RealtimeClickerGameConfig | RealtimeJeopardyGameConfig | RealtimeTicTacToeGameConfig
+
+export interface RealtimeTicTacToeGameView {
+    config: RealtimeTicTacToeGameConfig
+    kind: 'TicTacToe'
     name: 'TicTacToe'
-    session: RealtimeTicTacToeSession
+    participants: RealtimeTicTacToeParticipantView[]
+    session: RealtimeTicTacToeSession | null
+    status: RealtimeLobbyStatus
 }
 
-export interface RealtimeClickerGame {
-    initialData: {
-        backgroundUrl?: string
-    }
+export interface RealtimeClickerGameView {
+    config: RealtimeClickerGameConfig
+    kind: 'Clicker'
     name: 'Clicker'
-    session: RealtimeClickerSession
+    participants: RealtimeClickerParticipantView[]
+    session: RealtimeClickerSession | null
+    status: RealtimeLobbyStatus
 }
 
-export interface RealtimeJeopardyGame {
-    initialData: {
-        pack: {
-            public: true
-            value: string
-        }
-    }
+export interface RealtimeJeopardyGameView {
+    config: RealtimeJeopardyGameConfig
+    internal?: RealtimeJeopardySessionInternal
+    kind: 'Jeopardy'
     name: 'Jeopardy'
+    participants: RealtimeJeopardyParticipantView[]
     session: RealtimeJeopardyPublicSession | null
+    status: RealtimeLobbyStatus
 }
 
-export type RealtimeLobbyGame = RealtimeTicTacToeGame | RealtimeClickerGame | RealtimeJeopardyGame
+export type LobbyGameView = RealtimeClickerGameView | RealtimeJeopardyGameView | RealtimeTicTacToeGameView
+export type RealtimeTicTacToeGame = RealtimeTicTacToeGameView
+export type RealtimeClickerGame = RealtimeClickerGameView
+export type RealtimeJeopardyGame = RealtimeJeopardyGameView
+export type RealtimeLobbyGame = LobbyGameView
 
-export interface RealtimeLobbySnapshot {
+export interface RealtimeLobbyState {
     chat: RealtimeChatMessage[]
     createdAt: string
     creatorUserId: string
-    game: RealtimeLobbyGame
+    game: LobbyGameView
     hasPassword: boolean
     members: RealtimeLobbyMember[]
     name: string
     readyCheck: RealtimeReadyCheckState
-    roomId: string
+    lobbyId: string
     updatedAt: string
+    version: 2
 }
+
+export type RealtimeLobbySnapshot = RealtimeLobbyState
 
 export interface RealtimeLobbyListItem extends LobbyBaseInfo {
     createdAt: string
@@ -110,143 +155,73 @@ export interface RealtimeLobbyListItem extends LobbyBaseInfo {
     updatedAt: string
 }
 
-export interface CreateLobbyRequest {
-    gameName?: RealtimeLobbyGameName
-    initialData?: {
-        pack?: {
-            assetId: string
-            author: string
-            dateCreated: string
-            declaration: JeopardyDeclaration.Pack
-            fileName: string
-            value: string
-        }
-    }
+export interface CreateLobbyGameRequest {
+    config: LobbyGameConfigInput
+    kind: RealtimeLobbyGameName
+}
+
+export interface CreateLobbyRequestV2 {
+    game: CreateLobbyGameRequest
     name?: string
     password?: string
-    roomId: string
+    lobbyId: string
 }
 
-export interface LobbyRoomJoinMessage {
+export type CreateLobbyRequest = CreateLobbyRequestV2
+
+export type LobbyCommandName = 'join' | 'leave' | 'tip' | 'kick' | 'chat.send' | 'ready.start' | 'ready.set' | 'game.start'
+
+export interface LobbyCommandMessage {
     payload: {
-        password?: string
-        role: RealtimeLobbyMemberRole
+        commandName: LobbyCommandName
+        commandPayload?: unknown
     }
-    type: 'room.join'
+    type: 'lobby.command'
 }
 
-export interface LobbyRoomLeaveMessage {
-    type: 'room.leave'
-}
-
-export interface LobbyRoomSyncMessage {
-    type: 'room.sync'
-}
-
-export interface LobbyRoomChatSendMessage {
+export interface LobbyGameCommandMessage {
     payload: {
-        text: string
+        commandName: string
+        commandPayload?: unknown
     }
-    type: 'chat.send'
+    type: 'game.command'
 }
 
-export interface LobbyRoomReadyStartMessage {
-    type: 'ready.start'
-}
-
-export interface LobbyRoomReadySetMessage {
-    payload: {
-        ready: boolean
-    }
-    type: 'ready.set'
-}
-
-export interface LobbyRoomGameStartMessage {
-    type: 'game.start'
-}
-
-export interface LobbyRoomTicTacToeMoveMessage {
-    payload: {
-        cell: TicTacToeCellCoords
-    }
-    type: 'tictactoe.move'
-}
-
-export interface LobbyRoomClickerClickMessage {
-    payload: {
-        x: number
-        y: number
-    }
-    type: 'clicker.click'
-}
-
-export interface LobbyRoomJeopardyActionMessage {
-    payload: {
-        actionName: string
-        actionPayload: unknown
-    }
-    type: 'jeopardy.action'
-}
-
-export interface LobbyRoomTipClientMessage {
-    payload: {
-        id: string
-        toUserId: string
-    }
-    type: 'room.tip'
-}
-
-export interface LobbyRoomKickClientMessage {
-    payload: {
-        userId: string
-    }
-    type: 'room.kick'
-}
-
-export interface LobbyRoomPingMessage {
+export interface LobbyPingMessage {
     type: 'ping'
 }
 
-export type LobbyRoomClientMessage =
-    | LobbyRoomChatSendMessage
-    | LobbyRoomClickerClickMessage
-    | LobbyRoomGameStartMessage
-    | LobbyRoomJeopardyActionMessage
-    | LobbyRoomJoinMessage
-    | LobbyRoomKickClientMessage
-    | LobbyRoomLeaveMessage
-    | LobbyRoomPingMessage
-    | LobbyRoomReadySetMessage
-    | LobbyRoomReadyStartMessage
-    | LobbyRoomSyncMessage
-    | LobbyRoomTipClientMessage
-    | LobbyRoomTicTacToeMoveMessage
-
-export interface LobbyRoomSnapshotMessage {
-    payload: RealtimeLobbySnapshot
-    type: 'room.snapshot'
+export interface LobbySyncMessage {
+    type: 'lobby.sync'
 }
 
-export interface LobbyRoomErrorMessage {
+export type LobbyClientMessage = LobbyPingMessage | LobbySyncMessage | LobbyCommandMessage | LobbyGameCommandMessage
+
+export interface LobbyStateMessage {
+    payload: RealtimeLobbyState
+    type: 'lobby.state'
+}
+
+export interface LobbyErrorMessage {
     payload: {
         code?: string
         message: string
     }
-    type: 'room.error'
+    type: 'lobby.error'
 }
 
-export interface LobbyRoomNoticeMessage {
+export interface LobbyNoticeMessage {
     payload: {
         message: string
     }
-    type: 'room.notice'
+    type: 'lobby.notice'
 }
 
-export interface LobbyRoomPongMessage {
+export interface LobbyPongMessage {
     type: 'pong'
 }
 
-export interface LobbyRoomGameActionMessage {
+export interface LobbyGameActionMessage {
     payload: {
         actionName: string
         actionPayload: unknown
@@ -256,56 +231,27 @@ export interface LobbyRoomGameActionMessage {
             type: 'game' | 'player'
         }
     }
-    type: 'game.action'
+    type: 'game.event'
 }
 
-export interface LobbyRoomGameSessionStartMessage {
-    payload: {
-        session: unknown
-    }
-    type: 'game.session.start'
+export interface LobbyEventMessage {
+    payload:
+        | {
+              eventName: 'tip'
+              eventPayload: {
+                  from: string
+                  id: string
+                  lobbyId: string
+                  to: string
+              }
+          }
+        | {
+              eventName: 'kick'
+              eventPayload: {
+                  memberId: string
+              }
+          }
+    type: 'lobby.event'
 }
 
-export interface LobbyRoomGameSessionUpdateMessage {
-    payload: {
-        data: unknown
-    }
-    type: 'game.session.update'
-}
-
-export interface LobbyRoomGameSessionEndMessage {
-    payload: {
-        players: unknown[]
-        session: unknown
-    }
-    type: 'game.session.end'
-}
-
-export interface LobbyRoomTipServerMessage {
-    payload: {
-        from: string
-        id: string
-        lobbyId: string
-        to: string
-    }
-    type: 'room.tip'
-}
-
-export interface LobbyRoomKickServerMessage {
-    payload: {
-        memberId: string
-    }
-    type: 'room.kick'
-}
-
-export type LobbyRoomServerMessage =
-    | LobbyRoomErrorMessage
-    | LobbyRoomGameActionMessage
-    | LobbyRoomGameSessionEndMessage
-    | LobbyRoomGameSessionStartMessage
-    | LobbyRoomGameSessionUpdateMessage
-    | LobbyRoomKickServerMessage
-    | LobbyRoomNoticeMessage
-    | LobbyRoomPongMessage
-    | LobbyRoomSnapshotMessage
-    | LobbyRoomTipServerMessage
+export type LobbyServerMessage = LobbyErrorMessage | LobbyEventMessage | LobbyGameActionMessage | LobbyNoticeMessage | LobbyPongMessage | LobbyStateMessage

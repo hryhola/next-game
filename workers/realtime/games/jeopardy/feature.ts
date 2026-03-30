@@ -1,4 +1,4 @@
-import type { LobbyRoomGameActionMessage, LobbyRoomServerMessage } from '../../../shared/contracts/realtime-lobby'
+import type { LobbyGameActionMessage } from '../../../../shared/contracts/realtime-lobby'
 import type {
     JeopardyDeclaration,
     RealtimeJeopardyPublicSession,
@@ -7,8 +7,8 @@ import type {
     RealtimeJeopardySessionState,
     RealtimeJeopardyState,
     RealtimeJeopardyWinner
-} from '../../../shared/contracts/jeopardy'
-import { shuffle } from '../../../util/array'
+} from '../../../../shared/contracts/jeopardy'
+import { shuffle } from '../../../../util/array'
 import {
     getAnswers as getJeopardyAnswers,
     getFinalThemes,
@@ -20,12 +20,12 @@ import {
     getRoundThemeNames,
     getRoundsCount,
     isFinalRound
-} from '../jeopardy/pack'
-import type { FinalizeRoomSessionInput } from '../room-sessions/store'
-import type { RoomScheduler } from '../scheduler/RoomScheduler'
-import { nowIso } from './common'
+} from '../../jeopardy/pack'
+import type { FinalizeLobbySessionInput } from '../../lobby-sessions/store'
+import type { LobbyScheduler } from '../../scheduler/LobbyScheduler'
+import { nowIso } from '../../lobby/time'
 import type { GameStartResult, JeopardyActionResult, ScheduledTaskResult } from './operations'
-import type { RoomScheduledTaskPayload, StoredJeopardyGame, StoredJeopardySession, StoredLobbyMember, StoredLobbyState } from './types'
+import type { LobbyScheduledTaskPayload, StoredJeopardyGame, StoredJeopardySession, StoredLobbyMember, StoredLobbyState } from './internal-types'
 
 const JEOPARDY_PACK_PREVIEW_DURATION_MS = 10_000
 const JEOPARDY_ROUND_NAME_PREVIEW_DURATION_MS = 2_000
@@ -38,16 +38,14 @@ const JEOPARDY_ANSWER_VERIFYING_DURATION_MS = 10_000
 const JEOPARDY_ANSWER_COOLDOWN_MS = 2_000
 
 type JeopardyDeps = {
-    broadcastServerMessage: (message: LobbyRoomServerMessage) => void
-    createGameActionMessage: (payload: LobbyRoomGameActionMessage['payload']) => LobbyRoomGameActionMessage
+    createGameActionMessage: (payload: LobbyGameActionMessage['payload']) => LobbyGameActionMessage
     getConnectedSocketsCount: (userId: string) => number
-    persistFinalizedRoomSession: (session: FinalizeRoomSessionInput | null | undefined) => Promise<void>
-    scheduler: RoomScheduler<RoomScheduledTaskPayload>
-    sendServerMessageToUser: (userId: string, message: LobbyRoomServerMessage) => void
+    persistFinalizedLobbySession: (session: FinalizeLobbySessionInput | null | undefined) => Promise<void>
+    scheduler: LobbyScheduler<LobbyScheduledTaskPayload>
 }
 
-function withRoomSessionId(internal: RealtimeJeopardySessionInternal): RealtimeJeopardySessionInternal & { roomSessionId?: string } {
-    return internal as RealtimeJeopardySessionInternal & { roomSessionId?: string }
+function withLobbySessionId(internal: RealtimeJeopardySessionInternal): RealtimeJeopardySessionInternal & { lobbySessionId?: string } {
+    return internal as RealtimeJeopardySessionInternal & { lobbySessionId?: string }
 }
 
 export function createEmptyJeopardySessionInternal(): RealtimeJeopardySessionInternal {
@@ -78,7 +76,7 @@ export function createEmptyJeopardySession(): StoredJeopardySession {
     }
 }
 
-export class JeopardyRoomFeature {
+export class JeopardyLobbyFeature {
     constructor(private readonly deps: JeopardyDeps) {}
 
     toPublicSession(session: StoredJeopardySession): RealtimeJeopardyPublicSession {
@@ -98,7 +96,7 @@ export class JeopardyRoomFeature {
     }
 
     toInternalView(internal: RealtimeJeopardySessionInternal): RealtimeJeopardySessionInternal {
-        const { roomSessionId: _roomSessionId, ...sessionInternal } = withRoomSessionId(internal)
+        const { lobbySessionId: _lobbySessionId, ...sessionInternal } = withLobbySessionId(internal)
 
         return sessionInternal
     }
@@ -111,24 +109,24 @@ export class JeopardyRoomFeature {
         return state.members.filter(member => member.role === 'player' && member.id !== state.creatorUserId)
     }
 
-    getActiveRoomSessionId(state: StoredLobbyState): string | null {
+    getActiveLobbySessionId(state: StoredLobbyState): string | null {
         const activeSession = state.game.name === 'Jeopardy' ? state.game.session : null
 
         if (!activeSession) {
             return null
         }
 
-        return withRoomSessionId(activeSession.internal).roomSessionId || null
+        return withLobbySessionId(activeSession.internal).lobbySessionId || null
     }
 
-    setRoomSessionId(state: StoredLobbyState, roomSessionId: string): void {
+    setLobbySessionId(state: StoredLobbyState, lobbySessionId: string): void {
         const session = this.getSession(state)
 
         if (!session) {
             return
         }
 
-        withRoomSessionId(session.internal).roomSessionId = roomSessionId
+        withLobbySessionId(session.internal).lobbySessionId = lobbySessionId
     }
 
     async startGame(state: StoredLobbyState, userId: string): Promise<GameStartResult> {
@@ -179,7 +177,7 @@ export class JeopardyRoomFeature {
         const startedAt = nowIso()
 
         state.game.session = createEmptyJeopardySession()
-        this.setRoomSessionId(state, sessionId)
+        this.setLobbySessionId(state, sessionId)
 
         await this.beginPackPreview(state, sessionId)
         state.members.forEach(member => {
@@ -188,10 +186,9 @@ export class JeopardyRoomFeature {
         state.readyCheck = {
             participants: [],
             status: 'idle',
-            updatedAt: nowIso()
+            updatedAt: nowIso(),
+            votes: {}
         }
-        this.broadcastSessionStart(state)
-
         return {
             success: true,
             startedSession: {
@@ -303,7 +300,7 @@ export class JeopardyRoomFeature {
                     pickedQuestion: payload.questionId
                 })
 
-                const sessionId = this.getActiveRoomSessionId(state)
+                const sessionId = this.getActiveLobbySessionId(state)
 
                 if (sessionId) {
                     await this.scheduleTask(
@@ -349,7 +346,7 @@ export class JeopardyRoomFeature {
                 }
 
                 if (session.frame.answeringStatus !== 'allowed' || session.frame.answeringPlayerId) {
-                    const sessionId = this.getActiveRoomSessionId(state)
+                    const sessionId = this.getActiveLobbySessionId(state)
 
                     if (sessionId) {
                         await this.scheduleTask(
@@ -392,7 +389,7 @@ export class JeopardyRoomFeature {
 
                 session.meta.answerRequestRemainingMs = remainingMs
 
-                const sessionId = this.getActiveRoomSessionId(state)
+                const sessionId = this.getActiveLobbySessionId(state)
 
                 if (sessionId) {
                     await this.cancelTask(sessionId, 'answer-request.complete')
@@ -452,7 +449,7 @@ export class JeopardyRoomFeature {
                     currentAnsweringPlayerId: userId
                 })
 
-                const sessionId = this.getActiveRoomSessionId(state)
+                const sessionId = this.getActiveLobbySessionId(state)
 
                 if (sessionId) {
                     await this.cancelTask(sessionId, 'answer-giving.complete')
@@ -522,7 +519,7 @@ export class JeopardyRoomFeature {
                     result: payload.rating
                 })
 
-                const sessionId = this.getActiveRoomSessionId(state)
+                const sessionId = this.getActiveLobbySessionId(state)
 
                 if (sessionId) {
                     await this.cancelTask(sessionId, 'answer-verifying.complete')
@@ -609,7 +606,7 @@ export class JeopardyRoomFeature {
                     }
                 }
 
-                const sessionId = this.getActiveRoomSessionId(state)
+                const sessionId = this.getActiveLobbySessionId(state)
 
                 if (!sessionId) {
                     return {
@@ -813,7 +810,6 @@ export class JeopardyRoomFeature {
                 }
 
                 session.internal.finalBets[userId] = value
-                this.sendInternalSessionUpdate(state)
 
                 this.updateFrame(state, {
                     ...session.frame,
@@ -861,7 +857,6 @@ export class JeopardyRoomFeature {
                 session.internal.finalAnswers[userId] = {
                     value: payload?.answer || ''
                 }
-                this.sendInternalSessionUpdate(state)
 
                 this.updateFrame(state, {
                     ...session.frame,
@@ -922,7 +917,6 @@ export class JeopardyRoomFeature {
                 answer.rate = rate
                 answeringPlayer.playerScore +=
                     rate === 'approved' ? session.internal.finalBets[answeringPlayerId] || 0 : -(session.internal.finalBets[answeringPlayerId] || 0)
-                this.sendInternalSessionUpdate(state)
 
                 return {
                     stateChanged: true,
@@ -970,7 +964,7 @@ export class JeopardyRoomFeature {
         }
     }
 
-    async handleTask(state: StoredLobbyState, task: RoomScheduledTaskPayload): Promise<ScheduledTaskResult> {
+    async handleTask(state: StoredLobbyState, task: LobbyScheduledTaskPayload): Promise<ScheduledTaskResult> {
         switch (task.type) {
             case 'jeopardy.pack-preview.complete':
                 return this.handlePackPreviewCompleteTask(state, task.sessionId)
@@ -1002,24 +996,22 @@ export class JeopardyRoomFeature {
             return
         }
 
-        const publicSession = this.toPublicSession(state.game.session)
-        const sessionId = this.getActiveRoomSessionId(state)
+        const sessionId = this.getActiveLobbySessionId(state)
 
         if (sessionId) {
             await this.cancelSessionTasks(sessionId)
         }
 
-        await this.deps.persistFinalizedRoomSession(this.createAbandonedRoomSessionRecord(state, removalReason))
+        await this.deps.persistFinalizedLobbySession(this.createAbandonedLobbySessionRecord(state, removalReason))
         state.game.session = null
-        this.broadcastSessionEnd(state, publicSession)
     }
 
-    createCompletedRoomSessionRecord(state: StoredLobbyState): FinalizeRoomSessionInput | null {
+    createCompletedLobbySessionRecord(state: StoredLobbyState): FinalizeLobbySessionInput | null {
         if (state.game.name !== 'Jeopardy' || !state.game.session) {
             return null
         }
 
-        const sessionId = this.getActiveRoomSessionId(state)
+        const sessionId = this.getActiveLobbySessionId(state)
 
         if (!sessionId) {
             return null
@@ -1053,12 +1045,12 @@ export class JeopardyRoomFeature {
         }
     }
 
-    createAbandonedRoomSessionRecord(state: StoredLobbyState, reason: string): FinalizeRoomSessionInput | null {
+    createAbandonedLobbySessionRecord(state: StoredLobbyState, reason: string): FinalizeLobbySessionInput | null {
         if (state.game.name !== 'Jeopardy') {
             return null
         }
 
-        const sessionId = this.getActiveRoomSessionId(state)
+        const sessionId = this.getActiveLobbySessionId(state)
 
         if (!state.game.session || !sessionId) {
             return null
@@ -1113,68 +1105,6 @@ export class JeopardyRoomFeature {
         return state.game.name === 'Jeopardy' ? state.game.session : null
     }
 
-    private sendInternalSessionUpdate(state: StoredLobbyState): void {
-        if (state.game.name !== 'Jeopardy' || !state.game.session) {
-            return
-        }
-
-        const master = this.getMaster(state)
-
-        if (!master) {
-            return
-        }
-
-        this.deps.sendServerMessageToUser(master.id, {
-            type: 'game.session.update',
-            payload: {
-                data: {
-                    internal: this.toInternalView(state.game.session.internal)
-                }
-            }
-        })
-    }
-
-    private broadcastSessionStart(state: StoredLobbyState): void {
-        if (state.game.name !== 'Jeopardy' || !state.game.session) {
-            return
-        }
-
-        this.deps.broadcastServerMessage({
-            type: 'game.session.start',
-            payload: {
-                session: this.toPublicSession(state.game.session)
-            }
-        })
-        this.sendInternalSessionUpdate(state)
-    }
-
-    private broadcastSessionUpdate(state: StoredLobbyState, data: Partial<RealtimeJeopardyPublicSession>): void {
-        if (state.game.name !== 'Jeopardy' || !state.game.session) {
-            return
-        }
-
-        this.deps.broadcastServerMessage({
-            type: 'game.session.update',
-            payload: {
-                data
-            }
-        })
-    }
-
-    private broadcastSessionEnd(state: StoredLobbyState, session: RealtimeJeopardyPublicSession): void {
-        this.deps.broadcastServerMessage({
-            type: 'game.session.end',
-            payload: {
-                players: state.members
-                    .filter(member => member.role === 'player')
-                    .map(member => ({
-                        ...this.toWinner(member)
-                    })),
-                session
-            }
-        })
-    }
-
     private createSuccessfulGameAction(actor: { id: string; type: 'game' | 'player' }, actionName: string, actionPayload: unknown, actionResult?: unknown) {
         return this.deps.createGameActionMessage({
             actor,
@@ -1195,7 +1125,7 @@ export class JeopardyRoomFeature {
         return `${this.getSessionTaskPrefix(sessionId)}${suffix}`
     }
 
-    private async scheduleTask(sessionId: string, suffix: string, payload: RoomScheduledTaskPayload, delayMs: number): Promise<void> {
+    private async scheduleTask(sessionId: string, suffix: string, payload: LobbyScheduledTaskPayload, delayMs: number): Promise<void> {
         await this.deps.scheduler.schedule({
             key: this.getTaskKey(sessionId, suffix),
             payload,
@@ -1222,8 +1152,6 @@ export class JeopardyRoomFeature {
             ...session.internal,
             ...patch
         }
-
-        this.sendInternalSessionUpdate(state)
     }
 
     private updateFrame(state: StoredLobbyState, frame: RealtimeJeopardyState.Frame): void {
@@ -1234,10 +1162,6 @@ export class JeopardyRoomFeature {
         }
 
         session.frame = frame
-        this.broadcastSessionUpdate(state, {
-            frame,
-            isPaused: session.isPaused
-        })
     }
 
     private async beginPackPreview(state: StoredLobbyState, sessionId: string): Promise<void> {
@@ -1249,7 +1173,7 @@ export class JeopardyRoomFeature {
         }
 
         session.internal = createEmptyJeopardySessionInternal()
-        withRoomSessionId(session.internal).roomSessionId = sessionId
+        withLobbySessionId(session.internal).lobbySessionId = sessionId
         session.isPaused = false
         session.meta.answerRequestRemainingMs = null
         session.meta.currentQuestionFlow = null
@@ -1276,7 +1200,7 @@ export class JeopardyRoomFeature {
         }
 
         const round = getRoundThemeNames(game.packDeclaration, roundId)
-        const sessionId = this.getActiveRoomSessionId(state)
+        const sessionId = this.getActiveLobbySessionId(state)
 
         if (!round || !sessionId) {
             return
@@ -1287,23 +1211,6 @@ export class JeopardyRoomFeature {
             isRoundName: true,
             text: round.roundName
         }
-
-        this.broadcastSessionUpdate(state, {
-            frame: session.frame,
-            isPaused: session.isPaused
-        })
-        this.deps.broadcastServerMessage(
-            this.createSuccessfulGameAction(
-                {
-                    id: 'game',
-                    type: 'game'
-                },
-                '$RoundPreview',
-                {
-                    roundId
-                }
-            )
-        )
 
         await this.deps.scheduler.cancelByPrefix(this.getTaskKey(sessionId, 'round-preview.theme.'))
         await this.cancelTask(sessionId, 'round-preview.complete').catch(() => null)
@@ -1423,7 +1330,7 @@ export class JeopardyRoomFeature {
         beforeMarker: boolean
     ): Promise<void> {
         const session = this.getSession(state)
-        const sessionId = this.getActiveRoomSessionId(state)
+        const sessionId = this.getActiveLobbySessionId(state)
 
         if (!session || !sessionId) {
             return
@@ -1481,7 +1388,7 @@ export class JeopardyRoomFeature {
 
     private async beginAnswerRequest(state: StoredLobbyState, durationMs: number): Promise<void> {
         const session = this.getSession(state)
-        const sessionId = this.getActiveRoomSessionId(state)
+        const sessionId = this.getActiveLobbySessionId(state)
 
         if (!session || !sessionId || session.frame.id !== 'question-content') {
             return
@@ -1519,7 +1426,7 @@ export class JeopardyRoomFeature {
     private async beginAnswerVerifying(state: StoredLobbyState): Promise<void> {
         const game = this.getGame(state)
         const session = this.getSession(state)
-        const sessionId = this.getActiveRoomSessionId(state)
+        const sessionId = this.getActiveLobbySessionId(state)
 
         if (!game || !session || !sessionId || session.frame.id !== 'question-content') {
             return
@@ -1746,12 +1653,12 @@ export class JeopardyRoomFeature {
             winner: this.toWinner(winner)
         })
 
-        await this.deps.persistFinalizedRoomSession(this.createCompletedRoomSessionRecord(state))
+        await this.deps.persistFinalizedLobbySession(this.createCompletedLobbySessionRecord(state))
     }
 
     private async pauseSession(state: StoredLobbyState): Promise<JeopardyActionResult> {
         const session = this.getSession(state)
-        const sessionId = this.getActiveRoomSessionId(state)
+        const sessionId = this.getActiveLobbySessionId(state)
 
         if (!session || !sessionId) {
             return {
@@ -1786,10 +1693,6 @@ export class JeopardyRoomFeature {
         }
 
         session.isPaused = true
-        this.broadcastSessionUpdate(state, {
-            frame: this.toPublicSession(session).frame,
-            isPaused: true
-        })
 
         return {
             action: this.createSuccessfulGameAction(
@@ -1836,7 +1739,7 @@ export class JeopardyRoomFeature {
             )
         )
 
-        const getRemainingMs = (type: RoomScheduledTaskPayload['type']) =>
+        const getRemainingMs = (type: LobbyScheduledTaskPayload['type']) =>
             session.meta.pausedTasks.find(task => task.payload.type === type)?.remainingMs || null
 
         session.meta.pausedTasks = []
@@ -1871,11 +1774,6 @@ export class JeopardyRoomFeature {
             }
         }
 
-        this.broadcastSessionUpdate(state, {
-            frame: this.toPublicSession(session).frame,
-            isPaused: false
-        })
-
         return {
             action: this.createSuccessfulGameAction(
                 {
@@ -1891,7 +1789,7 @@ export class JeopardyRoomFeature {
     }
 
     private async handlePackPreviewCompleteTask(state: StoredLobbyState, sessionId: string): Promise<ScheduledTaskResult> {
-        if (state.game.name !== 'Jeopardy' || this.getActiveRoomSessionId(state) !== sessionId) {
+        if (state.game.name !== 'Jeopardy' || this.getActiveLobbySessionId(state) !== sessionId) {
             return {
                 stateChanged: false
             }
@@ -1905,7 +1803,7 @@ export class JeopardyRoomFeature {
     }
 
     private async handleRoundPreviewThemeTask(state: StoredLobbyState, sessionId: string, roundId: number, themeIndex: number): Promise<ScheduledTaskResult> {
-        if (state.game.name !== 'Jeopardy' || this.getActiveRoomSessionId(state) !== sessionId || !state.game.session) {
+        if (state.game.name !== 'Jeopardy' || this.getActiveLobbySessionId(state) !== sessionId || !state.game.session) {
             return {
                 stateChanged: false
             }
@@ -1939,7 +1837,7 @@ export class JeopardyRoomFeature {
     }
 
     private async handleRoundPreviewCompleteTask(state: StoredLobbyState, sessionId: string, roundId: number): Promise<ScheduledTaskResult> {
-        if (state.game.name !== 'Jeopardy' || this.getActiveRoomSessionId(state) !== sessionId || !state.game.session) {
+        if (state.game.name !== 'Jeopardy' || this.getActiveLobbySessionId(state) !== sessionId || !state.game.session) {
             return {
                 stateChanged: false
             }
@@ -1961,7 +1859,7 @@ export class JeopardyRoomFeature {
         sessionId: string,
         questionId: RealtimeJeopardyQuestionId
     ): Promise<ScheduledTaskResult> {
-        if (state.game.name !== 'Jeopardy' || this.getActiveRoomSessionId(state) !== sessionId) {
+        if (state.game.name !== 'Jeopardy' || this.getActiveLobbySessionId(state) !== sessionId) {
             return {
                 stateChanged: false
             }
@@ -1975,7 +1873,7 @@ export class JeopardyRoomFeature {
     }
 
     private async handleQuestionAtomCompleteTask(state: StoredLobbyState, sessionId: string): Promise<ScheduledTaskResult> {
-        if (state.game.name !== 'Jeopardy' || this.getActiveRoomSessionId(state) !== sessionId) {
+        if (state.game.name !== 'Jeopardy' || this.getActiveLobbySessionId(state) !== sessionId) {
             return {
                 stateChanged: false
             }
@@ -1989,7 +1887,7 @@ export class JeopardyRoomFeature {
     }
 
     private async handleAnswerRequestCompleteTask(state: StoredLobbyState, sessionId: string): Promise<ScheduledTaskResult> {
-        if (state.game.name !== 'Jeopardy' || this.getActiveRoomSessionId(state) !== sessionId || !state.game.session) {
+        if (state.game.name !== 'Jeopardy' || this.getActiveLobbySessionId(state) !== sessionId || !state.game.session) {
             return {
                 stateChanged: false
             }
@@ -2028,7 +1926,7 @@ export class JeopardyRoomFeature {
     }
 
     private async handleAnswerGivingCompleteTask(state: StoredLobbyState, sessionId: string): Promise<ScheduledTaskResult> {
-        if (state.game.name !== 'Jeopardy' || this.getActiveRoomSessionId(state) !== sessionId || !state.game.session) {
+        if (state.game.name !== 'Jeopardy' || this.getActiveLobbySessionId(state) !== sessionId || !state.game.session) {
             return {
                 stateChanged: false
             }
@@ -2053,7 +1951,7 @@ export class JeopardyRoomFeature {
     }
 
     private async handleAnswerVerifyingCompleteTask(state: StoredLobbyState, sessionId: string): Promise<ScheduledTaskResult> {
-        if (state.game.name !== 'Jeopardy' || this.getActiveRoomSessionId(state) !== sessionId || !state.game.session) {
+        if (state.game.name !== 'Jeopardy' || this.getActiveLobbySessionId(state) !== sessionId || !state.game.session) {
             return {
                 stateChanged: false
             }
@@ -2093,7 +1991,7 @@ export class JeopardyRoomFeature {
     }
 
     private async handleCooldownCompleteTask(state: StoredLobbyState, sessionId: string, userId: string): Promise<ScheduledTaskResult> {
-        if (state.game.name !== 'Jeopardy' || this.getActiveRoomSessionId(state) !== sessionId || !state.game.session) {
+        if (state.game.name !== 'Jeopardy' || this.getActiveLobbySessionId(state) !== sessionId || !state.game.session) {
             return {
                 stateChanged: false
             }

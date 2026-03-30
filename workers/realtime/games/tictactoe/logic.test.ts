@@ -1,4 +1,4 @@
-import { createEmptyBoard, findWinningLine, isBoardFull } from './tictactoe'
+import { createEmptyBoard, findWinningLine, isBoardFull } from './logic'
 
 describe('tictactoe lobby helpers', () => {
     it('creates an empty 3x3 board', () => {

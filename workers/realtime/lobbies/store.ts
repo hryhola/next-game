@@ -9,14 +9,14 @@ type LobbyRow = {
     membersCount: number
     name: string
     playersCount: number
-    roomId: string
+    lobbyId: string
     status: string
     updatedAt: string
 }
 
 function mapLobbyRow(row: LobbyRow): RealtimeLobbyListItem {
     return {
-        id: row.roomId,
+        id: row.lobbyId,
         private: Boolean(row.hasPassword),
         createdAt: row.createdAt,
         creatorNickname: row.creatorNickname,
@@ -35,7 +35,7 @@ export async function listLobbies(db: D1Database): Promise<RealtimeLobbyListItem
         .prepare(
             `
                 SELECT
-                    room_id as roomId,
+                    lobby_id as lobbyId,
                     name,
                     game_name as gameName,
                     creator_user_id as creatorUserId,
@@ -56,12 +56,12 @@ export async function listLobbies(db: D1Database): Promise<RealtimeLobbyListItem
     return (result.results || []).map(mapLobbyRow)
 }
 
-export async function getLobbyMetadata(db: D1Database, roomId: string): Promise<RealtimeLobbyListItem | null> {
+export async function getLobbyMetadata(db: D1Database, lobbyId: string): Promise<RealtimeLobbyListItem | null> {
     const row = await db
         .prepare(
             `
                 SELECT
-                    room_id as roomId,
+                    lobby_id as lobbyId,
                     name,
                     game_name as gameName,
                     creator_user_id as creatorUserId,
@@ -73,12 +73,12 @@ export async function getLobbyMetadata(db: D1Database, roomId: string): Promise<
                     created_at as createdAt,
                     updated_at as updatedAt
                 FROM lobbies
-                WHERE room_id = ?1
+                WHERE lobby_id = ?1
                     AND deleted_at IS NULL
                 LIMIT 1
             `
         )
-        .bind(roomId)
+        .bind(lobbyId)
         .first<LobbyRow>()
 
     return row ? mapLobbyRow(row) : null
@@ -89,7 +89,7 @@ export async function upsertLobbyMetadata(db: D1Database, item: RealtimeLobbyLis
         .prepare(
             `
                 INSERT INTO lobbies (
-                    room_id,
+                    lobby_id,
                     name,
                     game_name,
                     creator_user_id,
@@ -102,7 +102,7 @@ export async function upsertLobbyMetadata(db: D1Database, item: RealtimeLobbyLis
                     updated_at,
                     deleted_at
                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, NULL)
-                ON CONFLICT(room_id) DO UPDATE SET
+                ON CONFLICT(lobby_id) DO UPDATE SET
                     name = excluded.name,
                     game_name = excluded.game_name,
                     creator_user_id = excluded.creator_user_id,
@@ -132,15 +132,15 @@ export async function upsertLobbyMetadata(db: D1Database, item: RealtimeLobbyLis
         .run()
 }
 
-export async function markLobbyDeleted(db: D1Database, roomId: string, deletedAt: string): Promise<void> {
+export async function markLobbyDeleted(db: D1Database, lobbyId: string, deletedAt: string): Promise<void> {
     await db
         .prepare(
             `
                 UPDATE lobbies
                 SET deleted_at = ?1, updated_at = ?1
-                WHERE room_id = ?2
+                WHERE lobby_id = ?2
             `
         )
-        .bind(deletedAt, roomId)
+        .bind(deletedAt, lobbyId)
         .run()
 }

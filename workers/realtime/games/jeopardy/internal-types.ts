@@ -1,42 +1,23 @@
+import type { IdentityProfile } from '../../../../shared/contracts/identity'
 import type {
     RealtimeChatMessage,
-    RealtimeClickerGame,
-    RealtimeClickerSession,
-    RealtimeJeopardyGame,
-    RealtimeLobbyGame,
-    RealtimeLobbyGameName,
+    RealtimeJeopardyGameConfig,
     RealtimeLobbyMemberRole,
-    RealtimeLobbySnapshot,
-    RealtimeReadyCheckState,
-    RealtimeTicTacToeGame,
-    RealtimeTicTacToeSession,
-    TicTacToePlayerChar
-} from '../../../shared/contracts/realtime-lobby'
-import type { IdentityProfile } from '../../../shared/contracts/identity'
-import type { JeopardyDeclaration, RealtimeJeopardyQuestionId, RealtimeJeopardySessionState } from '../../../shared/contracts/jeopardy'
-import type { ScheduledTask } from '../../../shared/domain/ports/Scheduler'
+    RealtimeReadyCheckState
+} from '../../../../shared/contracts/realtime-lobby'
+import type { JeopardyDeclaration, RealtimeJeopardyQuestionId, RealtimeJeopardySessionState } from '../../../../shared/contracts/jeopardy'
 
 export interface StoredLobbyMember extends IdentityProfile {
     isCreator: boolean
     joinedAt: string
-    playerChar: TicTacToePlayerChar | null
-    playerIsClickAllowed: boolean
     playerScore: number
     ready: boolean | null
     role: RealtimeLobbyMemberRole
 }
 
-export interface StoredTicTacToeGame extends RealtimeTicTacToeGame {
-    session: RealtimeTicTacToeSession
-}
-
-export interface StoredClickerGame extends RealtimeClickerGame {
-    session: RealtimeClickerSession
-}
-
 export interface StoredJeopardyPausedTask {
     key: string
-    payload: RoomScheduledTaskPayload
+    payload: LobbyScheduledTaskPayload
     remainingMs: number
 }
 
@@ -60,7 +41,9 @@ export interface StoredJeopardySession extends RealtimeJeopardySessionState {
     meta: StoredJeopardySessionMeta
 }
 
-export interface StoredJeopardyGame extends Omit<RealtimeJeopardyGame, 'session'> {
+export interface StoredJeopardyGame {
+    config: RealtimeJeopardyGameConfig
+    name: 'Jeopardy'
     packAssetId: string
     packAuthor: string
     packDateCreated: string
@@ -70,41 +53,20 @@ export interface StoredJeopardyGame extends Omit<RealtimeJeopardyGame, 'session'
     session: StoredJeopardySession | null
 }
 
-export type StoredLobbyGame = StoredTicTacToeGame | StoredClickerGame | StoredJeopardyGame
-
 export interface StoredLobbyState {
     chat: RealtimeChatMessage[]
     createdAt: string
     creatorUserId: string
-    game: StoredLobbyGame
-    password?: string
+    game: StoredJeopardyGame
     members: StoredLobbyMember[]
     name: string
+    password?: string
     readyCheck: RealtimeReadyCheckState
-    roomId: string
+    lobbyId: string
     updatedAt: string
 }
 
-export interface RoomSocketAttachment {
-    sessionId: string
-    user: IdentityProfile
-}
-
-export type RoomScheduledTaskPayload =
-    | {
-          sessionId: string
-          type: 'clicker.allow-click'
-      }
-    | {
-          sessionId: string
-          type: 'clicker.complete-session'
-          winnerUserId: string
-      }
-    | {
-          sessionId: string
-          type: 'clicker.reenable-player'
-          userId: string
-      }
+export type LobbyScheduledTaskPayload =
     | {
           sessionId: string
           type: 'jeopardy.answer-giving.complete'
@@ -146,7 +108,3 @@ export type RoomScheduledTaskPayload =
           sessionId: string
           type: 'jeopardy.round-preview.complete'
       }
-
-export type RoomScheduledTask = ScheduledTask<RoomScheduledTaskPayload>
-
-export type ComputedLobbySnapshot = RealtimeLobbySnapshot

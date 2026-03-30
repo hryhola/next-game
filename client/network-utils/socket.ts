@@ -8,7 +8,21 @@ const messageLogger = (message: MessageEvent<any>) => {
     try {
         const parsed = JSON.parse(message.data)
 
-        console.log('%c' + parsed.ctx + ' %cget', 'color: aqua', '', parsed.data)
+        if (parsed?.type === 'pong') {
+            return
+        }
+
+        if (typeof parsed?.ctx === 'string') {
+            console.log('%c' + parsed.ctx + ' %cget', 'color: aqua', '', parsed.data)
+            return
+        }
+
+        if (typeof parsed?.type === 'string') {
+            console.log('%c' + parsed.type + ' %cget', 'color: aqua', '', 'payload' in parsed ? parsed.payload : parsed)
+            return
+        }
+
+        console.log('%cget', 'color: aqua', parsed)
     } catch (e) {
         console.log('%cget > ' + message.data, 'color: red')
     }

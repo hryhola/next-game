@@ -2,7 +2,7 @@ import type { ScheduledTask, Scheduler } from '../../../shared/domain/ports/Sche
 
 const STORAGE_KEY = 'scheduler.tasks'
 
-export class RoomScheduler<TPayload> implements Scheduler<TPayload> {
+export class LobbyScheduler<TPayload> implements Scheduler<TPayload> {
     constructor(private readonly storage: DurableObjectStorage) {}
 
     async schedule(task: ScheduledTask<TPayload>): Promise<void> {

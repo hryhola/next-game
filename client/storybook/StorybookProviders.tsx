@@ -52,6 +52,7 @@ export const StorybookProviders: React.FC<Props> = ({ children, user, lobby }) =
     const [chatMessages, setChatMessages] = React.useState<TChatMessage[]>([])
     const [readyCheck, setReadyCheck] = React.useState(Boolean(initialLobby.readyCheck))
     const [readyCheckMembers, setReadyCheckMembers] = React.useState(initialLobby.readyCheck?.members || [])
+    const myRole = members.find(member => member.id === userId)?.memberRole || 'spectator'
 
     const [isProfileEditOpen, setIsProfileEditOpen] = React.useState(false)
     const [isNavigationOpen, setIsNavigationOpen] = React.useState(false)
@@ -106,9 +107,7 @@ export const StorybookProviders: React.FC<Props> = ({ children, user, lobby }) =
             setReadyCheck(false)
             setReadyCheckMembers([])
         },
-        get myRole() {
-            return members.find(member => member.id === userId)?.memberRole || 'spectator'
-        }
+        myRole
     }
 
     return (

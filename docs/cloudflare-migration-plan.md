@@ -7,7 +7,7 @@ This is a historical migration document. The legacy in-memory `state/` tree and 
 Migrate the project from a stateful Next.js + uWebSockets.js server model to this target stack:
 
 - Keep Next.js for the frontend
-- Move realtime and authoritative room logic to Cloudflare Workers + Durable Objects
+- Move realtime and authoritative lobby logic to Cloudflare Workers + Durable Objects
 - Move uploaded assets to R2
 - Add D1 only for metadata that must survive process restarts
 
@@ -23,7 +23,7 @@ The current app is not just "Next.js with websockets". It is a stateful multipla
 - uploads assume local disk
 - some game flows depend on timers and long-lived process state
 
-Cloudflare Durable Objects are the closest serverless primitive to the current architecture because each lobby can become an authoritative room object with its own state, connections, and timers.
+Cloudflare Durable Objects are the closest serverless primitive to the current architecture because each lobby can become an authoritative lobby object with its own state, connections, and timers.
 
 ## Current Hotspots To Refactor
 
@@ -63,7 +63,7 @@ These files are the main coupling points that drive the migration order:
 ### Realtime Backend
 
 - A Cloudflare Worker becomes the entry point
-- Durable Objects become authoritative room actors
+- Durable Objects become authoritative lobby actors
 - each lobby maps to one Durable Object instance
 - websocket fanout, room membership, presence, and game session state move there
 
@@ -78,7 +78,7 @@ These files are the main coupling points that drive the migration order:
     - user profiles
     - asset metadata
     - durable lobby metadata if required
-    - room snapshots if restart recovery is needed
+    - lobby snapshots if restart recovery is needed
 
 ### Domain Layer
 
@@ -156,7 +156,7 @@ Create a transport-independent contract layer shared by frontend and new backend
 ```ts
 type ClientMessage = {
     type: string
-    roomId?: string
+    lobbyId?: string
     requestId?: string
     token?: string
     payload?: unknown
@@ -164,7 +164,7 @@ type ClientMessage = {
 
 type ServerMessage = {
     type: string
-    roomId?: string
+    lobbyId?: string
     requestId?: string
     payload?: unknown
     error?: {
@@ -197,7 +197,7 @@ Preserve the current game logic while removing direct dependency on `uWebSockets
 - Remove static `State.act` usage over time
 - Introduce interfaces such as:
     - `RealtimeBus`
-    - `RoomConnection`
+    - `LobbyConnection`
     - `Scheduler`
     - `AssetStore`
     - `UserStore`
@@ -208,7 +208,7 @@ Preserve the current game logic while removing direct dependency on `uWebSockets
 
 ```ts
 interface RealtimeBus {
-    publishRoom(roomId: string, message: unknown): void
+    publishLobby(lobbyId: string, message: unknown): void
     publishGlobal(message: unknown): void
     sendToConnection(connectionId: string, message: unknown): void
 }
@@ -290,7 +290,7 @@ Still intentionally unsupported through the bridge:
 
 ### First Objects To Introduce
 
-- `LobbyRoomDO`
+- `LobbyDO`
 - optional `GlobalHubDO` if you want centralized lobby list broadcasting
 
 ### Deliverables
@@ -342,7 +342,7 @@ The first migration slice for this phase can stay intentionally thin:
 
 - add a D1-backed identity/session store for persistent profile metadata
 - keep using an opaque cookie token named `token` during transition
-- add a dedicated global presence Durable Object instead of coupling online users to room state
+- add a dedicated global presence Durable Object instead of coupling online users to lobby state
 - leave full frontend cutover and lobby membership migration for Phase 5
 
 ## Phase 5: Migrate Lobby Lifecycle
@@ -366,7 +366,7 @@ Move lobby creation, join/leave, ready checks, and chat to Durable Objects.
 
 ### Suggested Rule
 
-- authoritative room state lives in the Durable Object
+- authoritative lobby state lives in the Durable Object
 - searchable metadata lives in D1 only if it must be queryable outside the room
 
 ### Deliverables
@@ -377,16 +377,16 @@ Move lobby creation, join/leave, ready checks, and chat to Durable Objects.
 ### Done When
 
 - users can create and join a lobby through the new runtime
-- lobby list and room state no longer depend on `appState` in Next.js
+- lobby list and lobby state no longer depend on `appState` in Next.js
 
 ### Phase 5 Implementation Note
 
 The first useful localhost slice can expose:
 
 - `GET /lobbies` backed by D1 for discovery
-- `POST /lobbies` and `DELETE /lobbies/:roomId` for lifecycle control
-- `GET /rooms/:roomId/state` for snapshot inspection
-- `GET /rooms/:roomId/websocket` for join, leave, ready check, chat, and room sync
+- `POST /lobbies` and `DELETE /lobbies/:lobbyId` for lifecycle control
+- `GET /lobbies/:lobbyId/state` for snapshot inspection
+- `GET /lobbies/:lobbyId/websocket` for join, leave, ready check, chat, and room sync
 - a small worker-served playground page so this flow can be exercised before the full frontend cutover
 
 ## Phase 6: Migrate One Game End To End
@@ -401,7 +401,7 @@ Prove the new architecture with the simplest complete game slice.
 
 Why:
 
-- simple room state
+- simple lobby state
 - minimal asset concerns
 - deterministic session flow
 - low timer complexity
@@ -423,7 +423,7 @@ For local verification, the simplest successful slice is:
 
 1. register two users
 2. create a TicTacToe lobby
-3. connect both users to the room websocket
+3. connect both users to the lobby websocket
 4. run ready check
 5. start game
 6. play a full match
@@ -450,7 +450,7 @@ Replace Node timers and `node-schedule` assumptions with a Cloudflare-friendly t
 
 - timers should be idempotent
 - timer callbacks should be safe if replayed or resumed
-- room state changes should be written before scheduling follow-up actions
+- lobby state changes should be written before scheduling follow-up actions
 
 ### Deliverables
 
@@ -505,7 +505,7 @@ Remove local filesystem assumptions from profile uploads and game assets.
 
 ### Objective
 
-Use D1 intentionally instead of turning it into a dumping ground for all room state.
+Use D1 intentionally instead of turning it into a dumping ground for all lobby state.
 
 ### Good D1 Candidates
 
@@ -535,15 +535,15 @@ Keep active session state in Durable Objects. Use D1 for lookup, recovery, and m
 
 Phase 9 is now grounded by `room_sessions` in D1:
 
-- a room session row is created when a migrated game session starts
+- a lobby session row is created when a migrated game session starts
 - the row is finalized when the session completes or is abandoned
-- `GET /rooms/:roomId/history` exposes the durable summary for debugging and future UI/statistics work
+- `GET /lobbies/:lobbyId/history` exposes the durable summary for debugging and future UI/statistics work
 
-This keeps D1 valuable without moving authoritative live room state out of Durable Objects.
+This keeps D1 valuable without moving authoritative live lobby state out of Durable Objects.
 
 ### Done When
 
-- D1 is being used for durable metadata, not as a replacement for authoritative room runtime
+- D1 is being used for durable metadata, not as a replacement for authoritative lobby runtime
 
 ## Phase 10: Cut Over The Frontend Networking Layer
 

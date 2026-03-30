@@ -1,12 +1,15 @@
 import type {
     LobbyBaseInfo,
-    LobbyRoomGameActionMessage,
-    RealtimeJeopardySessionInternal,
+    LobbyGameActionMessage,
     RealtimeChatMessage,
-    RealtimeLobbyGame,
+    RealtimeClickerParticipantView,
+    RealtimeJeopardyParticipantView,
+    RealtimeJeopardySessionInternal,
     RealtimeLobbyListItem,
     RealtimeLobbyMember,
     RealtimeLobbySnapshot,
+    RealtimeLobbyGame,
+    RealtimeTicTacToeParticipantView,
     RealtimeTicTacToeSession,
     StateEventName,
     StateEvents
@@ -19,11 +22,6 @@ export type AppEventEnvelope = {
         data: StateEvents[E]
     }
 }[StateEventName]
-
-type AppPlayerData = PlayerData & {
-    playerChar?: RealtimeLobbyMember['playerChar']
-    playerIsClickAllowed?: boolean
-}
 
 export function toAppChatMessage(message: RealtimeChatMessage): TChatMessage {
     return {
@@ -56,33 +54,64 @@ export function toAppLobbyMember(member: RealtimeLobbyMember, memberPosition: nu
     }
 }
 
-function toAppPlayer(member: RealtimeLobbyMember, memberPosition: number): PlayerData {
-    const player: AppPlayerData = {
-        ...toAppLobbyMember(member, memberPosition),
-        playerIsMaster: member.playerIsMaster ?? member.isCreator,
-        playerScore: member.playerScore ?? 0
-    }
-
-    if (member.playerChar) {
-        player.playerChar = member.playerChar
-    }
-
-    if (typeof member.playerIsClickAllowed === 'boolean') {
-        player.playerIsClickAllowed = member.playerIsClickAllowed
-    }
-
-    return player as PlayerData
+function getMemberPosition(snapshot: RealtimeLobbySnapshot, memberId: string): number {
+    return snapshot.members.findIndex(member => member.id === memberId)
 }
 
-function getAppMembers(snapshot: RealtimeLobbySnapshot): LobbyMemberData[] {
-    return snapshot.members.map((member, index) => toAppLobbyMember(member, index))
+function toAppPlayerFromTicTacToeParticipant(snapshot: RealtimeLobbySnapshot, participant: RealtimeTicTacToeParticipantView): PlayerData | null {
+    const member = snapshot.members.find(item => item.id === participant.memberId)
+
+    if (!member) {
+        return null
+    }
+
+    return {
+        ...toAppLobbyMember(member, getMemberPosition(snapshot, member.id)),
+        playerChar: participant.seat,
+        playerIsMaster: member.isCreator,
+        playerScore: 0
+    }
+}
+
+function toAppPlayerFromClickerParticipant(snapshot: RealtimeLobbySnapshot, participant: RealtimeClickerParticipantView): PlayerData | null {
+    const member = snapshot.members.find(item => item.id === participant.memberId)
+
+    if (!member) {
+        return null
+    }
+
+    return {
+        ...toAppLobbyMember(member, getMemberPosition(snapshot, member.id)),
+        playerIsClickAllowed: participant.isClickAllowed,
+        playerIsMaster: member.isCreator,
+        playerScore: participant.score
+    }
+}
+
+function toAppPlayerFromJeopardyParticipant(snapshot: RealtimeLobbySnapshot, participant: RealtimeJeopardyParticipantView): PlayerData | null {
+    const member = snapshot.members.find(item => item.id === participant.memberId)
+
+    if (!member) {
+        return null
+    }
+
+    return {
+        ...toAppLobbyMember(member, getMemberPosition(snapshot, member.id)),
+        playerIsMaster: participant.isMaster,
+        playerScore: participant.score
+    }
 }
 
 function getAppPlayers(snapshot: RealtimeLobbySnapshot): PlayerData[] {
-    return snapshot.members
-        .map((member, index) => ({ member, index }))
-        .filter(({ member }) => member.role === 'player')
-        .map(({ member, index }) => toAppPlayer(member, index))
+    if (snapshot.game.kind === 'TicTacToe') {
+        return snapshot.game.participants.map(participant => toAppPlayerFromTicTacToeParticipant(snapshot, participant)).filter(Boolean) as PlayerData[]
+    }
+
+    if (snapshot.game.kind === 'Clicker') {
+        return snapshot.game.participants.map(participant => toAppPlayerFromClickerParticipant(snapshot, participant)).filter(Boolean) as PlayerData[]
+    }
+
+    return snapshot.game.participants.map(participant => toAppPlayerFromJeopardyParticipant(snapshot, participant)).filter(Boolean) as PlayerData[]
 }
 
 function getAppCreator(snapshot: RealtimeLobbySnapshot) {
@@ -108,18 +137,12 @@ function getAppCreator(snapshot: RealtimeLobbySnapshot) {
           }
 }
 
-function toAppClickerWinner(snapshot: RealtimeLobbySnapshot, winnerUserId: string | null): PlayerData | undefined {
-    if (!winnerUserId) {
+function toAppPlayerById(snapshot: RealtimeLobbySnapshot, memberId: string | null): PlayerData | undefined {
+    if (!memberId) {
         return undefined
     }
 
-    const winnerIndex = snapshot.members.findIndex(member => member.id === winnerUserId && member.role === 'player')
-
-    if (winnerIndex < 0) {
-        return undefined
-    }
-
-    return toAppPlayer(snapshot.members[winnerIndex], winnerIndex)
+    return getAppPlayers(snapshot).find(player => player.id === memberId)
 }
 
 function toAppActiveSession(
@@ -127,57 +150,70 @@ function toAppActiveSession(
     snapshot: RealtimeLobbySnapshot,
     sessionInternal?: RealtimeJeopardySessionInternal | null
 ): GameData['session'] {
-    if (game.name === 'Clicker') {
-        if (game.session.status === 'idle') {
+    if (game.kind === 'Clicker') {
+        if (!game.session || game.session.status === 'idle') {
             return undefined
         }
 
         return {
             playerIsClickAllowed: game.session.playerIsClickAllowed,
-            winner: toAppClickerWinner(snapshot, game.session.winnerUserId)
+            winner: toAppPlayerById(snapshot, game.session.winnerUserId)
         }
     }
 
-    if (game.name === 'Jeopardy') {
+    if (game.kind === 'Jeopardy') {
         if (!game.session) {
             return undefined
         }
 
-        return sessionInternal
+        const internal = sessionInternal || game.internal
+
+        return internal
             ? {
                   ...game.session,
-                  internal: sessionInternal
+                  internal
               }
             : {
                   ...game.session
               }
     }
 
-    if (game.session.status !== 'active') {
+    if (!game.session || game.session.status !== 'active') {
         return undefined
     }
 
+    const session = game.session as RealtimeTicTacToeSession
+
     return {
-        board: game.session.board.map(row => [...row]),
-        turn: game.session.turnUserId,
+        board: session.board.map((row: RealtimeTicTacToeSession['board'][number]) => [...row]),
+        turn: session.turnUserId,
         winner: undefined
     }
 }
 
 function toAppEndedSession(previous: RealtimeLobbySnapshot, next: RealtimeLobbySnapshot): GameData['session'] {
-    if (previous.game.name === 'Clicker') {
+    if (previous.game.kind === 'Clicker') {
         return {
             playerIsClickAllowed: true,
-            winner: toAppClickerWinner(next, previous.game.session.winnerUserId)
+            winner: toAppPlayerById(next, previous.game.session?.winnerUserId || null)
         }
     }
 
-    if (previous.game.name === 'Jeopardy') {
+    if (previous.game.kind === 'Jeopardy') {
         return previous.game.session
             ? {
-                  ...previous.game.session
+                  ...(previous.game.internal
+                      ? {
+                            ...previous.game.session,
+                            internal: previous.game.internal
+                        }
+                      : previous.game.session)
               }
             : undefined
+    }
+
+    if (!previous.game.session) {
+        return undefined
     }
 
     return {
@@ -188,25 +224,29 @@ function toAppEndedSession(previous: RealtimeLobbySnapshot, next: RealtimeLobbyS
 }
 
 function toAppInitialData(snapshot: RealtimeLobbySnapshot): GameData['initialData'] {
-    if (snapshot.game.name === 'Jeopardy') {
+    if (snapshot.game.kind === 'Jeopardy') {
         return {
             pack: {
                 public: true,
-                value: snapshot.game.initialData.pack.value
+                value: snapshot.game.config.pack.value
             }
         }
     }
 
-    if (snapshot.game.name !== 'Clicker' || !snapshot.game.initialData.backgroundUrl) {
+    if (snapshot.game.kind !== 'Clicker' || !snapshot.game.config.backgroundUrl) {
         return {}
     }
 
     return {
         background: {
             public: true,
-            value: snapshot.game.initialData.backgroundUrl
+            value: snapshot.game.config.backgroundUrl
         }
     }
+}
+
+function getAppMembers(snapshot: RealtimeLobbySnapshot): LobbyMemberData[] {
+    return snapshot.members.map((member, index) => toAppLobbyMember(member, index))
 }
 
 export function toAppLobbyBaseInfo(item: RealtimeLobbyListItem): LobbyBaseInfo {
@@ -218,21 +258,21 @@ export function toAppLobbyBaseInfo(item: RealtimeLobbyListItem): LobbyBaseInfo {
 
 export function toAppLobbyData(snapshot: RealtimeLobbySnapshot): LobbyData {
     return {
-        id: snapshot.roomId,
+        id: snapshot.lobbyId,
         private: snapshot.hasPassword,
-        gameName: snapshot.game.name,
+        gameName: snapshot.game.kind,
         members: getAppMembers(snapshot),
         creator: getAppCreator(snapshot),
         readyCheck:
             snapshot.readyCheck.status === 'active'
                 ? {
                       members: getAppMembers(snapshot).map(member => {
-                          const realtimeMember = snapshot.members.find(item => item.id === member.id)
+                          const ready = snapshot.readyCheck.votes[member.id]
 
-                          return typeof realtimeMember?.ready === 'boolean'
+                          return typeof ready === 'boolean'
                               ? {
                                     ...member,
-                                    ready: realtimeMember.ready
+                                    ready
                                 }
                               : member
                       })
@@ -244,7 +284,7 @@ export function toAppLobbyData(snapshot: RealtimeLobbySnapshot): LobbyData {
 export function toAppGameData(snapshot: RealtimeLobbySnapshot, sessionInternal?: RealtimeJeopardySessionInternal | null): GameData {
     return {
         initialData: toAppInitialData(snapshot),
-        name: snapshot.game.name,
+        name: snapshot.game.kind,
         players: getAppPlayers(snapshot),
         session: toAppActiveSession(snapshot.game, snapshot, sessionInternal)
     }
@@ -254,7 +294,7 @@ export function toAppLobbyChatMessages(snapshot: RealtimeLobbySnapshot): TChatMe
     return toAppChatMessages(snapshot.chat.slice(-50).reverse())
 }
 
-export function toAppGameActionEvent(lobbyId: string, payload: LobbyRoomGameActionMessage['payload']): StateEvents['Game-SessionAction'] {
+export function toAppGameActionEvent(lobbyId: string, payload: LobbyGameActionMessage['payload']): StateEvents['Game-SessionAction'] {
     return {
         actor: payload.actor,
         lobbyId,
@@ -305,8 +345,8 @@ function getChangedLobbyMemberData(previous: RealtimeLobbyMember, next: Realtime
     return Object.keys(data).length ? data : null
 }
 
-function getChangedPlayerData(previous: RealtimeLobbyMember, next: RealtimeLobbyMember): Partial<PlayerData> | null {
-    const data: Record<string, unknown> = {}
+function getChangedPlayerData(previous: PlayerData, next: PlayerData): Partial<PlayerData> | null {
+    const data: Partial<PlayerData> = {}
 
     if (previous.userNickname !== next.userNickname) {
         data.userNickname = next.userNickname
@@ -320,32 +360,32 @@ function getChangedPlayerData(previous: RealtimeLobbyMember, next: RealtimeLobby
         data.userAvatarUrl = next.userAvatarUrl
     }
 
-    if (previous.connected !== next.connected) {
-        data.userIsOnline = next.connected
+    if (previous.userIsOnline !== next.userIsOnline) {
+        data.userIsOnline = next.userIsOnline
     }
 
     if (previous.playerChar !== next.playerChar) {
         data.playerChar = next.playerChar
     }
 
-    if ((previous.playerScore ?? 0) !== (next.playerScore ?? 0)) {
-        data.playerScore = next.playerScore ?? 0
+    if (previous.playerScore !== next.playerScore) {
+        data.playerScore = next.playerScore
     }
 
-    if ((previous.playerIsMaster ?? previous.isCreator) !== (next.playerIsMaster ?? next.isCreator)) {
-        data.playerIsMaster = next.playerIsMaster ?? next.isCreator
+    if (previous.playerIsMaster !== next.playerIsMaster) {
+        data.playerIsMaster = next.playerIsMaster
     }
 
-    if (previous.playerIsClickAllowed !== next.playerIsClickAllowed && typeof next.playerIsClickAllowed === 'boolean') {
+    if (previous.playerIsClickAllowed !== next.playerIsClickAllowed) {
         data.playerIsClickAllowed = next.playerIsClickAllowed
     }
 
-    return Object.keys(data).length ? (data as Partial<PlayerData>) : null
+    return Object.keys(data).length ? data : null
 }
 
 function findBoardMove(previous: RealtimeTicTacToeSession, next: RealtimeTicTacToeSession): { cell: [number, number]; value: 'x' | 'o' } | null {
-    for (let row = 0; row < next.board.length; row++) {
-        for (let column = 0; column < next.board[row].length; column++) {
+    for (let row = 0; row < next.board.length; row += 1) {
+        for (let column = 0; column < next.board[row].length; column += 1) {
             const prevValue = previous.board[row][column]
             const nextValue = next.board[row][column]
 
@@ -361,30 +401,26 @@ function findBoardMove(previous: RealtimeTicTacToeSession, next: RealtimeTicTacT
     return null
 }
 
+function areSessionsEqual(left: GameData['session'], right: GameData['session']): boolean {
+    return JSON.stringify(left) === JSON.stringify(right)
+}
+
 export function deriveAppEventsFromSnapshot(previous: RealtimeLobbySnapshot, next: RealtimeLobbySnapshot): AppEventEnvelope[] {
     const events: AppEventEnvelope[] = []
     const previousMembersById = new Map(previous.members.map(member => [member.id, member]))
     const nextMembersById = new Map(next.members.map(member => [member.id, member]))
+    const previousPlayersById = new Map(getAppPlayers(previous).map(player => [player.id, player]))
+    const nextPlayersById = new Map(getAppPlayers(next).map(player => [player.id, player]))
 
     next.members.forEach((member, index) => {
         if (!previousMembersById.has(member.id)) {
             events.push({
                 ctx: 'Lobby-Join',
                 data: {
-                    lobbyId: next.roomId,
+                    lobbyId: next.lobbyId,
                     member: toAppLobbyMember(member, index)
                 }
             })
-
-            if (member.role === 'player') {
-                events.push({
-                    ctx: 'Game-Join',
-                    data: {
-                        lobbyId: next.roomId,
-                        player: toAppPlayer(member, index)
-                    }
-                })
-            }
         }
     })
 
@@ -393,20 +429,10 @@ export function deriveAppEventsFromSnapshot(previous: RealtimeLobbySnapshot, nex
             events.push({
                 ctx: 'Lobby-Leave',
                 data: {
-                    lobbyId: next.roomId,
+                    lobbyId: next.lobbyId,
                     member: toAppLobbyMember(member, index)
                 }
             })
-
-            if (member.role === 'player') {
-                events.push({
-                    ctx: 'Game-Leave',
-                    data: {
-                        lobbyId: next.roomId,
-                        player: toAppPlayer(member, index)
-                    }
-                })
-            }
         }
     })
 
@@ -423,7 +449,7 @@ export function deriveAppEventsFromSnapshot(previous: RealtimeLobbySnapshot, nex
             events.push({
                 ctx: 'Lobby-MemberUpdate',
                 data: {
-                    lobbyId: next.roomId,
+                    lobbyId: next.lobbyId,
                     data: {
                         id: member.id,
                         ...changedMemberData
@@ -431,41 +457,44 @@ export function deriveAppEventsFromSnapshot(previous: RealtimeLobbySnapshot, nex
                 }
             })
         }
+    })
 
-        if (previousMember.role !== member.role) {
-            if (previousMember.role !== 'player' && member.role === 'player') {
-                events.push({
-                    ctx: 'Game-Join',
-                    data: {
-                        lobbyId: next.roomId,
-                        player: toAppPlayer(member, index)
-                    }
-                })
-            } else if (previousMember.role === 'player' && member.role !== 'player') {
-                events.push({
-                    ctx: 'Game-Leave',
-                    data: {
-                        lobbyId: next.roomId,
-                        player: toAppPlayer(previousMember, index)
-                    }
-                })
-            }
+    nextPlayersById.forEach((player, playerId) => {
+        const previousPlayer = previousPlayersById.get(playerId)
 
+        if (!previousPlayer) {
+            events.push({
+                ctx: 'Game-Join',
+                data: {
+                    lobbyId: next.lobbyId,
+                    player
+                }
+            })
             return
         }
 
-        if (member.role === 'player') {
-            const changedPlayerData = getChangedPlayerData(previousMember, member)
+        const changedPlayerData = getChangedPlayerData(previousPlayer, player)
 
-            if (changedPlayerData) {
-                events.push({
-                    ctx: 'Game-PlayerUpdate',
-                    data: {
-                        id: member.id,
-                        data: changedPlayerData
-                    }
-                })
-            }
+        if (changedPlayerData) {
+            events.push({
+                ctx: 'Game-PlayerUpdate',
+                data: {
+                    id: player.id,
+                    data: changedPlayerData
+                }
+            })
+        }
+    })
+
+    previousPlayersById.forEach((player, playerId) => {
+        if (!nextPlayersById.has(playerId)) {
+            events.push({
+                ctx: 'Game-Leave',
+                data: {
+                    lobbyId: next.lobbyId,
+                    player
+                }
+            })
         }
     })
 
@@ -479,9 +508,10 @@ export function deriveAppEventsFromSnapshot(previous: RealtimeLobbySnapshot, nex
     }
 
     next.members.forEach(member => {
-        const previousMember = previousMembersById.get(member.id)
+        const previousReady = previous.readyCheck.votes[member.id]
+        const nextReady = next.readyCheck.votes[member.id]
 
-        if (!previousMember || previousMember.ready === member.ready || typeof member.ready !== 'boolean') {
+        if (previousReady === nextReady || typeof nextReady !== 'boolean') {
             return
         }
 
@@ -489,7 +519,7 @@ export function deriveAppEventsFromSnapshot(previous: RealtimeLobbySnapshot, nex
             ctx: 'ReadyCheck-PlayerStatus',
             data: {
                 userNickname: member.userNickname,
-                ready: member.ready
+                ready: nextReady
             }
         })
     })
@@ -511,28 +541,35 @@ export function deriveAppEventsFromSnapshot(previous: RealtimeLobbySnapshot, nex
                 ctx: 'Chat-NewMessage',
                 data: {
                     scope: 'lobby',
-                    lobbyId: next.roomId,
+                    lobbyId: next.lobbyId,
                     message: toAppChatMessage(message)
                 }
             })
         }
     })
 
-    if (previous.game.name === 'TicTacToe' && next.game.name === 'TicTacToe') {
-        if (previous.game.session.status !== 'active' && next.game.session.status === 'active') {
-            events.push({
-                ctx: 'Game-SessionStart',
-                data: {
-                    lobbyId: next.roomId,
-                    session: toAppActiveSession(next.game, next)!
-                }
-            })
-        }
+    const previousSession = toAppActiveSession(previous.game, previous, previous.game.kind === 'Jeopardy' ? previous.game.internal : null)
+    const nextSession = toAppActiveSession(next.game, next, next.game.kind === 'Jeopardy' ? next.game.internal : null)
 
-        const move = previous.game.session.status === 'active' ? findBoardMove(previous.game.session, next.game.session) : null
+    if (!previousSession && nextSession) {
+        events.push({
+            ctx: 'Game-SessionStart',
+            data: {
+                lobbyId: next.lobbyId,
+                session: nextSession
+            }
+        })
+    }
+
+    if (previous.game.kind === 'TicTacToe' && next.game.kind === 'TicTacToe' && previous.game.session && next.game.session) {
+        const move =
+            previous.game.session.status === 'active' && ['active', 'finished'].includes(next.game.session.status)
+                ? findBoardMove(previous.game.session, next.game.session)
+                : null
 
         if (move) {
-            const actor = next.members.find(member => member.role === 'player' && member.playerChar === move.value)
+            const actorParticipant = next.game.participants.find(participant => participant.seat === move.value)
+            const actor = actorParticipant ? next.members.find(member => member.id === actorParticipant.memberId) : null
 
             if (actor) {
                 events.push({
@@ -542,7 +579,7 @@ export function deriveAppEventsFromSnapshot(previous: RealtimeLobbySnapshot, nex
                             id: actor.id,
                             type: 'player'
                         },
-                        lobbyId: next.roomId,
+                        lobbyId: next.lobbyId,
                         payload: {
                             cell: move.cell
                         },
@@ -558,40 +595,25 @@ export function deriveAppEventsFromSnapshot(previous: RealtimeLobbySnapshot, nex
                 })
             }
         }
-
-        if (previous.game.session.status === 'active' && next.game.session.status === 'finished') {
-            events.push({
-                ctx: 'Game-SessionEnd',
-                data: {
-                    lobbyId: next.roomId,
-                    players: getAppPlayers(next),
-                    session: toAppEndedSession(next, next)
-                }
-            })
-        }
     }
 
-    if (previous.game.name === 'Clicker' && next.game.name === 'Clicker') {
-        if (previous.game.session.status === 'idle' && next.game.session.status !== 'idle') {
-            events.push({
-                ctx: 'Game-SessionStart',
-                data: {
-                    lobbyId: next.roomId,
-                    session: toAppActiveSession(next.game, next)!
-                }
-            })
-        }
-
-        if (previous.game.session.status !== 'idle' && next.game.session.status === 'idle') {
-            events.push({
-                ctx: 'Game-SessionEnd',
-                data: {
-                    lobbyId: next.roomId,
-                    players: getAppPlayers(next),
-                    session: toAppEndedSession(previous, next)
-                }
-            })
-        }
+    if (previousSession && !nextSession) {
+        events.push({
+            ctx: 'Game-SessionEnd',
+            data: {
+                lobbyId: next.lobbyId,
+                players: getAppPlayers(next),
+                session: toAppEndedSession(previous, next)
+            }
+        })
+    } else if (previousSession && nextSession && !areSessionsEqual(previousSession, nextSession)) {
+        events.push({
+            ctx: 'Game-SessionUpdate',
+            data: {
+                lobbyId: next.lobbyId,
+                data: nextSession
+            }
+        })
     }
 
     return events

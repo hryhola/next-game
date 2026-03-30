@@ -1,8 +1,9 @@
-import type { TicTacToeCellCoords, TicTacToeCellValue } from '../../../shared/contracts/realtime-lobby'
-import type { FinalizeRoomSessionInput } from '../room-sessions/store'
-import type { StoredLobbyState } from './types'
-import type { GameStartResult, TicTacToeMoveResult } from './operations'
-import { nowIso, resetReadyCheck } from './common'
+import type { TicTacToeCellCoords, TicTacToeCellValue } from '../../../../shared/contracts/realtime-lobby'
+import type { FinalizeLobbySessionInput } from '../../lobby-sessions/store'
+import type { LobbyMutationResult } from '../../lobby/operations'
+import { resetReadyCheck } from '../../lobby/ready-check'
+import { nowIso } from '../../lobby/time'
+import type { LobbyRecordV2, StoredTicTacToeGameState } from '../../lobby/types'
 
 export function createEmptyBoard(): TicTacToeCellValue[][] {
     return [
@@ -82,8 +83,22 @@ export function createIdleTicTacToeSession() {
     }
 }
 
-export function startTicTacToeGame(state: StoredLobbyState, userId: string): GameStartResult {
-    if (state.game.name !== 'TicTacToe') {
+function getGame(record: LobbyRecordV2): StoredTicTacToeGameState {
+    return record.game as StoredTicTacToeGameState
+}
+
+function getPlayers(record: LobbyRecordV2) {
+    return record.members.filter(member => member.role === 'player')
+}
+
+function getSeatByUserId(game: StoredTicTacToeGameState, userId: string) {
+    return game.participants.find(participant => participant.memberId === userId)?.seat || null
+}
+
+export function startTicTacToeGame(record: LobbyRecordV2, userId: string): LobbyMutationResult {
+    const game = getGame(record)
+
+    if (game.kind !== 'TicTacToe') {
         return {
             success: false,
             message: 'This room does not run TicTacToe',
@@ -91,15 +106,15 @@ export function startTicTacToeGame(state: StoredLobbyState, userId: string): Gam
         }
     }
 
-    if (state.creatorUserId !== userId) {
+    if (!record.members.some(member => member.id === userId && member.role === 'player')) {
         return {
             success: false,
-            message: 'Only the lobby creator can start the game',
-            code: 'forbidden'
+            message: 'Only players can start the game',
+            code: 'not_a_player'
         }
     }
 
-    const players = state.members.filter(member => member.role === 'player')
+    const players = getPlayers(record)
 
     if (players.length !== 2) {
         return {
@@ -109,7 +124,7 @@ export function startTicTacToeGame(state: StoredLobbyState, userId: string): Gam
         }
     }
 
-    if (!players.every(player => player.ready === true)) {
+    if (!players.every(player => record.readyCheck.votes[player.id] === true)) {
         return {
             success: false,
             message: 'Run the ready check and wait for both players to confirm',
@@ -121,7 +136,7 @@ export function startTicTacToeGame(state: StoredLobbyState, userId: string): Gam
     const sessionId = crypto.randomUUID()
     const startedAt = nowIso()
 
-    state.game.session = {
+    game.session = {
         board: createEmptyBoard(),
         endedAt: null,
         id: sessionId,
@@ -133,12 +148,12 @@ export function startTicTacToeGame(state: StoredLobbyState, userId: string): Gam
         winnerUserId: null
     }
 
-    resetReadyCheck(state)
+    resetReadyCheck(record)
 
     return {
         success: true,
         startedSession: {
-            gameName: state.game.name,
+            gameName: game.kind,
             id: sessionId,
             initiatedByUserId: userId,
             startedAt
@@ -147,8 +162,10 @@ export function startTicTacToeGame(state: StoredLobbyState, userId: string): Gam
     }
 }
 
-export function makeTicTacToeMove(state: StoredLobbyState, userId: string, cell: [number, number]): TicTacToeMoveResult {
-    if (state.game.name !== 'TicTacToe') {
+export function makeTicTacToeMove(record: LobbyRecordV2, userId: string, cell: [number, number]): LobbyMutationResult {
+    const game = getGame(record)
+
+    if (game.kind !== 'TicTacToe') {
         return {
             success: false,
             message: 'This room does not run TicTacToe',
@@ -156,7 +173,7 @@ export function makeTicTacToeMove(state: StoredLobbyState, userId: string, cell:
         }
     }
 
-    const player = state.members.find(member => member.id === userId && member.role === 'player')
+    const player = record.members.find(member => member.id === userId && member.role === 'player')
 
     if (!player) {
         return {
@@ -166,7 +183,7 @@ export function makeTicTacToeMove(state: StoredLobbyState, userId: string, cell:
         }
     }
 
-    if (state.game.session.status !== 'active') {
+    if (game.session.status !== 'active') {
         return {
             success: false,
             message: 'There is no active game',
@@ -174,7 +191,7 @@ export function makeTicTacToeMove(state: StoredLobbyState, userId: string, cell:
         }
     }
 
-    if (state.game.session.turnUserId !== userId) {
+    if (game.session.turnUserId !== userId) {
         return {
             success: false,
             message: 'It is not your turn',
@@ -192,7 +209,7 @@ export function makeTicTacToeMove(state: StoredLobbyState, userId: string, cell:
         }
     }
 
-    if (state.game.session.board[row][column] !== null) {
+    if (game.session.board[row][column] !== null) {
         return {
             success: false,
             message: 'Cell is already taken',
@@ -200,7 +217,9 @@ export function makeTicTacToeMove(state: StoredLobbyState, userId: string, cell:
         }
     }
 
-    if (!player.playerChar) {
+    const seat = getSeatByUserId(game, userId)
+
+    if (!seat) {
         return {
             success: false,
             message: 'Player piece is missing',
@@ -208,56 +227,63 @@ export function makeTicTacToeMove(state: StoredLobbyState, userId: string, cell:
         }
     }
 
-    state.game.session.board[row][column] = player.playerChar
+    game.session.board[row][column] = seat
 
-    const winningLine = findWinningLine(state.game.session.board)
+    const winningLine = findWinningLine(game.session.board)
 
     if (winningLine) {
-        const winner = state.members.find(member => member.playerChar === winningLine.winner)
+        const winner = game.participants.find(participant => participant.seat === winningLine.winner)
 
-        state.game.session.status = 'finished'
-        state.game.session.winnerUserId = winner?.id || null
-        state.game.session.winLine = winningLine.line
-        state.game.session.turnUserId = null
-        state.game.session.endedAt = nowIso()
-        state.game.session.isDraw = false
+        game.session.status = 'finished'
+        game.session.winnerUserId = winner?.memberId || null
+        game.session.winLine = winningLine.line
+        game.session.turnUserId = null
+        game.session.endedAt = nowIso()
+        game.session.isDraw = false
 
         return {
-            finalizedSession: createCompletedTicTacToeRoomSessionRecord(state) || undefined,
+            finalizedSession: createCompletedTicTacToeLobbySessionRecord(record) || undefined,
+            notifyLobbyList: true,
+            stateChanged: true,
             success: true
         }
     }
 
-    if (isBoardFull(state.game.session.board)) {
-        state.game.session.status = 'finished'
-        state.game.session.winnerUserId = null
-        state.game.session.winLine = null
-        state.game.session.turnUserId = null
-        state.game.session.endedAt = nowIso()
-        state.game.session.isDraw = true
+    if (isBoardFull(game.session.board)) {
+        game.session.status = 'finished'
+        game.session.winnerUserId = null
+        game.session.winLine = null
+        game.session.turnUserId = null
+        game.session.endedAt = nowIso()
+        game.session.isDraw = true
 
         return {
-            finalizedSession: createCompletedTicTacToeRoomSessionRecord(state) || undefined,
+            finalizedSession: createCompletedTicTacToeLobbySessionRecord(record) || undefined,
+            notifyLobbyList: true,
+            stateChanged: true,
             success: true
         }
     }
 
-    const nextPlayer = state.members.find(member => member.role === 'player' && member.id !== userId)
-    state.game.session.turnUserId = nextPlayer?.id || null
+    const nextPlayer = game.participants.find(participant => participant.memberId !== userId)
+    game.session.turnUserId = nextPlayer?.memberId || null
 
     return {
+        stateChanged: true,
         success: true
     }
 }
 
-export function createCompletedTicTacToeRoomSessionRecord(state: StoredLobbyState): FinalizeRoomSessionInput | null {
-    if (state.game.name !== 'TicTacToe' || state.game.session.status !== 'finished' || !state.game.session.id) {
+export function createCompletedTicTacToeLobbySessionRecord(record: LobbyRecordV2): FinalizeLobbySessionInput | null {
+    const game = getGame(record)
+
+    if (game.kind !== 'TicTacToe' || game.session.status !== 'finished' || !game.session.id) {
         return null
     }
 
-    const session = state.game.session
+    const session = game.session
     const sessionId = session.id
-    const winner = state.members.find(member => member.id === session.winnerUserId)
+    const winner = record.members.find(member => member.id === session.winnerUserId)
 
     if (!sessionId) {
         return null
@@ -269,13 +295,19 @@ export function createCompletedTicTacToeRoomSessionRecord(state: StoredLobbyStat
         resultSummary: {
             board: session.board.map(row => [...row]),
             isDraw: session.isDraw,
-            players: state.members
-                .filter(member => member.role === 'player')
-                .map(member => ({
-                    id: member.id,
-                    playerChar: member.playerChar,
-                    userNickname: member.userNickname
-                })),
+            players: game.participants
+                .map(participant => {
+                    const member = record.members.find(item => item.id === participant.memberId && item.role === 'player')
+
+                    return member
+                        ? {
+                              id: member.id,
+                              playerChar: participant.seat,
+                              userNickname: member.userNickname
+                          }
+                        : null
+                })
+                .filter(Boolean),
             winLine: session.winLine ? [...session.winLine] : null
         },
         status: 'completed',
@@ -284,12 +316,14 @@ export function createCompletedTicTacToeRoomSessionRecord(state: StoredLobbyStat
     }
 }
 
-export function createAbandonedTicTacToeRoomSessionRecord(state: StoredLobbyState, reason: string): FinalizeRoomSessionInput | null {
-    if (state.game.name !== 'TicTacToe' || state.game.session.status !== 'active' || !state.game.session.id) {
+export function createAbandonedTicTacToeLobbySessionRecord(record: LobbyRecordV2, reason: string): FinalizeLobbySessionInput | null {
+    const game = getGame(record)
+
+    if (game.kind !== 'TicTacToe' || game.session.status !== 'active' || !game.session.id) {
         return null
     }
 
-    const sessionId = state.game.session.id
+    const sessionId = game.session.id
 
     if (!sessionId) {
         return null
@@ -299,14 +333,20 @@ export function createAbandonedTicTacToeRoomSessionRecord(state: StoredLobbyStat
         endedAt: nowIso(),
         id: sessionId,
         resultSummary: {
-            board: state.game.session.board.map(row => [...row]),
-            players: state.members
-                .filter(member => member.role === 'player')
-                .map(member => ({
-                    id: member.id,
-                    playerChar: member.playerChar,
-                    userNickname: member.userNickname
-                })),
+            board: game.session.board.map(row => [...row]),
+            players: game.participants
+                .map(participant => {
+                    const member = record.members.find(item => item.id === participant.memberId && item.role === 'player')
+
+                    return member
+                        ? {
+                              id: member.id,
+                              playerChar: participant.seat,
+                              userNickname: member.userNickname
+                          }
+                        : null
+                })
+                .filter(Boolean),
             reason
         },
         status: 'abandoned'

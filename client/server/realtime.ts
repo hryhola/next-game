@@ -65,9 +65,9 @@ export async function getLobbySnapshot(lobbyId: string): Promise<RealtimeLobbySn
         return null
     }
 
-    const response = await readJson<{ room?: RealtimeLobbySnapshot }>(`/rooms/${encodeURIComponent(lobbyId)}/state`, token)
+    const response = await readJson<{ lobby?: RealtimeLobbySnapshot }>(`/lobbies/${encodeURIComponent(lobbyId)}/state`, token)
 
-    return response?.room || null
+    return response?.lobby || null
 }
 
 export async function findActiveLobbySnapshot(token?: string): Promise<RealtimeLobbySnapshot | null> {
@@ -87,11 +87,11 @@ export async function findActiveLobbySnapshot(token?: string): Promise<RealtimeL
     const lobbies = lobbiesResponse?.lobbies || []
 
     for (const lobby of lobbies) {
-        const roomResponse = await readJson<{ room?: RealtimeLobbySnapshot }>(`/rooms/${encodeURIComponent(lobby.id)}/state`, sessionToken)
-        const room = roomResponse?.room
+        const lobbyResponse = await readJson<{ lobby?: RealtimeLobbySnapshot }>(`/lobbies/${encodeURIComponent(lobby.id)}/state`, sessionToken)
+        const lobbySnapshot = lobbyResponse?.lobby
 
-        if (room?.members.some(member => member.id === session.user.id)) {
-            return room
+        if (lobbySnapshot?.members.some(member => member.id === session.user.id)) {
+            return lobbySnapshot
         }
     }
 

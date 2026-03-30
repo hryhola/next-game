@@ -10,8 +10,8 @@
     "durable_objects": {
         "bindings": [
             {
-                "name": "LOBBY_ROOMS",
-                "class_name": "LobbyRoomDO"
+                "name": "LOBBIES",
+                "class_name": "LobbyDO"
             },
             {
                 "name": "GLOBAL_PRESENCE",
@@ -36,7 +36,7 @@
     "migrations": [
         {
             "tag": "v1",
-            "new_sqlite_classes": ["LobbyRoomDO"]
+            "new_sqlite_classes": ["LobbyDO"]
         },
         {
             "tag": "v2",

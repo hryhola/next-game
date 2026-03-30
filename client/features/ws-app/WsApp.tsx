@@ -4,7 +4,7 @@ import { connectToWebSocket } from 'client/network-utils/socket'
 import { useLobby, useWS } from 'client/context/list'
 import { DevToolsOverlay } from 'client/features/dev/DevToolsOverlay'
 import { useClientRouter } from 'client/route/ClientRouter'
-import { getCloudflareRoomWebSocketUrl } from 'client/network-utils/realtimeMode'
+import { getCloudflareLobbyWebSocketUrl } from 'client/network-utils/realtimeMode'
 import { getCookie } from 'cookies-next'
 import { Button } from 'client/ui/primitives'
 
@@ -82,9 +82,9 @@ export const WsApp: React.FC<Props> = props => {
     }
 
     useEffect(() => {
-        const requiresRoomSocket = router.frame === 'Lobby' && Boolean(lobby.lobbyId)
+        const requiresLobbySocket = router.frame === 'Lobby' && Boolean(lobby.lobbyId)
 
-        if (!requiresRoomSocket) {
+        if (!requiresLobbySocket) {
             closeSocket()
             ws.setIsConnected(true)
             updateHandlingConnection(false)
@@ -99,7 +99,7 @@ export const WsApp: React.FC<Props> = props => {
             return
         }
 
-        const targetUrl = getCloudflareRoomWebSocketUrl(lobby.lobbyId, token)
+        const targetUrl = getCloudflareLobbyWebSocketUrl(lobby.lobbyId, token)
         const currentSocket = ws.wsRef.current
 
         if (currentSocket && currentTargetUrl.current === targetUrl && currentSocket.readyState === WebSocket.OPEN) {

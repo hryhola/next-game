@@ -212,8 +212,8 @@ export const playgroundHtml = String.raw`<!doctype html>
         <p>Use separate tabs with different nicknames to test the new worker-native flow locally. This page stores the auth token in per-tab session storage so two tabs can act as different users against the same localhost worker.</p>
         <div class="row">
           <span class="pill" id="authStatus">Signed out</span>
-          <span class="pill" id="wsStatus">Room socket disconnected</span>
-          <span class="pill" id="roomStatus">No room selected</span>
+          <span class="pill" id="wsStatus">Lobby socket disconnected</span>
+          <span class="pill" id="lobbyStatus">No lobby selected</span>
         </div>
       </section>
 
@@ -232,8 +232,8 @@ export const playgroundHtml = String.raw`<!doctype html>
         <div class="panel stack">
           <h2>Create Lobby</h2>
           <div class="row">
-            <input id="roomIdInput" placeholder="room id" />
-            <input id="roomNameInput" placeholder="display name (optional)" />
+            <input id="lobbyIdInput" placeholder="lobby id" />
+            <input id="lobbyNameInput" placeholder="display name (optional)" />
           </div>
           <div class="row">
             <input id="passwordInput" placeholder="password (optional)" />
@@ -251,9 +251,9 @@ export const playgroundHtml = String.raw`<!doctype html>
         </div>
 
         <div class="panel stack">
-          <h2>Current Room</h2>
+          <h2>Current Lobby</h2>
           <div class="row">
-            <input id="selectedRoomInput" placeholder="room id" />
+            <input id="selectedLobbyInput" placeholder="lobby id" />
             <select id="roleSelect">
               <option value="player">Join as player</option>
               <option value="spectator">Join as spectator</option>
@@ -261,12 +261,12 @@ export const playgroundHtml = String.raw`<!doctype html>
             <input id="joinPasswordInput" placeholder="join password" />
           </div>
           <div class="row">
-            <button id="connectRoomButton">Connect</button>
-            <button id="syncRoomButton" class="ghost">Sync</button>
-            <button id="leaveRoomButton" class="ghost">Leave</button>
-            <button id="destroyRoomButton" class="danger">Destroy</button>
+            <button id="connectLobbyButton">Connect</button>
+            <button id="syncLobbyButton" class="ghost">Sync</button>
+            <button id="leaveLobbyButton" class="ghost">Leave</button>
+            <button id="destroyLobbyButton" class="danger">Destroy</button>
           </div>
-          <pre id="roomSnapshotView">No room snapshot yet</pre>
+          <pre id="lobbySnapshotView">No lobby snapshot yet</pre>
         </div>
       </section>
 
@@ -312,18 +312,18 @@ export const playgroundHtml = String.raw`<!doctype html>
         session: null,
         token: sessionStorage.getItem(storageKey),
         lobbies: [],
-        roomId: "",
-        roomSnapshot: null,
+        lobbyId: "",
+        lobbySnapshot: null,
         socket: null
       };
 
       const el = id => document.getElementById(id);
       const authStatus = el("authStatus");
       const wsStatus = el("wsStatus");
-      const roomStatus = el("roomStatus");
+      const lobbyStatus = el("lobbyStatus");
       const sessionView = el("sessionView");
       const createResultView = el("createResultView");
-      const roomSnapshotView = el("roomSnapshotView");
+      const lobbySnapshotView = el("lobbySnapshotView");
       const membersView = el("membersView");
       const gameSummaryView = el("gameSummaryView");
       const chatFeed = el("chatFeed");
@@ -388,29 +388,29 @@ export const playgroundHtml = String.raw`<!doctype html>
           const asPlayer = document.createElement("button");
           asPlayer.textContent = "Open as player";
           asPlayer.onclick = () => {
-            el("selectedRoomInput").value = lobby.id;
+            el("selectedLobbyInput").value = lobby.id;
             el("roleSelect").value = "player";
-            connectRoom();
+            connectLobby();
           };
 
           const asSpectator = document.createElement("button");
           asSpectator.textContent = "Open as spectator";
           asSpectator.className = "ghost";
           asSpectator.onclick = () => {
-            el("selectedRoomInput").value = lobby.id;
+            el("selectedLobbyInput").value = lobby.id;
             el("roleSelect").value = "spectator";
-            connectRoom();
+            connectLobby();
           };
 
           const fetchState = document.createElement("button");
           fetchState.textContent = "Fetch state";
           fetchState.className = "ghost";
           fetchState.onclick = async () => {
-            const result = await api("/rooms/" + encodeURIComponent(lobby.id) + "/state");
-            state.roomSnapshot = result.room;
-            state.roomId = lobby.id;
-            renderRoom();
-            log("fetched room state", result);
+            const result = await api("/lobbies/" + encodeURIComponent(lobby.id) + "/state");
+            state.lobbySnapshot = result.room;
+            state.lobbyId = lobby.id;
+            renderLobby();
+            log("fetched lobby state", result);
           };
 
           controls.append(asPlayer, asSpectator, fetchState);
@@ -421,20 +421,34 @@ export const playgroundHtml = String.raw`<!doctype html>
 
       function renderMembers() {
         membersView.innerHTML = "";
-        const members = state.roomSnapshot ? state.roomSnapshot.members : [];
+        const members = state.lobbySnapshot ? state.lobbySnapshot.members : [];
 
         if (!members.length) {
           membersView.innerHTML = '<div class="member muted">No members in this room</div>';
           return;
         }
 
+        const participantByMemberId = new Map(
+          state.lobbySnapshot && state.lobbySnapshot.game && state.lobbySnapshot.game.participants
+            ? state.lobbySnapshot.game.participants.map(participant => [participant.memberId, participant])
+            : []
+        );
+
         members.forEach(member => {
+          const participant = participantByMemberId.get(member.id);
+          const participantLabel =
+            participant && "seat" in participant
+              ? " (" + participant.seat + ")"
+              : participant && "isMaster" in participant && participant.isMaster
+                ? " (master)"
+                : "";
+          const ready = state.lobbySnapshot && state.lobbySnapshot.readyCheck ? state.lobbySnapshot.readyCheck.votes[member.id] : null;
           const row = document.createElement("div");
           row.className = "member";
           row.innerHTML =
             "<div><strong style='color:" + member.userColor + "'>" + member.userNickname + "</strong>" +
-            "<div class='muted'>" + member.role + (member.playerChar ? " (" + member.playerChar + ")" : "") + (member.isCreator ? " | creator" : "") + "</div></div>" +
-            "<div class='muted'>" + (member.connected ? "connected" : "offline") + " | ready: " + (member.ready === null ? "-" : String(member.ready)) + "</div>";
+            "<div class='muted'>" + member.role + participantLabel + (member.isCreator ? " | creator" : "") + "</div></div>" +
+            "<div class='muted'>" + (member.connected ? "connected" : "offline") + " | ready: " + (ready === null || typeof ready === "undefined" ? "-" : String(ready)) + "</div>";
           membersView.appendChild(row);
         });
       }
@@ -442,7 +456,7 @@ export const playgroundHtml = String.raw`<!doctype html>
       function renderBoard() {
         const board = el("board");
         board.innerHTML = "";
-        const session = state.roomSnapshot && state.roomSnapshot.game ? state.roomSnapshot.game.session : null;
+        const session = state.lobbySnapshot && state.lobbySnapshot.game ? state.lobbySnapshot.game.session : null;
         const grid = session ? session.board : [[null, null, null], [null, null, null], [null, null, null]];
 
         grid.forEach((row, rowIndex) => {
@@ -450,7 +464,14 @@ export const playgroundHtml = String.raw`<!doctype html>
             const button = document.createElement("button");
             button.className = "cell";
             button.textContent = cell || "";
-            button.onclick = () => sendRoomMessage({ type: "tictactoe.move", payload: { cell: [rowIndex, columnIndex] } });
+            button.onclick = () =>
+              sendLobbyMessage({
+                type: "game.command",
+                payload: {
+                  commandName: "$Move",
+                  commandPayload: { cell: [rowIndex, columnIndex] }
+                }
+              });
             board.appendChild(button);
           });
         });
@@ -460,7 +481,7 @@ export const playgroundHtml = String.raw`<!doctype html>
 
       function renderChat() {
         chatFeed.innerHTML = "";
-        const messages = state.roomSnapshot ? state.roomSnapshot.chat : [];
+        const messages = state.lobbySnapshot ? state.lobbySnapshot.chat : [];
 
         if (!messages.length) {
           chatFeed.innerHTML = '<div class="chat-line muted">No messages yet</div>';
@@ -478,9 +499,9 @@ export const playgroundHtml = String.raw`<!doctype html>
         });
       }
 
-      function renderRoom() {
-        roomStatus.textContent = state.roomId ? "Room: " + state.roomId : "No room selected";
-        roomSnapshotView.textContent = state.roomSnapshot ? JSON.stringify(state.roomSnapshot, null, 2) : "No room snapshot yet";
+      function renderLobby() {
+        lobbyStatus.textContent = state.lobbyId ? "Lobby: " + state.lobbyId : "No lobby selected";
+        lobbySnapshotView.textContent = state.lobbySnapshot ? JSON.stringify(state.lobbySnapshot, null, 2) : "No lobby snapshot yet";
         renderMembers();
         renderBoard();
         renderChat();
@@ -547,12 +568,16 @@ export const playgroundHtml = String.raw`<!doctype html>
       }
 
       async function createLobby() {
-        const roomId = el("roomIdInput").value.trim();
-        if (!roomId) return;
+        const lobbyId = el("lobbyIdInput").value.trim();
+        if (!lobbyId) return;
 
         const payload = {
-          roomId,
-          name: el("roomNameInput").value.trim() || undefined,
+          game: {
+            kind: "TicTacToe",
+            config: {}
+          },
+          lobbyId,
+          name: el("lobbyNameInput").value.trim() || undefined,
           password: el("passwordInput").value.trim() || undefined
         };
 
@@ -563,10 +588,10 @@ export const playgroundHtml = String.raw`<!doctype html>
         });
 
         createResultView.textContent = JSON.stringify(data, null, 2);
-        state.roomId = roomId;
-        state.roomSnapshot = data.room;
-        el("selectedRoomInput").value = roomId;
-        renderRoom();
+        state.lobbyId = lobbyId;
+        state.lobbySnapshot = data.room;
+        el("selectedLobbyInput").value = lobbyId;
+        renderLobby();
         await refreshLobbies();
         log("lobby created", data);
       }
@@ -580,10 +605,10 @@ export const playgroundHtml = String.raw`<!doctype html>
           }
         }
         state.socket = null;
-        setSocketStatus("Room socket disconnected");
+        setSocketStatus("Lobby socket disconnected");
       }
 
-      function sendRoomMessage(message) {
+      function sendLobbyMessage(message) {
         if (!state.socket || state.socket.readyState !== WebSocket.OPEN) {
           log("socket not ready", message);
           return;
@@ -591,66 +616,69 @@ export const playgroundHtml = String.raw`<!doctype html>
         state.socket.send(JSON.stringify(message));
       }
 
-      function connectRoom() {
+      function connectLobby() {
         if (!state.token) {
           log("connect blocked", { message: "Sign in first" });
           return;
         }
 
-        const roomId = el("selectedRoomInput").value.trim();
-        if (!roomId) return;
+        const lobbyId = el("selectedLobbyInput").value.trim();
+        if (!lobbyId) return;
 
         closeSocket();
-        state.roomId = roomId;
+        state.lobbyId = lobbyId;
 
         const protocol = location.protocol === "https:" ? "wss:" : "ws:";
-        const socket = new WebSocket(protocol + "//" + location.host + "/rooms/" + encodeURIComponent(roomId) + "/websocket?token=" + encodeURIComponent(state.token));
+        const socket = new WebSocket(protocol + "//" + location.host + "/lobbies/" + encodeURIComponent(lobbyId) + "/websocket?token=" + encodeURIComponent(state.token));
 
         socket.onopen = () => {
           state.socket = socket;
-          setSocketStatus("Room socket connected");
-          sendRoomMessage({
-            type: "room.join",
+          setSocketStatus("Lobby socket connected");
+          sendLobbyMessage({
+            type: "lobby.command",
             payload: {
-              role: el("roleSelect").value,
-              password: el("joinPasswordInput").value.trim() || undefined
+              commandName: "join",
+              commandPayload: {
+                role: el("roleSelect").value,
+                password: el("joinPasswordInput").value.trim() || undefined
+              }
             }
           });
-          sendRoomMessage({ type: "room.sync" });
+          sendLobbyMessage({ type: "lobby.sync" });
         };
 
         socket.onmessage = event => {
           const message = JSON.parse(event.data);
           log("socket message", message);
 
-          if (message.type === "room.snapshot") {
-            state.roomSnapshot = message.payload;
-            state.roomId = message.payload.roomId;
-            renderRoom();
+          if (message.type === "lobby.state") {
+            state.lobbySnapshot = message.payload;
+            state.lobbyId = message.payload.lobbyId;
+            renderLobby();
             refreshLobbies().catch(error => log("refresh lobbies failed", { message: error.message }));
           }
         };
 
         socket.onclose = () => {
-          setSocketStatus("Room socket disconnected");
+          setSocketStatus("Lobby socket disconnected");
           state.socket = null;
         };
 
         socket.onerror = () => {
-          setSocketStatus("Room socket error");
+          setSocketStatus("Lobby socket error");
         };
       }
 
-      async function destroyRoom() {
-        const roomId = el("selectedRoomInput").value.trim();
-        if (!roomId) return;
-        await api("/lobbies/" + encodeURIComponent(roomId), { method: "DELETE" });
+      async function destroyLobby() {
+        const lobbyId = el("selectedLobbyInput").value.trim();
+        if (!lobbyId) return;
+        await api("/lobbies/" + encodeURIComponent(lobbyId), { method: "DELETE" });
         closeSocket();
-        state.roomSnapshot = null;
-        state.roomId = "";
-        renderRoom();
+        state.lobbySnapshot = null;
+        state.lobbyId = "";
+        renderLobby();
         await refreshLobbies();
-        log("room destroyed", { roomId });
+        log("room destroyed", { lobbyId });
       }
 
       async function logout() {
@@ -668,26 +696,26 @@ export const playgroundHtml = String.raw`<!doctype html>
       el("logoutButton").onclick = () => logout().catch(error => log("logout failed", { message: error.message }));
       el("createLobbyButton").onclick = () => createLobby().catch(error => log("create lobby failed", { message: error.message }));
       el("refreshLobbiesButton").onclick = () => refreshLobbies().catch(error => log("refresh lobbies failed", { message: error.message }));
-      el("connectRoomButton").onclick = () => connectRoom();
-      el("syncRoomButton").onclick = () => sendRoomMessage({ type: "room.sync" });
-      el("leaveRoomButton").onclick = () => sendRoomMessage({ type: "room.leave" });
-      el("destroyRoomButton").onclick = () => destroyRoom().catch(error => log("destroy room failed", { message: error.message }));
-      el("startReadyButton").onclick = () => sendRoomMessage({ type: "ready.start" });
-      el("readyTrueButton").onclick = () => sendRoomMessage({ type: "ready.set", payload: { ready: true } });
-      el("readyFalseButton").onclick = () => sendRoomMessage({ type: "ready.set", payload: { ready: false } });
-      el("startGameButton").onclick = () => sendRoomMessage({ type: "game.start" });
+      el("connectLobbyButton").onclick = () => connectLobby();
+      el("syncLobbyButton").onclick = () => sendLobbyMessage({ type: "lobby.sync" });
+      el("leaveLobbyButton").onclick = () => sendLobbyMessage({ type: "lobby.command", payload: { commandName: "leave" } });
+      el("destroyLobbyButton").onclick = () => destroyLobby().catch(error => log("destroy lobby failed", { message: error.message }));
+      el("startReadyButton").onclick = () => sendLobbyMessage({ type: "lobby.command", payload: { commandName: "ready.start" } });
+      el("readyTrueButton").onclick = () => sendLobbyMessage({ type: "lobby.command", payload: { commandName: "ready.set", commandPayload: { ready: true } } });
+      el("readyFalseButton").onclick = () => sendLobbyMessage({ type: "lobby.command", payload: { commandName: "ready.set", commandPayload: { ready: false } } });
+      el("startGameButton").onclick = () => sendLobbyMessage({ type: "lobby.command", payload: { commandName: "game.start" } });
       el("sendChatButton").onclick = () => {
         const input = el("chatInput");
         const text = input.value.trim();
         if (!text) return;
-        sendRoomMessage({ type: "chat.send", payload: { text } });
+        sendLobbyMessage({ type: "lobby.command", payload: { commandName: "chat.send", commandPayload: { text } } });
         input.value = "";
       };
 
       restoreSession().then(refreshLobbies).catch(error => log("initialization failed", { message: error.message }));
       renderSession();
       renderLobbies();
-      renderRoom();
+      renderLobby();
     </script>
   </body>
 </html>`
