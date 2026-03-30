@@ -1,6 +1,6 @@
 import React, { MutableRefObject, useEffect, useRef, useState } from 'react'
 import { JeopardySessionState, JeopardyState } from 'state/games/jeopardy/JeopardySessionState'
-import { Box, Button, Grid, List, ListItem, ListItemButton, Slider, Table, TableBody, TableCell, TableHead, TableRow, TextField } from '@mui/material'
+import { Box, Button, Grid, List, ListItem, ListItemButton, Slider, Table, TableBody, TableCell, TableHead, TableRow, TextField } from 'client/ui/mui-shim'
 import { useUser } from 'client/context/list'
 import { useActionSender, useJeopardy } from '../JeopardyView'
 import { useGlobalModal } from 'client/features/global-modal/GlobalModal'
@@ -70,6 +70,7 @@ export const FinalRoundBoard: React.FC<
         if (!player || player.playerIsMaster || player.playerScore <= 0 || props.playersThatMadeBet.includes(player.id)) return
 
         globalModal.confirm({
+            title: 'Make your bet',
             header: 'Make your bet',
             content: (
                 <Box minWidth="200px" display="flex" justifyContent="center" alignItems="center" overflow="hidden">

@@ -2,7 +2,7 @@
     position: fixed;
     width: 100%;
     left: 50%;
-    transform: translatex(-50%) translateY(100%);
+    transform: translateX(-50%) translateY(100%);
     animation: scroll 10s cubic-bezier(0.42, 0, 0.58, 1) forwards;
 }
 
@@ -11,20 +11,18 @@
     width: 100%;
     left: 50%;
     top: 50%;
-    transform: translatex(-50%) translateY(-50%);
-
+    transform: translateX(-50%) translateY(-50%);
     text-align: center;
-
     animation: disappear 4s forwards;
 }
 
 @keyframes scroll {
     from {
-        transform: translatex(-50%) translateY(100%);
+        transform: translateX(-50%) translateY(100%);
     }
 
     to {
-        transform: translatex(-50%) translateY(-100%);
+        transform: translateX(-50%) translateY(-100%);
     }
 }
 

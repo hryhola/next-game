@@ -1,20 +1,22 @@
-import { Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Button } from '@mui/material'
 import React, { useState, createContext } from 'react'
+import { Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader } from 'client/ui/primitives'
 
 export interface GlobalModalOpenOptions {
-    header?: string | JSX.Element
+    title: string
+    header?: React.ReactNode
     inContainer?: boolean
-    content?: string | JSX.Element
+    content?: React.ReactNode
     actionRequired?: boolean
     zIndex?: number
-    actions?: JSX.Element
+    actions?: React.ReactNode
 }
 
 export interface ConfirmModalOpenOptions {
-    header?: string | JSX.Element
+    title: string
+    header?: React.ReactNode
     inContainer?: boolean
     actionRequired?: boolean | 'confirm'
-    content?: string | JSX.Element
+    content?: React.ReactNode
     zIndex?: number
     onConfirm: () => void
     onCancel?: () => void
@@ -27,19 +29,21 @@ export const GlobalModalCtx = createContext({
 })
 
 interface Props {
-    children?: JSX.Element
+    children?: React.ReactNode
 }
 
 export const GlobalModalProvider: React.FC<Props> = props => {
     const [isModalOpen, setIsModalOpen] = useState(false)
-    const [header, setHeader] = useState<string | JSX.Element | null>(null)
-    const [content, setContent] = useState<string | JSX.Element | null>(null)
-    const [actions, setActions] = useState<JSX.Element | null>(null)
+    const [title, setTitle] = useState<string | null>(null)
+    const [header, setHeader] = useState<React.ReactNode>(null)
+    const [content, setContent] = useState<React.ReactNode>(null)
+    const [actions, setActions] = useState<React.ReactNode>(null)
     const [inContainer, setInContainer] = useState(true)
     const [zIndex, setZIndex] = useState<undefined | number>(undefined)
     const [actionRequired, setActionRequired] = useState<boolean | 'confirm'>(false)
 
     const open = (options?: GlobalModalOpenOptions) => {
+        setTitle(options?.title || null)
         setHeader(options?.header || null)
         setInContainer(options?.inContainer ?? true)
         setContent(options?.content || null)
@@ -56,6 +60,7 @@ export const GlobalModalProvider: React.FC<Props> = props => {
     }
 
     const confirm = (options: ConfirmModalOpenOptions) => {
+        setTitle(options.title)
         setHeader(options?.header || null)
         setInContainer(options?.inContainer ?? true)
         setContent(options?.content || null)
@@ -95,20 +100,25 @@ export const GlobalModalProvider: React.FC<Props> = props => {
     let calculatedContent = <></>
 
     if (content) {
-        calculatedContent = typeof content === 'string' ? <DialogContentText>{content}</DialogContentText> : content
-
-        if (inContainer) {
-            calculatedContent = <DialogContent>{calculatedContent}</DialogContent>
-        }
+        calculatedContent = typeof content === 'string' ? <DialogDescription>{content}</DialogDescription> : <>{content}</>
     }
 
     return (
         <GlobalModalCtx.Provider value={{ open, close, confirm }}>
             {props.children}
-            <Dialog open={isModalOpen} {...(actionRequired ? {} : { onClose: () => setIsModalOpen(false) })} sx={{ zIndex }}>
-                {header && <DialogTitle>{header}</DialogTitle>}
-                {calculatedContent}
-                {actions && <DialogActions>{actions}</DialogActions>}
+            <Dialog open={isModalOpen} onOpenChange={value => (!actionRequired ? setIsModalOpen(value) : undefined)}>
+                {isModalOpen ? (
+                    <DialogContent style={zIndex ? { zIndex } : undefined} title={title} titleVisuallyHidden>
+                        {header || calculatedContent ? (
+                            <DialogHeader>
+                                {header ? <div className="text-2xl font-semibold text-white">{header}</div> : null}
+                                {inContainer ? calculatedContent : null}
+                            </DialogHeader>
+                        ) : null}
+                        {!inContainer ? calculatedContent : null}
+                        {actions ? <DialogFooter>{actions}</DialogFooter> : null}
+                    </DialogContent>
+                ) : null}
             </Dialog>
         </GlobalModalCtx.Provider>
     )

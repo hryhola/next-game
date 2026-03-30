@@ -1,5 +1,4 @@
 import { FormEventHandler, useContext, useState, useRef, useEffect } from 'react'
-import { TextField, Button, FormControl, InputLabel, MenuItem, Select, Alert, Grid, SelectChangeEvent } from '@mui/material'
 import { useLobby } from 'client/context/list'
 import { useClientRouter } from 'client/route/ClientRouter'
 import { LoadingOverlay } from 'client/ui'
@@ -7,6 +6,7 @@ import { api } from 'client/network-utils/api'
 import { GameName } from 'state/games'
 import { HomeContext } from 'client/context/list/homeCtx'
 import { InitialGameDataSchema } from 'state/common/game/GameInitialData'
+import { Button, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from 'client/ui/primitives'
 
 export const LobbyCreator: React.FC = () => {
     const home = useContext(HomeContext)
@@ -21,20 +21,6 @@ export const LobbyCreator: React.FC = () => {
     const [gameName, setGameName] = useState<GameName>('Clicker')
     const [isLoading, setIsLoading] = useState(false)
     const [initialDataScheme, setInitialDataScheme] = useState<InitialGameDataSchema>([])
-
-    const updateGameSchema = async (gameName: GameName) => {
-        const [response, error] = await api.post('game-get-schema', { gameName })
-
-        if (!response) {
-            return setError(String(error))
-        }
-
-        if (!response.success) {
-            return setError(response.message)
-        }
-
-        setInitialDataScheme(response.initialDataScheme || [])
-    }
 
     const handleSubmit: FormEventHandler<HTMLFormElement> = async event => {
         event.preventDefault()
@@ -63,75 +49,83 @@ export const LobbyCreator: React.FC = () => {
         router.setFrame('Lobby')
     }
 
-    const handleGameChange = async (event: SelectChangeEvent) => {
-        const gameName = event.target.value as GameName
-
-        setGameName(gameName)
-    }
-
     useEffect(() => {
-        updateGameSchema(gameName)
+        let isCancelled = false
+
+        const loadGameSchema = async () => {
+            const [response, postError] = await api.post('game-get-schema', { gameName })
+
+            if (isCancelled) {
+                return
+            }
+
+            if (!response) {
+                setError(String(postError))
+                return
+            }
+
+            if (!response.success) {
+                setError(response.message)
+                return
+            }
+
+            setError('')
+            setInitialDataScheme(response.initialDataScheme || [])
+        }
+
+        void loadGameSchema()
+
+        return () => {
+            isCancelled = true
+        }
     }, [gameName])
 
     return (
         <>
-            <Grid container component="form" onSubmit={handleSubmit} ref={formRef} direction="column" spacing={2} height="100%">
-                {error && (
-                    <Grid item>
-                        <Alert severity="error">{error}</Alert>
-                    </Grid>
-                )}
-                <Grid item>
-                    <TextField required label="Lobby name" name="lobbyId" value={lobbyId} onChange={e => setLobbyId(e.target.value)} fullWidth />
-                </Grid>
-                <Grid item>
-                    <FormControl fullWidth>
-                        <InputLabel required id="game-type-selector">
-                            Game
-                        </InputLabel>
-                        <Select
-                            value={gameName}
-                            onChange={handleGameChange}
-                            labelId="game-type-selector"
-                            id="game-type-selector"
-                            name="gameName"
-                            label="Game"
-                            fullWidth
-                        >
-                            <MenuItem value="TicTacToe">Tic Tac Toe</MenuItem>
-                            <MenuItem value="Clicker">Clicker</MenuItem>
-                            <MenuItem value="Jeopardy">Jeopardy</MenuItem>
-                        </Select>
-                    </FormControl>
-                </Grid>
+            <form className="flex h-full flex-col gap-4" onSubmit={handleSubmit} ref={formRef}>
+                {error ? <div className="rounded-2xl border border-rose-300/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">{error}</div> : null}
+                <Input required placeholder="Lobby name" name="lobbyId" value={lobbyId} onChange={e => setLobbyId(e.target.value)} />
+                <div className="space-y-2">
+                    <Label htmlFor="game-type-selector">Game</Label>
+                    <Select value={gameName} onValueChange={value => setGameName(value as GameName)}>
+                        <SelectTrigger id="game-type-selector">
+                            <SelectValue placeholder="Select a game" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="TicTacToe">Tic Tac Toe</SelectItem>
+                            <SelectItem value="Clicker">Clicker</SelectItem>
+                            <SelectItem value="Jeopardy">Jeopardy</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <input type="hidden" name="gameName" value={gameName} />
+                </div>
 
                 {initialDataScheme.map(field => (
-                    <Grid item key={field.name}>
-                        {field.type === 'field' && <TextField label={field.label} name={'initialData-' + field.name} required={field.required} fullWidth />}
+                    <div key={field.name} className="space-y-2">
+                        {field.type === 'field' && <Input placeholder={field.label} name={'initialData-' + field.name} required={field.required} />}
                         {field.type === 'file' && (
-                            <FormControl sx={{ display: 'inline-block' }}>
-                                <label>{field.label}&nbsp;</label>
+                            <div className="space-y-2">
+                                <Label>{field.label}</Label>
                                 <input
+                                    className="glass-input block w-full rounded-2xl px-4 py-3 text-sm"
                                     required={field.required}
                                     multiple={false}
                                     accept={field.accept.join(',')}
                                     name={'initialData-' + field.name}
                                     type="file"
                                 />
-                            </FormControl>
+                            </div>
                         )}
-                    </Grid>
+                    </div>
                 ))}
 
-                <Grid item>
-                    <TextField label="Password" name="password" value={password} onChange={e => setPassword(e.target.value.split('\\').pop()!)} fullWidth />
-                </Grid>
-                <Grid item sx={{ mt: 'auto', mb: 2 }}>
-                    <Button color="primary" variant="contained" type="submit" size="large" fullWidth>
+                <Input placeholder="Password" name="password" value={password} onChange={e => setPassword(e.target.value.split('\\').pop()!)} />
+                <div className="mt-auto pb-2">
+                    <Button className="w-full" type="submit" size="lg">
                         Create
                     </Button>
-                </Grid>
-            </Grid>
+                </div>
+            </form>
             <LoadingOverlay isLoading={isLoading} />
         </>
     )

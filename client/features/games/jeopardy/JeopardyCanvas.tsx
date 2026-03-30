@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/refs */
 import React, { useEffect, useRef, useState } from 'react'
 import { FinalRoundBoard } from './frames/JeopardyFinalRoundBoard'
 import { FinalScore } from './frames/JeopardyFinalScore'

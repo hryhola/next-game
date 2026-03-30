@@ -1,14 +1,13 @@
-import { Alert, Box, Button, Grid, IconButton } from '@mui/material'
-import TextField from '@mui/material/TextField'
 import { useWS, useUser } from 'client/context/list'
 import React, { useState, useRef } from 'react'
 import { LoadingOverlay } from 'client/ui'
 import { api } from 'client/network-utils/api'
-import CircleIcon from '@mui/icons-material/Circle'
 import { ProfilePicture } from '../profile-picture/ProfilePicture'
 import randomColor from 'randomcolor'
 import { deleteCookie } from 'cookies-next'
 import { useGlobalModal } from '../global-modal/GlobalModal'
+import { Button, Input } from 'client/ui/primitives'
+import { Sparkles } from 'lucide-react'
 
 interface Props {
     onUpdated?: () => void
@@ -88,53 +87,37 @@ export const ProfileEditor: React.FC<Props> = props => {
 
     return (
         <>
-            <Grid component="form" container direction="column" spacing={4} minHeight="100%" onSubmit={handleSubmit} ref={formRef}>
-                {error && (
-                    <Grid item>
-                        <Alert severity="error">{error}</Alert>
-                    </Grid>
-                )}
-                <Grid item alignSelf="center">
+            <form className="flex min-h-full flex-col gap-5" onSubmit={handleSubmit} ref={formRef}>
+                {error ? <div className="rounded-2xl border border-rose-300/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">{error}</div> : null}
+                <div className="self-center">
                     <ProfilePicture editable {...displayedImage} color={userColor} onChange={file => setImageFile(file)} />
-                </Grid>
-                <Grid item>
-                    <Box sx={{ display: 'flex', alignItems: 'flex-end' }}>
-                        <IconButton onClick={() => setNicknameColor(randomColor())} sx={{ mr: 2 }} size="small">
-                            <CircleIcon sx={{ color: userColor }} />
-                        </IconButton>
-                        <TextField
-                            variant="standard"
-                            label="nickname"
-                            name="userNickname"
-                            value={nickname}
-                            onChange={e => setNickname(e.target.value)}
-                            fullWidth
-                        />
-                    </Box>
-                </Grid>
-                <Grid item sx={{ mt: 'auto', mb: 1 }}>
+                </div>
+                <div className="flex items-center gap-3">
+                    <Button type="button" variant="secondary" size="icon" onClick={() => setNicknameColor(randomColor())}>
+                        <Sparkles className="size-4" style={{ color: userColor }} />
+                    </Button>
+                    <Input placeholder="Nickname" name="userNickname" value={nickname} onChange={e => setNickname(e.target.value)} />
+                </div>
+                <div className="mt-auto flex flex-col gap-3">
                     <Button
-                        fullWidth
-                        size="large"
-                        variant="outlined"
-                        color="error"
+                        className="w-full"
+                        variant="danger"
                         onClick={() =>
                             globalModel.confirm({
+                                title: 'Log out',
                                 content: "You won't be able to login into this profile again",
                                 header: 'Are you sure want to logout?',
                                 onConfirm: handleLogout
                             })
                         }
                     >
-                        log out
+                        Log out
                     </Button>
-                </Grid>
-                <Grid item>
-                    <Button fullWidth size="large" variant="contained" color="primary" type="submit">
-                        update
+                    <Button className="w-full" size="lg" type="submit">
+                        Update
                     </Button>
-                </Grid>
-            </Grid>
+                </div>
+            </form>
             <LoadingOverlay isLoading={isLoading} />
         </>
     )

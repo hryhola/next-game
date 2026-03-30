@@ -26,7 +26,7 @@ export type LobbyCtxValue = {
 export const LobbyContext = createContext<LobbyCtxValue | null>(null)
 
 interface Props {
-    children?: JSX.Element
+    children?: React.ReactNode
     lobby?: LobbyData
 }
 

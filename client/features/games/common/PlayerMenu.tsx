@@ -1,16 +1,14 @@
-import { DialogContentText, Menu, MenuItem, TextField } from '@mui/material'
 import { useUser, useLobby, useWS } from 'client/context/list'
 import { useGlobalModal } from 'client/features/global-modal/GlobalModal'
 import { useRef } from 'react'
 import { PlayerData } from 'state'
 import { v4 } from 'uuid'
 import { useGame } from './GameFactory'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from 'client/ui/primitives'
 
 type Props = {
-    playerMenuAnchor: Element | null
-    isPlayerMenuOpen: boolean
-    handleClose: () => void
     player: PlayerData
+    children: React.ReactNode
 }
 
 export const PlayerMenu: React.FC<Props> = props => {
@@ -36,6 +34,7 @@ export const PlayerMenu: React.FC<Props> = props => {
 
         if (option === 'kick') {
             globalModal.confirm({
+                title: 'Kick player',
                 content: `Want to kick ${props.player.userNickname}?`,
                 onConfirm: () => {
                     ws.send('Lobby-Kick', {
@@ -48,10 +47,19 @@ export const PlayerMenu: React.FC<Props> = props => {
 
         if (option === 'set-score') {
             globalModal.confirm({
+                title: 'Set score',
                 content: (
                     <>
-                        <DialogContentText sx={{ pb: 2 }}>Set score for {props.player.userNickname}</DialogContentText>
-                        <TextField inputRef={scoreInputRef} label="Score value" type="number" />
+                        <div className="space-y-3">
+                            <p className="text-sm text-slate-300">Set score for {props.player.userNickname}</p>
+                            <input
+                                ref={scoreInputRef}
+                                inputMode="numeric"
+                                type="number"
+                                placeholder="Score value"
+                                className="glass-input glass-focus h-12 w-full rounded-2xl px-4 text-sm text-slate-100 placeholder:text-slate-400"
+                            />
+                        </div>
                     </>
                 ),
                 onConfirm: () => {
@@ -96,48 +104,15 @@ export const PlayerMenu: React.FC<Props> = props => {
     if (options.length === 0) return <></>
 
     return (
-        <>
-            <Menu
-                anchorEl={props.playerMenuAnchor}
-                id="account-menu"
-                open={props.isPlayerMenuOpen}
-                onClose={props.handleClose}
-                onClick={props.handleClose}
-                PaperProps={{
-                    elevation: 0,
-                    sx: {
-                        overflow: 'visible',
-                        filter: 'drop-shadow(0px 2px 8px rgba(0,0,0,0.32))',
-                        mt: 1.5,
-                        '& .MuiAvatar-root': {
-                            width: 32,
-                            height: 32,
-                            ml: -0.5,
-                            mr: 1
-                        },
-                        '&:before': {
-                            content: '""',
-                            display: 'block',
-                            position: 'absolute',
-                            top: 0,
-                            right: 14,
-                            width: 10,
-                            height: 10,
-                            bgcolor: 'background.paper',
-                            transform: 'translateY(-50%) rotate(45deg)',
-                            zIndex: 0
-                        }
-                    }
-                }}
-                transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-                anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-            >
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>{props.children}</DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
                 {options.map(x => (
-                    <MenuItem key={x[0]} id={x[0]} onClick={handleOptionClick}>
+                    <DropdownMenuItem key={x[0]} id={x[0]} onClick={handleOptionClick}>
                         {x[1]}
-                    </MenuItem>
+                    </DropdownMenuItem>
                 ))}
-            </Menu>
-        </>
+            </DropdownMenuContent>
+        </DropdownMenu>
     )
 }

@@ -1,6 +1,6 @@
-import { Box, Button, FormLabel, SvgIconTypeMap, SxProps, Theme } from '@mui/material'
-import PersonIcon from '@mui/icons-material/Person'
-import { OverridableComponent } from '@mui/material/OverridableComponent'
+import { Upload, UserRound } from 'lucide-react'
+import { cn } from 'client/ui/lib/cn'
+import { Button } from 'client/ui/primitives'
 
 interface Props {
     url?: string
@@ -12,7 +12,7 @@ interface Props {
     onChange?: (image: File) => void
     maxSize?: string
     editBorder?: boolean
-    editIcon?: OverridableComponent<SvgIconTypeMap<{}, 'svg'>>
+    editIcon?: React.ReactNode
     editLabel?: string
     color?: string
     filter?: string
@@ -36,67 +36,63 @@ export const ProfilePicture: React.FC<Props> = props => {
     if (!props.editable && !props.clickable) {
         if (!props.url) {
             return (
-                <Box sx={sizeProps}>
-                    <PersonIcon sx={{ ...sizeProps, color: props.color, filter: props.filter }} />
-                </Box>
+                <div className="flex items-center justify-center overflow-hidden rounded-full border border-white/10 bg-violet-500/10" style={sizeProps}>
+                    <UserRound style={{ color: props.color, filter: props.filter, width: sizeProps.width, height: sizeProps.height }} />
+                </div>
             )
         }
 
         return (
-            <Box
-                sx={{
-                    ...sizeProps,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    filter: props.filter
-                }}
+            <div
+                className="flex items-center justify-center overflow-hidden rounded-full border border-white/10 bg-white/5"
+                style={{ ...sizeProps, filter: props.filter }}
             >
                 <img alt="user avatar" src={props.url} />
-            </Box>
+            </div>
         )
     }
 
-    const buttonSx: SxProps<Theme> = {
-        backgroundColor: 'none',
-        display: 'flex',
-        flexDirection: 'column',
-        ...sizeProps,
-        padding: 0,
-        pointerEvents: 'auto'
-    }
+    const content = (
+        <>
+            {props.editable && (
+                <input
+                    type="file"
+                    name="image"
+                    accept="image/*"
+                    {...(props.onChange ? { onChange: e => e.target.files?.[0] && props.onChange!(e.target.files[0]) } : {})}
+                    hidden
+                />
+            )}
+            {props.url ? (
+                <img alt="user avatar" src={props.url} style={{ filter: props.filter, width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+                <>
+                    <div className="flex size-full items-center justify-center rounded-full border border-white/10 bg-violet-500/12">
+                        {props.editIcon || <UserRound style={{ color: props.color, filter: props.filter, width: sizeProps.width, height: sizeProps.height }} />}
+                    </div>
+                    {props.editable ? <Upload className="absolute bottom-5 right-5 size-5 text-white/80" /> : null}
+                    {props.editLabel ? <span className="text-xs text-slate-300">{props.editLabel}</span> : null}
+                </>
+            )}
+        </>
+    )
 
-    if (props.editBorder !== true) {
-        buttonSx.border = 'none'
-        // @ts-expect-error
-        buttonSx[':hover'] = {
-            border: 'none'
-        }
+    const sharedClassName = cn(
+        'relative flex flex-col gap-2 overflow-hidden rounded-full p-0',
+        props.editBorder === true ? 'border border-white/15' : 'border-none bg-transparent shadow-none'
+    )
+
+    if (props.editable) {
+        return (
+            <label className={sharedClassName} style={sizeProps}>
+                {content}
+            </label>
+        )
     }
 
     return (
-        <Button component="label" variant="outlined" sx={buttonSx} {...(props.clickable ? { onClick: props.onClick } : {})}>
-            {props.editable && (
-                <input type="file" name="image" accept="image/*" {...(props.onChange ? { onChange: e => props.onChange!(e.target.files![0]) } : {})} hidden />
-            )}
-            {props.url ? (
-                <img alt="user avatar" src={props.url} style={{ filter: props.filter }} />
-            ) : (
-                <>
-                    {props.editIcon ? (
-                        props.editIcon
-                    ) : (
-                        <PersonIcon
-                            sx={{
-                                ...sizeProps,
-                                color: props.color,
-                                filter: props.filter
-                            }}
-                        />
-                    )}
-                    {props.editLabel && <FormLabel sx={{ fontSize: '0.8rem', mt: 1 }}>{props.editLabel}</FormLabel>}
-                </>
-            )}
+        <Button type="button" variant="secondary" className={sharedClassName} style={sizeProps} {...(props.clickable ? { onClick: props.onClick } : {})}>
+            {content}
         </Button>
     )
 }

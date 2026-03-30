@@ -1,7 +1,7 @@
 import React from 'react'
 import { JeopardyState } from 'state/games/jeopardy/JeopardySessionState'
-import { Box, Typography } from '@mui/material'
-import styles from './JeopardyPackPreview.module.scss'
+import { Box, Typography } from 'client/ui/mui-shim'
+import styles from './JeopardyPackPreview.module.css'
 
 export const PackPreview: React.FC<JeopardyState.PackPreviewFrame> = props => {
     return (

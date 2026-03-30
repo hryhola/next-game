@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import { useSnackbar } from 'notistack'
 import dynamic from 'next/dynamic'
-import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Grid } from '@mui/material'
 import { useAudio, useEventHandler, useLobby, useUser, useWS } from 'client/context/list/'
 import { useClientRouter } from 'client/route/ClientRouter'
 import { ProfilePicture } from 'client/features/profile-picture/ProfilePicture'
 import { LoadingOverlay } from 'client/ui'
+import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Grid } from 'client/ui/mui-shim'
+import { useToast } from 'client/ui/toast/ToastProvider'
 
 export const LobbyFrame: React.FC = () => {
     const lobby = useLobby()
@@ -18,7 +18,7 @@ export const LobbyFrame: React.FC = () => {
     const game = useRef<ReturnType<typeof dynamic<any>> | null>(null)
     const [isLoaded, setIsLoaded] = useState(false)
 
-    const { enqueueSnackbar } = useSnackbar()
+    const { push } = useToast()
 
     useEventHandler('Lobby-Join', data => {
         if (data.lobbyId !== lobbyRef.current.lobbyId) {
@@ -27,25 +27,21 @@ export const LobbyFrame: React.FC = () => {
 
         lobby.setMembers(ms => [...ms.filter(m => m.id !== data.member.id), data.member])
 
-        enqueueSnackbar(
-            <>
-                <span style={{ color: data.member?.userColor }}>{data.member.userNickname}</span> joined as{' '}
-                <span
-                    style={{
-                        color: data.member.memberRole === 'player' ? '#00ff00' : '#777777'
-                    }}
-                >
-                    {data.member.memberRole}
-                </span>
-            </>,
-            {
-                content: (key, message) => (
-                    <div className="lobby-tip noselect" key={key}>
-                        {message}
-                    </div>
-                )
-            }
-        )
+        push({
+            className: 'lobby-tip noselect',
+            content: (
+                <>
+                    <span style={{ color: data.member?.userColor }}>{data.member.userNickname}</span> joined as{' '}
+                    <span
+                        style={{
+                            color: data.member.memberRole === 'player' ? '#00ff00' : '#777777'
+                        }}
+                    >
+                        {data.member.memberRole}
+                    </span>
+                </>
+            )
+        })
     })
 
     useEventHandler('Lobby-MemberUpdate', data => {
@@ -73,28 +69,20 @@ export const LobbyFrame: React.FC = () => {
 
         audio.play(Math.random() > 0.1 ? 'comp_coin.wav' : 'coins.wav')
 
-        enqueueSnackbar(
-            <>
-                <span style={{ color: to?.userColor }}>{data.to}</span> tipped by <span style={{ color: from?.userColor }}>{data.from}</span>
-            </>,
-            {
-                content: (key, message) => (
-                    <div className="lobby-tip noselect" key={key}>
-                        {message}
-                    </div>
-                )
-            }
-        )
+        push({
+            className: 'lobby-tip noselect',
+            content: (
+                <>
+                    <span style={{ color: to?.userColor }}>{data.to}</span> tipped by <span style={{ color: from?.userColor }}>{data.from}</span>
+                </>
+            )
+        })
     })
 
     useEventHandler('Lobby-Destroy', data => {
         if (data.lobbyId === lobbyRef.current.lobbyId) {
-            enqueueSnackbar('Lobby has been destroyed', {
-                anchorOrigin: {
-                    horizontal: 'center',
-                    vertical: 'top'
-                },
-                autoHideDuration: 3000
+            push({
+                content: 'Lobby has been destroyed'
             })
 
             ws.send('Universal-Subscription', {
@@ -136,12 +124,8 @@ export const LobbyFrame: React.FC = () => {
     })
 
     useEventHandler('Lobby-Kicked', data => {
-        enqueueSnackbar(`${data.member.userNickname}` + ' has been kicked', {
-            anchorOrigin: {
-                horizontal: 'center',
-                vertical: 'top'
-            },
-            autoHideDuration: 3000
+        push({
+            content: `${data.member.userNickname} has been kicked`
         })
 
         lobby.setMembers(members => members.filter(m => m.id !== data.member.id))

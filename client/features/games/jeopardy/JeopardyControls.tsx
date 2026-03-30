@@ -1,8 +1,8 @@
-import { Button } from '@mui/material'
 import { useLobby, useUser } from 'client/context/list'
 import { LobbyControls } from 'client/features/lobby-controls/LobbyControls'
 import React from 'react'
 import { useActionSender, useJeopardy } from './JeopardyView'
+import { Button } from 'client/ui/primitives'
 
 type Props = {}
 
@@ -12,7 +12,7 @@ const JeopardyControls = (props: Props) => {
     const user = useUser()
     const actionSender = useActionSender()
 
-    const gameControls: JSX.Element[] = []
+    const gameControls: React.ReactNode[] = []
 
     if (lobby.myRole !== 'spectator') {
         const isMasterView = game.players.some(p => p.id === user.id && p.playerIsMaster)
@@ -27,18 +27,23 @@ const JeopardyControls = (props: Props) => {
                 game.session.frame.answeringPlayerId !== user.id
 
             gameControls.push(
-                <Button onClick={() => actionSender('$AnswerRequest', null)} disabled={!theButtonEnabled} key="2" fullWidth>
+                <Button className="w-full" onClick={() => actionSender('$AnswerRequest', null)} disabled={!theButtonEnabled} key="2">
                     THE BUTTON
                 </Button>
             )
         } else {
             gameControls.push(
-                <Button disabled={!game.session || game.session?.frame.id === 'question-board'} onClick={() => actionSender('$SkipVote', null)} key="1">
+                <Button
+                    variant="secondary"
+                    disabled={!game.session || game.session?.frame.id === 'question-board'}
+                    onClick={() => actionSender('$SkipVote', null)}
+                    key="1"
+                >
                     Skip
                 </Button>
             )
             gameControls.push(
-                <Button onClick={() => actionSender(game.session?.isPaused ? '$Resume' : '$Pause', null)} key="3">
+                <Button variant="secondary" onClick={() => actionSender(game.session?.isPaused ? '$Resume' : '$Pause', null)} key="3">
                     {game.session?.isPaused ? 'Resume' : 'Pause'}
                 </Button>
             )

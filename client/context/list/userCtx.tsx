@@ -15,7 +15,7 @@ export const UserContext = createContext({
 })
 
 interface Props {
-    children?: JSX.Element
+    children?: React.ReactNode
     user: UserData
 }
 

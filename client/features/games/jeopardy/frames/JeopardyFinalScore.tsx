@@ -1,6 +1,6 @@
 import React from 'react'
 import { JeopardyState } from 'state/games/jeopardy/JeopardySessionState'
-import { Grid, Typography } from '@mui/material'
+import { Grid, Typography } from 'client/ui/mui-shim'
 
 export const FinalScore: React.FC<JeopardyState.FinalScoreFrame> = props => {
     return (

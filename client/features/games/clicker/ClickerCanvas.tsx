@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { Box } from '@mui/material'
-import styles from './Clicker.module.scss'
+import styles from './Clicker.module.css'
 import { useAudio, useEventHandler, useLobby, useUser } from 'client/context/list'
 import { ClickerPlayerData } from 'state'
 import { useActionSender, useClicker, useClickerAction } from './ClickerView'
@@ -13,7 +12,6 @@ export const ClickerCanvas: React.FC = () => {
     const canvasRef = useRef<HTMLDivElement>(null)
 
     const [gameClickAllowed, setGameClickAllowed] = useState(game.session?.playerIsClickAllowed ?? false)
-    const [isCanvasClickable, setIsCanvasClickable] = useState(true)
 
     const sendAction = useActionSender()
 
@@ -22,6 +20,30 @@ export const ClickerCanvas: React.FC = () => {
             setGameClickAllowed(game.session.playerIsClickAllowed)
         }
     }, [game.session?.playerIsClickAllowed])
+
+    function drawClick(color: string, x: number, y: number, status: 'Ok' | 'Failure' | 'NotWin') {
+        const canvas = canvasRef.current
+
+        if (!canvas) {
+            return
+        }
+
+        const circle = document.createElement('div')
+
+        if (status === 'Failure') {
+            circle.classList.add(styles.circle, styles.failure)
+            audio.play('clicker_fail.wav')
+        } else {
+            circle.classList.add(styles.circle, styles.success)
+            audio.play('clicker_success.wav')
+        }
+
+        circle.style.left = `${x}vw`
+        circle.style.top = `${y}vh`
+        circle.style.backgroundColor = color
+
+        canvas.prepend(circle)
+    }
 
     useClickerAction('$Click', action => {
         if (action.result.status && action.result.status !== 'Skipped') {
@@ -53,29 +75,7 @@ export const ClickerCanvas: React.FC = () => {
         }
     })
 
-    const drawClick = (color: string, x: number, y: number, status: 'Ok' | 'Failure' | 'NotWin') => {
-        const canvas = canvasRef.current
-
-        if (!canvas) {
-            return
-        }
-
-        const circle = document.createElement('div')
-
-        if (status === 'Failure') {
-            circle.classList.add(styles.circle, styles.failure)
-            audio.play('clicker_fail.wav')
-        } else {
-            circle.classList.add(styles.circle, styles.success)
-            audio.play('clicker_success.wav')
-        }
-
-        circle.style.left = `${x}vw`
-        circle.style.top = `${y}vh`
-        circle.style.backgroundColor = color
-
-        canvas.prepend(circle)
-    }
+    const isCanvasClickable = (game.players.find(p => p.userNickname === user.userNickname) as ClickerPlayerData | undefined)?.playerIsClickAllowed ?? true
 
     const actionHandler = (clientX: number, clientY: number) => {
         const width = window.innerWidth
@@ -95,21 +95,13 @@ export const ClickerCanvas: React.FC = () => {
         actionHandler(e.touches[0].clientX, e.touches[0].clientY)
     }
 
-    useEffect(() => {
-        const player = game.players.find(p => p.userNickname === user.userNickname) as ClickerPlayerData | undefined
-
-        if (player) {
-            setIsCanvasClickable(player.playerIsClickAllowed)
-        }
-    }, [game.players])
-
     return (
-        <Box
+        <div
             ref={canvasRef}
             onMouseDown={handleMouseDown}
             onTouchStart={handleTouch}
             onTouchEnd={e => e.preventDefault()}
-            sx={{
+            style={{
                 display: 'flex',
                 justifyContent: 'center',
                 alignItems: 'center',
@@ -128,6 +120,6 @@ export const ClickerCanvas: React.FC = () => {
             {gameClickAllowed && game.initialData?.background?.value && (
                 <img style={{ pointerEvents: 'none', userSelect: 'none' }} src={game.initialData.background.value} alt="background" />
             )}
-        </Box>
+        </div>
     )
 }

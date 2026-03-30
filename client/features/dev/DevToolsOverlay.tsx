@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useWS } from 'client/context/list'
-import { Box, Button, IconButton } from '@mui/material'
-import CloseIcon from '@mui/icons-material/Close'
-import ArrowBackIosIcon from '@mui/icons-material/ArrowBackIos'
+import { Button } from 'client/ui/primitives'
+import { ChevronLeft, X } from 'lucide-react'
 
 export const DevToolsOverlay: React.FC = () => {
     const [isEnabled, setIsEnabled] = useState(false)
@@ -22,19 +21,21 @@ export const DevToolsOverlay: React.FC = () => {
     }
 
     return (
-        <Box sx={{ position: 'fixed', right: 0, top: '50%', display: 'flex', flexDirection: 'column', zIndex: 9999 }}>
+        <div className="fixed right-0 top-1/2 z-[9999] flex -translate-y-1/2 flex-col">
             {isVisible ? (
                 <>
-                    <IconButton onClick={() => setIsVisible(false)}>
-                        <CloseIcon />
-                    </IconButton>
-                    <Button onClick={() => ws.wsRef.current?.close()}>close WS</Button>
+                    <Button variant="ghost" size="icon" onClick={() => setIsVisible(false)}>
+                        <X className="size-4" />
+                    </Button>
+                    <Button variant="secondary" onClick={() => ws.wsRef.current?.close()}>
+                        Close WS
+                    </Button>
                 </>
             ) : (
-                <IconButton onClick={() => setIsVisible(true)}>
-                    <ArrowBackIosIcon />
-                </IconButton>
+                <Button variant="secondary" size="icon" onClick={() => setIsVisible(true)}>
+                    <ChevronLeft className="size-4" />
+                </Button>
             )}
-        </Box>
+        </div>
     )
 }

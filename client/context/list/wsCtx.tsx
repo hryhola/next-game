@@ -45,7 +45,7 @@ export interface WSData {
 export const WSContext = createContext<WSData>({})
 
 interface Props {
-    children?: JSX.Element
+    children?: React.ReactNode
 }
 
 export const WSProvider: React.FC<Props> = props => {
@@ -221,7 +221,7 @@ export const WSProvider: React.FC<Props> = props => {
 
     const sendWorkerRoomMessage = (message: LobbyRoomClientMessage) => {
         if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
-            console.error('Cannot send worker room message because room websocket is not connected', message)
+            console.warn('Cannot send worker room message because room websocket is not connected yet', message)
             return
         }
 
@@ -686,7 +686,10 @@ export const WSProvider: React.FC<Props> = props => {
         workerGlobalShouldReconnectRef.current = true
 
         const connectWorkerGlobalSocket = () => {
-            if (workerGlobalSocketRef.current && [WebSocket.CONNECTING, WebSocket.OPEN].includes(workerGlobalSocketRef.current.readyState)) {
+            if (
+                workerGlobalSocketRef.current &&
+                (workerGlobalSocketRef.current.readyState === WebSocket.CONNECTING || workerGlobalSocketRef.current.readyState === WebSocket.OPEN)
+            ) {
                 return
             }
 

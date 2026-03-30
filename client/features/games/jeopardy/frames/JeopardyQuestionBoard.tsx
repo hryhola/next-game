@@ -1,6 +1,6 @@
 import React from 'react'
 import { JeopardyState } from 'state/games/jeopardy/JeopardySessionState'
-import { Box, Button, Divider } from '@mui/material'
+import { Box, Button, Divider } from 'client/ui/mui-shim'
 import { useLobby, useUser } from 'client/context/list'
 import { useActionSender, useJeopardy } from '../JeopardyView'
 

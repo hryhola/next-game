@@ -1,6 +1,6 @@
 import React from 'react'
 import { JeopardyState } from 'state/games/jeopardy/JeopardySessionState'
-import { Grid, Typography, Zoom } from '@mui/material'
+import { Grid, Typography, Zoom } from 'client/ui/mui-shim'
 
 export const RoundPreview: React.FC<JeopardyState.RoundPreviewFrame> = props => {
     return (

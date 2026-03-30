@@ -1,6 +1,6 @@
-import { FormControl, InputAdornment, List, ListItem, ListItemText, OutlinedInput, Toolbar } from '@mui/material'
 import React, { useState } from 'react'
-import SearchIcon from '@mui/icons-material/Search'
+import { Search } from 'lucide-react'
+import { Input } from 'client/ui/primitives'
 
 interface Props {
     users: Array<{ userNickname: string; id: string }>
@@ -12,30 +12,18 @@ export const UsersListBox: React.FC<Props> = props => {
     const renderedUsers = searchString.length ? props.users.filter(u => u.userNickname.toLowerCase().includes(searchString.toLowerCase())) : props.users
 
     return (
-        <>
-            <Toolbar sx={{ pt: 2 }}>
-                <FormControl fullWidth variant="filled">
-                    <OutlinedInput
-                        size="small"
-                        fullWidth
-                        placeholder="Search..."
-                        value={searchString}
-                        onChange={e => setSearchString(e.target.value)}
-                        endAdornment={
-                            <InputAdornment position="end">
-                                <SearchIcon />
-                            </InputAdornment>
-                        }
-                    />
-                </FormControl>
-            </Toolbar>
-            <List>
+        <div className="flex h-full flex-col gap-4">
+            <div className="relative pt-2">
+                <Search className="pointer-events-none absolute right-4 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
+                <Input placeholder="Search..." value={searchString} onChange={e => setSearchString(e.target.value)} className="pr-10" />
+            </div>
+            <div className="glass-card flex flex-1 flex-col gap-2 p-3">
                 {renderedUsers.map(user => (
-                    <ListItem key={user.id}>
-                        <ListItemText>{user.userNickname}</ListItemText>
-                    </ListItem>
+                    <div key={user.id} className="rounded-2xl border border-white/6 bg-white/4 px-4 py-3 text-sm text-slate-100">
+                        {user.userNickname}
+                    </div>
                 ))}
-            </List>
-        </>
+            </div>
+        </div>
     )
 }

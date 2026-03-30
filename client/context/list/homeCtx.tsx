@@ -11,7 +11,7 @@ export const HomeContext = createContext({
 })
 
 interface Props {
-    children?: JSX.Element
+    children?: React.ReactNode
 }
 
 export const HomeProvider: React.FC<Props> = props => {

@@ -1,27 +1,27 @@
-import AppBar, { AppBarProps } from '@mui/material/AppBar'
-import Toolbar from '@mui/material/Toolbar'
-import Typography from '@mui/material/Typography'
-import IconButton from '@mui/material/IconButton'
-import MenuIcon from '@mui/icons-material/Menu'
 import { ProfilePreview } from './ProfilePreview'
 import { useHome } from 'client/context/list'
+import { Button } from 'client/ui/primitives'
+import { Menu } from 'lucide-react'
+import { cn } from 'client/ui/lib/cn'
 
 export const headerHeight = '84px'
 
-export const Header: React.FC<AppBarProps> = props => {
+export const Header: React.FC<React.HTMLAttributes<HTMLElement>> = props => {
     const home = useHome()
 
     return (
-        <AppBar position="static" sx={{ height: headerHeight }} {...props}>
-            <Toolbar>
-                <IconButton onClick={() => home.setIsNavigationOpen(true)} size="large" edge="start" color="inherit" aria-label="menu" sx={{ mr: 2 }}>
-                    <MenuIcon />
-                </IconButton>
-                <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-                    Game Club
-                </Typography>
-                <ProfilePreview sx={{ marginY: 2 }} onClick={() => home.setIsProfileEditOpen(true)} />
-            </Toolbar>
-        </AppBar>
+        <header
+            className={cn('glass-panel sticky top-0 z-30 flex h-[84px] items-center gap-4 border-b border-white/10 px-4 sm:px-6', props.className)}
+            {...props}
+        >
+            <Button variant="secondary" size="icon" onClick={() => home.setIsNavigationOpen(true)} aria-label="Open navigation">
+                <Menu className="size-5" />
+            </Button>
+            <div className="min-w-0 flex-1">
+                <p className="text-xs uppercase tracking-[0.35em] text-violet-200/55">Game Club</p>
+                <h1 className="truncate text-xl font-semibold text-white">Play together, instantly.</h1>
+            </div>
+            <ProfilePreview onClick={() => home.setIsProfileEditOpen(true)} />
+        </header>
     )
 }

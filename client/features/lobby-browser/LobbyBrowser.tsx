@@ -1,11 +1,9 @@
-import { FormControl, IconButton, InputAdornment, List, Toolbar } from '@mui/material'
 import { useEventHandler, useHome, useRequestHandler, useWS } from 'client/context/list'
 import { useEffect, useState } from 'react'
 import type { LobbyBaseInfo } from 'shared/contracts/lobby'
-import AddIcon from '@mui/icons-material/Add'
-import { OutlinedInput } from '@mui/material'
-import SearchIcon from '@mui/icons-material/Search'
+import { Plus, Search } from 'lucide-react'
 import { LobbyRecord } from './LobbyRecord'
+import { Button, Input } from 'client/ui/primitives'
 
 export const LobbyBrowser: React.FC = () => {
     const ws = useWS()
@@ -47,31 +45,21 @@ export const LobbyBrowser: React.FC = () => {
     const renderedLobbies = searchString.length ? lobbiesList.filter(lobby => lobby.id.toLowerCase().includes(searchString.toLowerCase())) : lobbiesList
 
     return (
-        <>
-            <Toolbar sx={{ pt: 2 }}>
-                <IconButton size="large" edge="start" color="inherit" aria-label="menu" onClick={() => home.setIsCreateLobbyOpen(true)}>
-                    <AddIcon />
-                </IconButton>
-                <FormControl fullWidth variant="filled">
-                    <OutlinedInput
-                        size="small"
-                        fullWidth
-                        placeholder="Search..."
-                        value={searchString}
-                        onChange={e => setSearchString(e.target.value)}
-                        endAdornment={
-                            <InputAdornment position="end">
-                                <SearchIcon />
-                            </InputAdornment>
-                        }
-                    />
-                </FormControl>
-            </Toolbar>
-            <List>
+        <div className="flex h-full flex-col gap-4">
+            <div className="flex items-center gap-3">
+                <Button variant="secondary" size="icon" aria-label="Create lobby" onClick={() => home.setIsCreateLobbyOpen(true)}>
+                    <Plus className="size-4" />
+                </Button>
+                <div className="relative flex-1">
+                    <Search className="pointer-events-none absolute right-4 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
+                    <Input placeholder="Search..." value={searchString} onChange={e => setSearchString(e.target.value)} className="pr-10" />
+                </div>
+            </div>
+            <div className="flex flex-1 flex-col gap-3 overflow-y-auto">
                 {renderedLobbies.map(lobby => (
                     <LobbyRecord key={lobby.id} {...lobby} />
                 ))}
-            </List>
-        </>
+            </div>
+        </div>
     )
 }

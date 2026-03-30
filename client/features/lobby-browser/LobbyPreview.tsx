@@ -1,14 +1,15 @@
 import { useLobby } from 'client/context/list'
 import { useClientRouter } from 'client/route/ClientRouter'
 import { FormEventHandler, useState } from 'react'
-import { TextField, Button, Alert, Grid, Typography, SxProps, Theme, ButtonGroup } from '@mui/material'
 import { LoadingOverlay } from 'client/ui'
 import { LobbyData, LobbyMemberRole } from 'state'
 import { api } from 'client/network-utils/api'
+import { Button, Card, CardContent, Input } from 'client/ui/primitives'
+import { cn } from 'client/ui/lib/cn'
 
 interface Props {
     lobby: LobbyData
-    sx?: SxProps<Theme>
+    className?: string
 }
 
 export const LobbyPreview: React.FC<Props> = props => {
@@ -53,56 +54,40 @@ export const LobbyPreview: React.FC<Props> = props => {
 
     return (
         <>
-            <Grid sx={props.sx} container component="form" onSubmit={handleSubmit} direction="column" spacing={2} height="100%">
-                {error && (
-                    <Grid item>
-                        <Alert severity="error">{error}</Alert>
-                    </Grid>
-                )}
-                <Grid container item justifyContent="space-between">
-                    <Grid item>{props.lobby.id}</Grid>
-                    <Grid item>
-                        <Typography color="secondary">
-                            {props.lobby.members.length} {props.lobby.members.length === 1 ? 'member' : 'members'}
-                        </Typography>
-                    </Grid>
-                </Grid>
-                <Grid container item justifyContent="space-between">
-                    <Grid item>
-                        <Typography variant="overline">{props.lobby.gameName}</Typography>
-                    </Grid>
-                    <Grid item>
-                        <Typography color="secondary" variant="overline">
-                            by&nbsp;{props.lobby.creator.userNickname}
-                        </Typography>
-                    </Grid>
-                </Grid>
-
-                {props.lobby.private && (
-                    <Grid item>
-                        <TextField
-                            size="small"
-                            label="Password"
-                            name="password"
-                            required
-                            value={password}
-                            onChange={e => setPassword(e.target.value.split('\\').pop()!)}
-                            fullWidth
-                        />
-                    </Grid>
-                )}
-
-                <Grid item sx={{ mt: 'auto' }}>
-                    <ButtonGroup fullWidth>
-                        <Button color="primary" variant="outlined" type="submit" data-role="player">
-                            Play 🎮
-                        </Button>
-                        <Button color="primary" variant="outlined" type="submit" data-role="spectator">
-                            Watch 👀
-                        </Button>
-                    </ButtonGroup>
-                </Grid>
-            </Grid>
+            <Card className={cn('w-full', props.className)}>
+                <CardContent>
+                    <form className="flex h-full flex-col gap-4" onSubmit={handleSubmit}>
+                        {error ? <div className="rounded-2xl border border-rose-300/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">{error}</div> : null}
+                        <div className="flex items-center justify-between gap-4 text-sm">
+                            <span className="font-semibold text-white">{props.lobby.id}</span>
+                            <span className="text-violet-200">
+                                {props.lobby.members.length} {props.lobby.members.length === 1 ? 'member' : 'members'}
+                            </span>
+                        </div>
+                        <div className="flex items-center justify-between gap-4 text-xs uppercase tracking-[0.3em] text-slate-400">
+                            <span>{props.lobby.gameName}</span>
+                            <span>by {props.lobby.creator.userNickname}</span>
+                        </div>
+                        {props.lobby.private && (
+                            <Input
+                                placeholder="Password"
+                                name="password"
+                                required
+                                value={password}
+                                onChange={e => setPassword(e.target.value.split('\\').pop()!)}
+                            />
+                        )}
+                        <div className="mt-auto grid grid-cols-2 gap-3">
+                            <Button variant="secondary" type="submit" data-role="player">
+                                Play
+                            </Button>
+                            <Button variant="outline" type="submit" data-role="spectator">
+                                Watch
+                            </Button>
+                        </div>
+                    </form>
+                </CardContent>
+            </Card>
             <LoadingOverlay isLoading={isLoading} />
         </>
     )

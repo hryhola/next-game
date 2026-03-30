@@ -1,20 +1,11 @@
 import React, { useEffect, useRef } from 'react'
-import { Box, Button, ButtonProps, Grid, Skeleton, styled } from '@mui/material'
-import CloseIcon from '@mui/icons-material/Close'
-import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked'
+import { Box, Grid } from 'client/ui/mui-shim'
 import { useEventHandler, useUser } from 'client/context/list'
-import { useSnackbar } from 'notistack'
-import styles from './TicTacToe.module.scss'
+import { useToast } from 'client/ui/toast/ToastProvider'
+import styles from './TicTacToe.module.css'
 import { useActionSender, useTicTacToe, useTicTacToeAction } from './TicTacToeView'
-
-const Cell = styled(Button)<ButtonProps>(({ theme }) => ({
-    maxWidth: '200px',
-    maxHeight: '200px',
-    width: '30vw',
-    height: '30vw',
-    borderRadius: 0,
-    border: '1px solid'
-}))
+import { Button, Skeleton } from 'client/ui/primitives'
+import { Circle, X } from 'lucide-react'
 
 type Props = {
     isPlayable?: boolean
@@ -22,7 +13,7 @@ type Props = {
 }
 
 export const TicTacToeCanvas: React.FC<Props> = ({ isLoading }) => {
-    const { enqueueSnackbar } = useSnackbar()
+    const { push } = useToast()
     const sendAction = useActionSender()
 
     const user = useUser()
@@ -45,12 +36,15 @@ export const TicTacToeCanvas: React.FC<Props> = ({ isLoading }) => {
     }, [game.players])
 
     useEffect(() => {
+        // This mirrors server state into local animation state for the current board.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         game.session?.board && setCellValues(game.session?.board)
     }, [game.session?.board])
 
     useEffect(() => {
         if (!game.session) return
 
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setTurn(game.session.turn)
     }, [game.session?.turn])
 
@@ -118,20 +112,14 @@ export const TicTacToeCanvas: React.FC<Props> = ({ isLoading }) => {
                 svg.appendChild(line)
             }
 
-            enqueueSnackbar(`${winner?.userNickname} won!`, {
-                anchorOrigin: {
-                    vertical: 'bottom',
-                    horizontal: 'center'
-                }
+            push({
+                content: `${winner?.userNickname} won!`
             })
         }
 
         if (action.result.isDraw) {
-            enqueueSnackbar(`Draw!`, {
-                anchorOrigin: {
-                    vertical: 'bottom',
-                    horizontal: 'center'
-                }
+            push({
+                content: 'Draw!'
             })
         }
     })
@@ -167,28 +155,19 @@ export const TicTacToeCanvas: React.FC<Props> = ({ isLoading }) => {
                             <Grid justifyContent="center" key={y} item>
                                 {isLoading ? (
                                     <Skeleton
-                                        variant="rectangular"
-                                        sx={{
-                                            width: 200,
-                                            maxWidth: '29vw',
-                                            height: 200,
-                                            maxHeight: '29vw',
-                                            m: 0.2,
-                                            boxSizing: 'border-box'
-                                        }}
+                                        style={{ width: 200, maxWidth: '29vw', height: 200, maxHeight: '29vw', margin: '1px', boxSizing: 'border-box' }}
                                     />
                                 ) : (
-                                    <Cell
-                                        sx={{ pointerEvents: isMyTurn && cell === null ? 'auto' : 'none' }}
+                                    <Button
+                                        className="max-h-[200px] max-w-[200px] rounded-none border border-white/20 bg-violet-500/18 px-0 shadow-none"
+                                        style={{ width: '30vw', height: '30vw', pointerEvents: isMyTurn && cell === null ? 'auto' : 'none' }}
                                         disabled={!game.isSessionStarted}
                                         id={x + '-' + y}
                                         onClick={cellClickHandler}
-                                        variant="contained"
-                                        color="primary"
                                     >
-                                        {cell === 'x' && <CloseIcon sx={{ fontSize: 80 }} />}
-                                        {cell === 'o' && <RadioButtonUncheckedIcon sx={{ fontSize: 80 }} />}
-                                    </Cell>
+                                        {cell === 'x' && <X className="size-20" />}
+                                        {cell === 'o' && <Circle className="size-20" />}
+                                    </Button>
                                 )}
                             </Grid>
                         ))}

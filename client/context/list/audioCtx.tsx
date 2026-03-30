@@ -8,7 +8,7 @@ export const AudioCtx = createContext({
 })
 
 interface Props {
-    children?: JSX.Element
+    children?: React.ReactNode
 }
 
 export const AudioProvider: React.FC<Props> = props => {

@@ -1,93 +1,45 @@
 import * as React from 'react'
-import SwipeableViews from 'react-swipeable-views'
-import { SxProps, Theme, useTheme } from '@mui/material/styles'
-import AppBar from '@mui/material/AppBar'
-import Tabs from '@mui/material/Tabs'
-import Tab from '@mui/material/Tab'
-import Box, { BoxProps } from '@mui/material/Box'
 import { LobbyBrowser } from '../lobby-browser/LobbyBrowser'
 import { Chat } from '../chat/Chat'
 import { headerHeight } from '../header/Header'
-import { chatInputHeight } from 'client/ui'
 import { GlobalUsersList } from '../global-users-list/GlobalUsersList'
 import { GlobalUsersListTitle } from '../global-users-list/GlobalUsersListTitle'
-
-interface TabPanelProps {
-    children?: React.ReactNode
-    dir?: string
-    index: number
-    value: number
-    sx?: SxProps<Theme>
-}
-
-function TabPanel(props: TabPanelProps) {
-    const { children, value, index, ...other } = props
-
-    return (
-        <Box role="tabpanel" hidden={value !== index} id={`full-width-tabpanel-${index}`} aria-labelledby={`full-width-tab-${index}`} {...other}>
-            {value === index && children}
-        </Box>
-    )
-}
-
-function a11yProps(index: number) {
-    return {
-        id: `home-tab-${index}`,
-        'aria-controls': `home-tabpanel-${index}`
-    }
-}
+import { Tabs, TabsContent, TabsList, TabsTrigger } from 'client/ui/primitives'
+import { cn } from 'client/ui/lib/cn'
 
 export const tabsHeaderHeight = '48px'
 
-export const HomeTabs: React.FC<BoxProps> = props => {
-    const theme = useTheme()
+type HomeTabsProps = {
+    className?: string
+}
 
-    const [value, setValue] = React.useState(0)
-
-    const handleChange = (event: React.SyntheticEvent, newValue: number) => {
-        setValue(newValue)
-    }
-
-    const handleChangeIndex = (index: number) => {
-        setValue(index)
-    }
-
-    const sx: SxProps<Theme> = {
-        bgcolor: 'background.paper',
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100%',
-        ...(props.sx || {})
-    }
-
-    const headersHeight = `(${tabsHeaderHeight} + ${headerHeight})`
+export const HomeTabs: React.FC<HomeTabsProps> = props => {
+    const contentHeight = `calc(var(--fullHeight) - ${tabsHeaderHeight} - ${headerHeight} - 32px)`
 
     return (
-        <Box {...props} sx={sx}>
-            <AppBar sx={{ height: tabsHeaderHeight }} position="static">
-                <Tabs value={value} onChange={handleChange} indicatorColor="primary" textColor="inherit" variant="fullWidth" aria-label="Home page navigation">
-                    <Tab label="Lobbies" {...a11yProps(0)} />
-                    <Tab label="chat" {...a11yProps(1)} />
-                    <Tab label={<GlobalUsersListTitle />} {...a11yProps(2)} />
-                </Tabs>
-            </AppBar>
-            <SwipeableViews
-                id="home-tab-swipe-container"
-                style={{ flexGrow: 1 }}
-                axis={theme.direction === 'rtl' ? 'x-reverse' : 'x'}
-                index={value}
-                onChangeIndex={handleChangeIndex}
-            >
-                <TabPanel sx={{ height: `calc(var(--fullHeight) - ${headersHeight})` }} value={value} index={0} dir={theme.direction}>
+        <Tabs defaultValue="lobbies" className={cn('flex h-full flex-col gap-4 px-4 py-4 sm:px-6', props.className)}>
+            <TabsList className="grid h-12 w-full grid-cols-3">
+                <TabsTrigger value="lobbies">Lobbies</TabsTrigger>
+                <TabsTrigger value="chat">Chat</TabsTrigger>
+                <TabsTrigger value="online">
+                    <GlobalUsersListTitle />
+                </TabsTrigger>
+            </TabsList>
+            <TabsContent className="mt-0 min-h-0 flex-1" value="lobbies">
+                <div style={{ height: contentHeight }}>
                     <LobbyBrowser />
-                </TabPanel>
-                <TabPanel sx={{ height: `calc(var(--fullHeight) - ${headersHeight})` }} value={value} index={1} dir={theme.direction}>
-                    <Chat scope="global" messagesWrapperBoxSx={{ height: `calc(var(--fullHeight) - ${headersHeight} - ${chatInputHeight})` }} />
-                </TabPanel>
-                <TabPanel sx={{ height: `calc(var(--fullHeight) - ${headersHeight})` }} value={value} index={2} dir={theme.direction}>
+                </div>
+            </TabsContent>
+            <TabsContent className="mt-0 min-h-0 flex-1" value="chat">
+                <div style={{ height: contentHeight }}>
+                    <Chat className="h-full" scope="global" />
+                </div>
+            </TabsContent>
+            <TabsContent className="mt-0 min-h-0 flex-1" value="online">
+                <div style={{ height: contentHeight }}>
                     <GlobalUsersList />
-                </TabPanel>
-            </SwipeableViews>
-        </Box>
+                </div>
+            </TabsContent>
+        </Tabs>
     )
 }

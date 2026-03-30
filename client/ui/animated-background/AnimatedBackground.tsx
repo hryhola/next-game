@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import dotsGrid from './scripts/dots-grid'
 import matrix from './scripts/matrix'
 
-import styles from './AnimatedBackground.module.scss'
+import styles from './AnimatedBackground.module.css'
 
 export type AnimationType = 'dot-grid' | 'matrix'
 

@@ -1,39 +1,62 @@
-import React, { useState, createContext } from 'react'
-import { ErrorFrame } from './#common/ErrorFrame'
-import { LoginFrame } from './frames/LoginFrame'
-import { LobbyFrame } from './frames/LobbyFrame'
-import { HomeFrame } from './frames/HomeFrame'
-import { WsApp } from 'client/features/ws-app/WsApp'
+'use client'
 
-const PageToFrameMap = {
-    Login: <LoginFrame />,
-    Home: <HomeFrame />,
-    Lobby: <LobbyFrame />
-}
+import { useMemo } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
+import { useLobby } from 'client/context/list'
 
-export type FrameName = keyof typeof PageToFrameMap
+export type FrameName = 'Login' | 'Home' | 'Lobby' | 'Admin'
 
-export const ClientRouterContext = createContext({
-    frame: 'Login' as FrameName,
-    setFrame: (_val: FrameName) => {}
-})
-
-interface Props {
-    initialFrame: FrameName
-}
-
-export const ClientRouterProvider: React.FC<Props> = props => {
-    const [frame, setFrame] = useState<FrameName>(props.initialFrame)
-
-    if (!frame || !(frame in PageToFrameMap)) {
-        return <ErrorFrame />
+function getFrameFromPathname(pathname?: string | null): FrameName {
+    if (!pathname) {
+        return 'Login'
     }
 
-    let frameComponent = <WsApp>{PageToFrameMap[frame]}</WsApp>
+    if (pathname.startsWith('/lobby/')) {
+        return 'Lobby'
+    }
 
-    return <ClientRouterContext.Provider value={{ frame, setFrame }}>{frameComponent}</ClientRouterContext.Provider>
+    if (pathname.startsWith('/home')) {
+        return 'Home'
+    }
+
+    if (pathname.startsWith('/admin')) {
+        return 'Admin'
+    }
+
+    return 'Login'
+}
+
+function getPathForFrame(frame: FrameName, lobbyId?: string): string {
+    if (frame === 'Lobby') {
+        return lobbyId ? `/lobby/${encodeURIComponent(lobbyId)}` : '/home'
+    }
+
+    if (frame === 'Home') {
+        return '/home'
+    }
+
+    if (frame === 'Admin') {
+        return '/admin'
+    }
+
+    return '/login'
 }
 
 export const useClientRouter = () => {
-    return React.useContext(ClientRouterContext)
+    const router = useRouter()
+    const pathname = usePathname()
+    const lobby = useLobby()
+
+    return useMemo(
+        () => ({
+            frame: getFrameFromPathname(pathname),
+            setFrame: (frame: FrameName) => {
+                router.push(getPathForFrame(frame, lobby.lobbyId))
+            },
+            push: (href: string) => router.push(href),
+            replace: (href: string) => router.replace(href),
+            refresh: () => router.refresh()
+        }),
+        [lobby.lobbyId, pathname, router]
+    )
 }

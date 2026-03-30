@@ -1,7 +1,7 @@
-import Button, { ButtonProps } from '@mui/material/Button'
 import { useUser } from 'client/context/list'
-import PersonIcon from '@mui/icons-material/Person'
-import { Typography } from '@mui/material'
+import { Button } from 'client/ui/primitives'
+import { UserRound } from 'lucide-react'
+import { cn } from 'client/ui/lib/cn'
 
 function ProfilePicture() {
     const user = useUser()
@@ -9,30 +9,22 @@ function ProfilePicture() {
     if (user.userAvatarUrl) {
         return (
             <>
-                &nbsp;
-                <img
-                    style={{
-                        maxWidth: '40px',
-                        maxHeight: '40px'
-                    }}
-                    src={user.userAvatarUrl}
-                    alt="profile avatar"
-                />
+                <img className="size-10 rounded-full border border-white/10 object-cover" src={user.userAvatarUrl} alt="profile avatar" />
             </>
         )
     }
 
-    return <PersonIcon sx={{ fontSize: 40, color: user.userColor }} />
+    return <UserRound className="size-10" style={{ color: user.userColor }} />
 }
 
-export const ProfilePreview: React.FC<ButtonProps> = props => {
+export const ProfilePreview: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement>> = props => {
     const user = useUser()
 
     return (
-        <Button {...props}>
-            <Typography variant="body1" color={user.userColor} textTransform="none">
+        <Button variant="ghost" className={cn('h-auto gap-3 rounded-full px-3 py-2 text-left', props.className)} {...props}>
+            <span className="text-sm font-semibold" style={{ color: user.userColor }}>
                 {user.userNickname}
-            </Typography>
+            </span>
             <ProfilePicture />
         </Button>
     )

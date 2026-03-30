@@ -1,11 +1,10 @@
-import { Button, ListItem, ListItemButton, ListItemText, Theme } from '@mui/material'
 import type { LobbyBaseInfo } from 'shared/contracts/lobby'
-import LockIcon from '@mui/icons-material/Lock'
 import { LobbyPreview } from './LobbyPreview'
 import { MouseEventHandler, useState } from 'react'
 import { LobbyData } from 'state'
 import { useRequestHandler, useWS } from 'client/context/list'
-import ArrowDropUpIcon from '@mui/icons-material/ArrowDropUp'
+import { Button, Card, CardContent } from 'client/ui/primitives'
+import { ChevronUp, Lock } from 'lucide-react'
 
 export const LobbyRecord: React.FC<LobbyBaseInfo> = props => {
     const ws = useWS()
@@ -22,7 +21,7 @@ export const LobbyRecord: React.FC<LobbyBaseInfo> = props => {
         }
     })
 
-    const handleClick: MouseEventHandler<HTMLDivElement> = e => {
+    const handleClick: MouseEventHandler<HTMLButtonElement> = e => {
         if (lobbyInfo) {
             e.preventDefault()
         } else {
@@ -33,30 +32,22 @@ export const LobbyRecord: React.FC<LobbyBaseInfo> = props => {
     }
 
     return (
-        <ListItem disablePadding>
+        <Card className="overflow-hidden">
             {lobbyInfo ? (
-                <>
-                    <ListItemText
-                        sx={(theme: Theme) => ({
-                            pt: 0,
-                            mt: 0,
-                            ':hover': {
-                                backgroundColor: theme.palette.grey[900]
-                            }
-                        })}
-                    >
-                        <Button sx={{ borderRadius: 0 }} onClick={() => setLobbyInfo(null)} fullWidth>
-                            <ArrowDropUpIcon />
-                        </Button>
-                        <LobbyPreview sx={{ p: 2 }} lobby={lobbyInfo!} />
-                    </ListItemText>
-                </>
+                <CardContent className="p-0">
+                    <Button className="w-full rounded-none" variant="ghost" onClick={() => setLobbyInfo(null)}>
+                        <ChevronUp className="size-4" />
+                    </Button>
+                    <div className="p-4">
+                        <LobbyPreview lobby={lobbyInfo} />
+                    </div>
+                </CardContent>
             ) : (
-                <ListItemButton onClick={handleClick}>
-                    <ListItemText>{props.id}</ListItemText>
-                    {props.private && <LockIcon />}
-                </ListItemButton>
+                <button className="flex w-full items-center justify-between px-5 py-4 text-left transition hover:bg-white/6" onClick={handleClick}>
+                    <span className="font-medium text-white">{props.id}</span>
+                    {props.private ? <Lock className="size-4 text-violet-200" /> : null}
+                </button>
             )}
-        </ListItem>
+        </Card>
     )
 }

@@ -1,15 +1,15 @@
 import { FormEventHandler, RefObject, useState } from 'react'
 import { ChatMessageComponent } from './ChatMessage'
 import { TChatMessage } from 'state'
-import { List, IconButton, InputAdornment, FilledInput, Box, SxProps, Theme } from '@mui/material'
-import SendIcon from '@mui/icons-material/Send'
-import FormControl from '@mui/material/FormControl'
+import { Button, Input } from 'client/ui/primitives'
+import { cn } from 'client/ui/lib/cn'
+import { SendHorizontal } from 'lucide-react'
 
 export type ChatSXProps = {
-    sx?: SxProps<Theme>
-    messagesWrapperBoxSx?: SxProps<Theme>
-    inputSx?: SxProps<Theme>
-    inputRef?: RefObject<HTMLInputElement>
+    className?: string
+    messagesClassName?: string
+    inputClassName?: string
+    inputRef?: RefObject<HTMLInputElement | null>
 }
 
 type Props = ChatSXProps & {
@@ -20,11 +20,12 @@ type Props = ChatSXProps & {
 export const chatInputHeight = '56px'
 
 export const ChatBox: React.FunctionComponent<Props> = props => {
+    const { className, inputClassName, inputRef, messages, messagesClassName, onSendMessage } = props
     const [text, setText] = useState('')
 
     const handleMessageSent = () => {
         if (text.trim().length) {
-            props.onSendMessage(text.trim())
+            onSendMessage(text.trim())
             setText('')
         }
     }
@@ -35,33 +36,23 @@ export const ChatBox: React.FunctionComponent<Props> = props => {
     }
 
     return (
-        <Box component="form" sx={props.sx || {}} onSubmit={handleFormSubmit}>
-            <List dense sx={{ display: 'flex', flexDirection: 'column-reverse', overflowY: 'scroll', ...(props.messagesWrapperBoxSx || {}) }}>
-                {props.messages.map(message => (
+        <form className={cn('flex h-full flex-col', className)} onSubmit={handleFormSubmit}>
+            <div
+                className={cn(
+                    'flex flex-1 flex-col-reverse gap-3 overflow-y-auto rounded-[1.75rem] border border-white/8 bg-slate-950/25 p-3',
+                    messagesClassName
+                )}
+            >
+                {messages.map(message => (
                     <ChatMessageComponent key={message.id} message={message} />
                 ))}
-            </List>
-            <FormControl sx={props.inputSx || { height: chatInputHeight }} fullWidth variant="filled">
-                <FilledInput
-                    disableUnderline
-                    fullWidth
-                    hiddenLabel
-                    value={text}
-                    onChange={e => setText(e.target.value)}
-                    {...(props.inputRef
-                        ? {
-                              inputRef: props.inputRef
-                          }
-                        : {})}
-                    endAdornment={
-                        <InputAdornment position="end">
-                            <IconButton size="small" onClick={handleMessageSent}>
-                                <SendIcon />
-                            </IconButton>
-                        </InputAdornment>
-                    }
-                />
-            </FormControl>
-        </Box>
+            </div>
+            <div className={cn('mt-3 flex h-[56px] items-center gap-3', inputClassName)}>
+                <Input ref={inputRef} value={text} onChange={e => setText(e.target.value)} placeholder="Write a message..." className="h-full flex-1" />
+                <Button type="button" size="icon" variant="secondary" onClick={handleMessageSent}>
+                    <SendHorizontal className="size-4" />
+                </Button>
+            </div>
+        </form>
     )
 }

@@ -1,22 +1,16 @@
 import React from 'react'
-import { Box, Button, IconButton, Slider } from '@mui/material'
 import { chatInputHeight } from 'client/ui'
 import OverlayedTabs, { overlayedTabsToolbarHeight } from 'client/ui/overlayed-tabs/OverlayedTabs'
-import ChatIcon from '@mui/icons-material/Chat'
 import { Chat } from 'client/features/chat/Chat'
-import VolumeUpIcon from '@mui/icons-material/VolumeUp'
-import VolumeOffIcon from '@mui/icons-material/VolumeOff'
-import MoreVertIcon from '@mui/icons-material/MoreVert'
-import LogoutIcon from '@mui/icons-material/Logout'
-import HighlightOffIcon from '@mui/icons-material/HighlightOff'
-import CheckIcon from '@mui/icons-material/Check'
 import { useLobby, useUser, useWS, useAudio } from 'client/context/list'
 import { useClientRouter } from 'client/route/ClientRouter'
 import { useGlobalModal } from 'client/features/global-modal/GlobalModal'
 import { useGame } from '../games/common/GameFactory'
+import { Button, Slider } from 'client/ui/primitives'
+import { MessageCircle, Volume2, VolumeX, MoreVertical, LogOut, OctagonX, Check } from 'lucide-react'
 
 interface LobbyControlsProps {
-    buttons?: JSX.Element[]
+    buttons?: React.ReactNode[]
 }
 
 export const LobbyControls: React.FC<LobbyControlsProps> = props => {
@@ -54,86 +48,56 @@ export const LobbyControls: React.FC<LobbyControlsProps> = props => {
             views={[
                 {
                     onFullscreen: () => chatInputRef.current?.focus(),
-                    header: <ChatIcon />,
+                    header: <MessageCircle className="size-4" />,
                     view: ({ fullscreen }) => (
-                        <Chat
-                            messagesWrapperBoxSx={{
-                                height: `calc(${fullscreen ? `var(--fullHeight) - ${overlayedTabsToolbarHeight}` : '50vh'} - ${chatInputHeight})`
-                            }}
-                            scope="lobby"
-                            lobbyId={lobby.lobbyId}
-                            inputRef={chatInputRef}
-                        />
+                        <div style={{ height: `calc(${fullscreen ? `var(--fullHeight) - ${overlayedTabsToolbarHeight}` : '50vh'} - ${chatInputHeight})` }}>
+                            <Chat className="h-full p-4" scope="lobby" lobbyId={lobby.lobbyId} inputRef={chatInputRef} />
+                        </div>
                     )
                 },
                 {
                     type: 'popover',
-                    header: audio.volume === 0 ? <VolumeOffIcon /> : <VolumeUpIcon />,
+                    header: audio.volume === 0 ? <VolumeX className="size-4" /> : <Volume2 className="size-4" />,
                     height: '270px',
                     hideIconOnOpen: false,
                     view: opts => (
-                        <Box
-                            sx={{
-                                width: '46px',
-                                backgroundColor: '#272727',
-                                display: 'flex',
-                                flexDirection: opts.direction === 'up' ? 'column' : 'column-reverse',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                borderBottomLeftRadius: '30px',
-                                borderBottomRightRadius: '30px',
-                                pb: opts.direction === 'up' ? 4 : 0
-                            }}
+                        <div
+                            className="glass-panel flex w-[72px] items-center justify-center rounded-b-[30px] px-3"
+                            style={{ flexDirection: opts.direction === 'up' ? 'column' : 'column-reverse', paddingBottom: opts.direction === 'up' ? 16 : 0 }}
                         >
                             <Slider
-                                sx={{
-                                    '& input[type="range"]': {
-                                        WebkitAppearance: 'slider-vertical'
-                                    },
-                                    height: 200,
-                                    marginTop: 2,
-                                    marginBottom: 2
-                                }}
+                                className="my-4 h-[200px]"
                                 orientation="vertical"
                                 min={0}
                                 max={100}
                                 step={1}
-                                defaultValue={50}
-                                value={audio.volume}
-                                onChange={(event, value) => {
-                                    audio.setVolume(value as number)
-                                }}
+                                value={[audio.volume]}
+                                onValueChange={value => audio.setVolume(value[0] || 0)}
                                 aria-label="Volume"
                             />
-                            <Button size="small" sx={{ fontSize: 10, textTransform: 'none' }} onClick={() => audio.toggleMute()}>
+                            <Button size="sm" variant="ghost" className="px-2 text-[10px]" onClick={() => audio.toggleMute()}>
                                 {audio.volume === 0 ? 'Unmute' : 'Mute'}
                             </Button>
-                        </Box>
+                        </div>
                     )
                 },
                 {
                     type: 'popover',
-                    header: <MoreVertIcon />,
+                    header: <MoreVertical className="size-4" />,
                     height: `${controlsHeight}px`,
                     hideIconOnOpen: true,
                     view: opts => (
-                        <Box
-                            sx={{
-                                width: '46px',
-                                backgroundColor: '#272727',
-                                display: 'flex',
-                                flexDirection: opts.direction === 'up' ? 'column' : 'column-reverse',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                borderBottomLeftRadius: '30px',
-                                borderBottomRightRadius: '30px',
-                                pb: opts.direction === 'up' ? 4 : 0
-                            }}
+                        <div
+                            className="glass-panel flex w-[72px] items-center justify-center rounded-b-[30px] px-3"
+                            style={{ flexDirection: opts.direction === 'up' ? 'column' : 'column-reverse', paddingBottom: opts.direction === 'up' ? 16 : 0 }}
                         >
                             {isCreatorView && (
-                                <IconButton
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
                                     onClick={() =>
                                         globalModal.confirm({
+                                            title: 'Destroy lobby',
                                             content: 'Destroy this lobby?',
                                             onConfirm: () => {
                                                 lobby.destroy()
@@ -142,17 +106,20 @@ export const LobbyControls: React.FC<LobbyControlsProps> = props => {
                                         })
                                     }
                                 >
-                                    <HighlightOffIcon />
-                                </IconButton>
+                                    <OctagonX className="size-4" />
+                                </Button>
                             )}
                             {isReadyCheckButtonVisible && (
-                                <IconButton onClick={() => ws.send('Lobby-StartReadyCheck', { lobbyId: lobby.lobbyId })}>
-                                    <CheckIcon />
-                                </IconButton>
+                                <Button variant="ghost" size="icon" onClick={() => ws.send('Lobby-StartReadyCheck', { lobbyId: lobby.lobbyId })}>
+                                    <Check className="size-4" />
+                                </Button>
                             )}
-                            <IconButton
+                            <Button
+                                variant="ghost"
+                                size="icon"
                                 onClick={() =>
                                     globalModal.confirm({
+                                        title: 'Leave lobby',
                                         content: 'Want to leave?',
                                         onConfirm: () => {
                                             lobby.exit()
@@ -161,9 +128,9 @@ export const LobbyControls: React.FC<LobbyControlsProps> = props => {
                                     })
                                 }
                             >
-                                <LogoutIcon />
-                            </IconButton>
-                        </Box>
+                                <LogOut className="size-4" />
+                            </Button>
+                        </div>
                     )
                 }
             ]}

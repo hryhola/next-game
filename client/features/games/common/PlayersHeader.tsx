@@ -1,4 +1,3 @@
-import { Box, Grid } from '@mui/material'
 import { useEffect, useRef } from 'react'
 import { PlayerData } from 'state'
 import { Player } from './Player'
@@ -11,7 +10,7 @@ interface HeaderProps {
 }
 
 export const PlayersHeader: React.FC<HeaderProps> = props => {
-    const boxRef = useRef<HTMLElement>()
+    const boxRef = useRef<HTMLElement | null>(null)
 
     function setPlayersHeaderHeight() {
         const header = document.getElementById('players-header')
@@ -30,41 +29,30 @@ export const PlayersHeader: React.FC<HeaderProps> = props => {
 
     useEffect(() => {
         setPlayersHeaderHeight()
-    }, [boxRef.current])
+    }, [props.isLoading, props.members.length])
 
     return (
-        <Box
-            sx={{
-                background: 'linear-gradient(0deg, rgb(0 0 0 / 0%) 0%, #000024 100%)',
-                zIndex: 2
-            }}
-            width="100%"
-            display="flex"
-            justifyContent="center"
-            position="fixed"
-            id="players-header"
-            ref={boxRef}
-        >
-            <Grid container width="auto" wrap="nowrap" overflow="auto">
+        <div className="fixed left-0 right-0 z-20 flex justify-center bg-gradient-to-b from-[#000024] to-transparent" id="players-header" ref={boxRef as never}>
+            <div className="flex w-auto flex-nowrap overflow-auto">
                 {props.isLoading ? (
-                    <Grid item>
+                    <div>
                         <Player isLoading size="medium" />
-                    </Grid>
+                    </div>
                 ) : (
                     props.members
                         .sort((a, b) => a.memberPosition - b.memberPosition)
                         .map(p => (
-                            <Grid key={p.id} item>
+                            <div key={p.id}>
                                 <Player
                                     player={p}
                                     isHighlighted={props.highlightedPlayedIds?.includes(p.id)}
                                     size="medium"
                                     subtitle={p.playerIsMaster ? props.masterLabel : 'score'}
                                 />
-                            </Grid>
+                            </div>
                         ))
                 )}
-            </Grid>
-        </Box>
+            </div>
+        </div>
     )
 }

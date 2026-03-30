@@ -1,4 +1,4 @@
-import { Box, DialogContentText, Grid, LinearProgress, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from '@mui/material'
+import { Box, Grid, LinearProgress, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from 'client/ui/mui-shim'
 import { useAudio, useLobby, useUser, useWS } from 'client/context/list'
 import { useGlobalModal } from 'client/features/global-modal/GlobalModal'
 import { isCloudflareRealtimeEnabled } from 'client/network-utils/realtimeMode'
@@ -45,7 +45,7 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
     const isWorkerMode = isCloudflareRealtimeEnabled()
     const [timerNowMs, setTimerNowMs] = useState(() => Date.now())
 
-    const answerInputRef = useRef<HTMLInputElement>(null)
+    const answerInputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null)
     const closeAnswerModal = useRef<{ close: (() => void) | null }>({ close: null })
     const closeVerifyModal = useRef<{ close: (() => void) | null }>({ close: null })
 
@@ -57,7 +57,7 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
 
     useEffect(() => {
         updatePlayerVolume()
-    }, [audio.volume, playerRef.current])
+    }, [audio.volume])
 
     useEffect(() => {
         updatePlayerVolume()
@@ -81,8 +81,6 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
             return
         }
 
-        setTimerNowMs(Date.now())
-
         const intervalId = window.setInterval(() => setTimerNowMs(Date.now()), 100)
 
         return () => {
@@ -102,6 +100,7 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
     useEffect(() => {
         if (props.answeringPlayerId === user.id) {
             closeAnswerModal.current.close = globalModal.confirm({
+                title: 'Your answer',
                 header: 'Your answer',
                 actionRequired: true,
                 content: <TextField multiline inputRef={answerInputRef} />,
@@ -115,29 +114,19 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
         }
     }, [props.answeringPlayerId])
 
-    useEffect(() => {
-        const session = game.session as JeopardySessionState
-
-        if (session?.internal?.currentAnsweringPlayerId) {
-            showVerifyModal(session.internal)
-        } else if (closeVerifyModal.current.close) {
-            closeVerifyModal.current.close()
-            closeVerifyModal.current.close = null
-        }
-    }, [(game.session as JeopardySessionState)?.internal?.currentAnsweringPlayerId])
-
-    const showVerifyModal = (data: {
+    function showVerifyModal(data: {
         currentAnsweringPlayerId: string | null
         currentAnsweringPlayerAnswerText?: string | null
         correctAnswers?: string[] | null
         incorrectAnswers?: string[] | null
-    }) => {
+    }) {
         const correctAnswers = data.correctAnswers || []
         const incorrectAnswers = data.incorrectAnswers || []
 
         const mostAnswersList: string[] = correctAnswers.length > incorrectAnswers.length ? correctAnswers : incorrectAnswers
 
         closeVerifyModal.current.close = globalModal.confirm({
+            title: 'Verify answer',
             header: 'Verify answer',
             actionRequired: true,
             inContainer: false,
@@ -175,6 +164,17 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
         })
     }
 
+    useEffect(() => {
+        const session = game.session as JeopardySessionState
+
+        if (session?.internal?.currentAnsweringPlayerId) {
+            showVerifyModal(session.internal)
+        } else if (closeVerifyModal.current.close) {
+            closeVerifyModal.current.close()
+            closeVerifyModal.current.close = null
+        }
+    }, [(game.session as JeopardySessionState)?.internal?.currentAnsweringPlayerId])
+
     useJeopardyAction('$Pause', data => {
         if (!data.result.success) return
 
@@ -203,7 +203,7 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
     const answerGivingProgress = getTimedProgress(props.answerGivingStartedAt, props.answerGivingEndsAt, props.answerGivingTimeLeft, timerNowMs)
     const answerVerifyingProgress = getTimedProgress(props.answerVerifyingStartedAt, props.answerVerifyingEndsAt, props.answerVerifyingTimeLeft, timerNowMs)
 
-    let content!: JSX.Element
+    let content!: React.ReactNode
 
     switch (props.type) {
         case 'image': {

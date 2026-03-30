@@ -15,7 +15,7 @@ const messageLogger = (message: MessageEvent<any>) => {
 }
 
 // In theory should contain only one timer
-const pingIntervals: NodeJS.Timer[] = []
+const pingIntervals: Array<ReturnType<typeof setInterval>> = []
 
 let isHandlingConnectRequest = false
 
@@ -49,7 +49,7 @@ export const connectToWebSocket = async (callbacks?: WebSocketCallbacks) => {
     }
 
     ws.onclose = () => {
-        let i: NodeJS.Timer
+        let i: ReturnType<typeof setInterval>
 
         while (pingIntervals.length) {
             i = pingIntervals.pop()!

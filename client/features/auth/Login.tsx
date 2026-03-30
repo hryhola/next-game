@@ -1,8 +1,8 @@
 import { useState, FormEventHandler } from 'react'
 import { setCookie } from 'cookies-next'
-import { Button, Grid, TextField } from '@mui/material'
 import { useWS, useUser, useRequestHandler } from 'client/context/list'
 import { useClientRouter } from 'client/route/ClientRouter'
+import { Button, Card, CardContent, CardHeader, Input } from 'client/ui/primitives'
 
 const inSeconds90Days = 7776000
 
@@ -43,34 +43,25 @@ export const Login: React.FC = () => {
     }
 
     return (
-        <Grid
-            container
-            component="form"
-            onSubmit={handleSubmit}
-            direction="column"
-            justifyContent="center"
-            alignItems="center"
-            spacing={2}
-            height="var(--fullHeight)"
-        >
-            <Grid item minWidth="300px">
-                <TextField
-                    id="outlined-basic"
-                    name="nickname"
-                    label="nickname"
-                    variant="outlined"
-                    value={nickname}
-                    onChange={e => setNickname(e.target.value)}
-                    error={Boolean(error)}
-                    helperText={error || undefined}
-                    fullWidth
-                />
-            </Grid>
-            <Grid item minWidth="300px">
-                <Button sx={{ height: '54px' }} type="submit" variant="outlined" fullWidth>
-                    enter
-                </Button>
-            </Grid>
-        </Grid>
+        <div className="flex min-h-[var(--fullHeight)] items-center justify-center px-6 py-10">
+            <Card className="w-full max-w-md">
+                <CardHeader>
+                    <p className="text-xs uppercase tracking-[0.35em] text-violet-200/55">Welcome</p>
+                    <h2 className="text-3xl font-semibold text-white">Enter Game Club</h2>
+                    <p className="text-sm text-slate-300">Choose a nickname to hop into lobbies, chat, and game sessions.</p>
+                </CardHeader>
+                <CardContent>
+                    <form className="space-y-4" onSubmit={handleSubmit}>
+                        <div className="space-y-2">
+                            <Input name="nickname" placeholder="Nickname" value={nickname} onChange={e => setNickname(e.target.value)} />
+                            {error ? <p className="text-sm text-rose-300">{error}</p> : null}
+                        </div>
+                        <Button className="w-full" size="lg" variant="primary" type="submit">
+                            Enter
+                        </Button>
+                    </form>
+                </CardContent>
+            </Card>
+        </div>
     )
 }

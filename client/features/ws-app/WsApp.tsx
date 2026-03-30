@@ -3,19 +3,21 @@ import { LoadingOverlay } from 'client/ui/loading-overlay/LoadingOverlay'
 import { connectToWebSocket } from 'client/network-utils/socket'
 import { useLobby, useWS } from 'client/context/list'
 import { DevToolsOverlay } from 'client/features/dev/DevToolsOverlay'
-import { Backdrop, Box, Button } from '@mui/material'
 import { useClientRouter } from 'client/route/ClientRouter'
 import { getCloudflareRoomWebSocketUrl } from 'client/network-utils/realtimeMode'
 import { getCookie } from 'cookies-next'
+import { Button } from 'client/ui/primitives'
 
 type Props = {
-    children: JSX.Element | JSX.Element[]
+    children: React.ReactNode
 }
 
 export const WsApp: React.FC<Props> = props => {
     const ws = useWS()
     const lobby = useLobby()
     const router = useClientRouter()
+    const roomSocketRef = ws.wsRef
+    const setConnected = ws.setIsConnected
 
     const isFirstConnection = useRef(true)
     const currentTargetUrl = useRef<string | null>(null)
@@ -117,6 +119,24 @@ export const WsApp: React.FC<Props> = props => {
         }
     }, [lobby.lobbyId, router.frame])
 
+    useEffect(() => {
+        return () => {
+            if (!roomSocketRef.current) {
+                return
+            }
+
+            try {
+                roomSocketRef.current.close()
+            } catch (_error) {
+                return
+            } finally {
+                roomSocketRef.current = null
+                currentTargetUrl.current = null
+                setConnected(false)
+            }
+        }
+    }, [roomSocketRef, setConnected])
+
     const shouldShowBackdrop = router.frame === 'Lobby' && !isHandlingConnection && !ws.isConnected
 
     return (
@@ -124,25 +144,16 @@ export const WsApp: React.FC<Props> = props => {
             {props.children}
             <DevToolsOverlay />
             <LoadingOverlay transitionDuration={0} text="connecting..." isLoading={isHandlingConnection} />
-            <Backdrop
-                transitionDuration={0}
-                sx={{
-                    zIndex: theme => theme.zIndex.drawer + 1,
-                    ...(isFirstConnection.current
-                        ? {
-                              background: 'black'
-                          }
-                        : {})
-                }}
-                open={shouldShowBackdrop}
-            >
-                <Box sx={{ display: 'flex', flexFlow: 'column' }}>
-                    Connect to the room server to continue.
-                    <Button sx={{ mt: 4 }} variant="contained" color="secondary" onClick={() => startConnecting(currentTargetUrl.current || undefined)}>
-                        reconnect
-                    </Button>
-                </Box>
-            </Backdrop>
+            {shouldShowBackdrop ? (
+                <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+                    <div className="glass-card flex flex-col gap-4 px-6 py-5 text-center text-slate-100">
+                        <p>Connect to the room server to continue.</p>
+                        <Button variant="secondary" onClick={() => startConnecting(currentTargetUrl.current || undefined)}>
+                            Reconnect
+                        </Button>
+                    </div>
+                </div>
+            ) : null}
         </>
     )
 }
