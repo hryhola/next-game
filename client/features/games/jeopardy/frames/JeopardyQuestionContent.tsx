@@ -2,7 +2,6 @@ import { Box, Grid, LinearProgress, Table, TableBody, TableCell, TableHead, Tabl
 import { useAudio, useLobby, useUser, useWS } from 'client/context/list'
 import { useGlobalModal } from 'client/features/global-modal/GlobalModal'
 import { isCloudflareRealtimeEnabled } from 'client/network-utils/realtimeMode'
-import { overlayedTabsToolbarHeight } from 'client/ui/overlayed-tabs/OverlayedTabs'
 import React, { MutableRefObject, useEffect, useRef, useState } from 'react'
 import { useActionSender, useJeopardy, useJeopardyAction } from '../JeopardyView'
 import { JeopardyMedia } from '../utils/jeopardyPackLoading'
@@ -245,17 +244,17 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
                 </Grid>
             </Grid>
             {props.answeringStatus === 'answer-verifying' && answerVerifyingProgress !== null && (
-                <Box sx={{ position: 'fixed', width: '100vw', bottom: overlayedTabsToolbarHeight }}>
+                <Box sx={{ position: 'fixed', width: '100vw', bottom: { md: 0, xs: 'calc(env(safe-area-inset-bottom, 0px) + 148px)' } }}>
                     <LinearProgress variant="determinate" value={answerVerifyingProgress} color="success" />
                 </Box>
             )}
             {props.answeringStatus === 'answering' && answerGivingProgress !== null && (
-                <Box sx={{ position: 'fixed', width: '100vw', bottom: overlayedTabsToolbarHeight }}>
+                <Box sx={{ position: 'fixed', width: '100vw', bottom: { md: 0, xs: 'calc(env(safe-area-inset-bottom, 0px) + 148px)' } }}>
                     <LinearProgress variant="determinate" value={answerGivingProgress} color="secondary" />
                 </Box>
             )}
             {props.answeringStatus === 'allowed' && answerRequestProgress !== null && (
-                <Box sx={{ position: 'fixed', width: '100vw', bottom: overlayedTabsToolbarHeight }}>
+                <Box sx={{ position: 'fixed', width: '100vw', bottom: { md: 0, xs: 'calc(env(safe-area-inset-bottom, 0px) + 148px)' } }}>
                     <LinearProgress variant="determinate" value={answerRequestProgress} />
                 </Box>
             )}

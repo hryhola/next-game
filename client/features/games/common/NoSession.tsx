@@ -1,7 +1,6 @@
 import { useLobby, useUser, useWS } from 'client/context/list'
 import { GameCtxValue } from './GameFactory'
 import { Button } from 'client/ui/primitives'
-import { overlayedTabsToolbarHeight } from 'client/ui/overlayed-tabs/OverlayedTabs'
 
 type Props = {
     game: GameCtxValue
@@ -24,17 +23,16 @@ export const NoSession: React.FC<Props> = props => {
 
     const supportingText =
         myRole !== 'player'
-            ? 'Players can start the session when the lobby is ready. General lobby controls stay available below.'
+            ? 'Players can start the session when the lobby is ready. Floating chat and lobby controls stay around the frame.'
             : canStart
-              ? 'Start the session when everyone is ready. Ready check, leave, and other lobby tools remain available below.'
-              : 'Waiting for the game master to start the session. General lobby controls stay available below.'
+              ? 'Start the session when everyone is ready. Ready check, leave, chat, and the rest of the lobby tools stay available around the frame.'
+              : 'Waiting for the game master to start the session. Floating chat and lobby controls stay available around the frame.'
 
     return (
         <div
-            className="pointer-events-none fixed left-4 right-4 z-10 flex items-center justify-center sm:left-6 sm:right-6"
+            className="pointer-events-none fixed left-4 right-4 bottom-[calc(env(safe-area-inset-bottom,0px)+148px)] z-10 flex items-center justify-center sm:left-6 sm:right-6 md:bottom-4"
             style={{
-                top: 'calc(var(--playersHeaderHeight, 0px) + 16px)',
-                bottom: `calc(${overlayedTabsToolbarHeight} + 16px)`
+                top: 'calc(var(--playersHeaderHeight, 0px) + 16px)'
             }}
         >
             <div className="glass-card pointer-events-auto mx-auto flex w-full max-w-md flex-col items-center gap-4 px-6 py-7 text-center">

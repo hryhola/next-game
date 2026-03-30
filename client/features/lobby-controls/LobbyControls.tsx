@@ -1,17 +1,28 @@
 import React from 'react'
-import { chatInputHeight } from 'client/ui'
-import OverlayedTabs, { overlayedTabsToolbarHeight } from 'client/ui/overlayed-tabs/OverlayedTabs'
 import { Chat } from 'client/features/chat/Chat'
 import { useLobby, useUser, useWS, useAudio } from 'client/context/list'
 import { useClientRouter } from 'client/route/ClientRouter'
 import { useGlobalModal } from 'client/features/global-modal/GlobalModal'
 import { useGame } from '../games/common/GameFactory'
+import { cn } from 'client/ui/lib/cn'
 import { Button, Slider } from 'client/ui/primitives'
-import { MessageCircle, Volume2, VolumeX, MoreVertical, LogOut, OctagonX, Check } from 'lucide-react'
+import { Check, ChevronDown, ChevronUp, LogOut, MessageCircle, MoreHorizontal, OctagonX, Volume2, VolumeX } from 'lucide-react'
 
 interface LobbyControlsProps {
     buttons?: React.ReactNode[]
 }
+
+type ControlAction = {
+    icon: React.ReactNode
+    id: string
+    label: string
+    onClick: () => void
+    variant?: 'secondary' | 'outlineDanger'
+}
+
+const MIN_DESKTOP_CHAT_WIDTH = 320
+const controlIconClassName = 'size-6 shrink-0'
+const iconButtonClassName = 'size-12 rounded-full border-0 bg-transparent p-0 shadow-none hover:bg-white/6'
 
 export const LobbyControls: React.FC<LobbyControlsProps> = props => {
     const globalModal = useGlobalModal()
@@ -22,52 +33,143 @@ export const LobbyControls: React.FC<LobbyControlsProps> = props => {
     const router = useClientRouter()
     const game = useGame()
 
-    const [isReadyCheckButtonVisible, setIsReadyCheckVisible] = React.useState(!game.isSessionStarted)
+    const [isDesktopMenuOpen, setIsDesktopMenuOpen] = React.useState(false)
+    const [isDesktopVolumeOpen, setIsDesktopVolumeOpen] = React.useState(false)
+    const [isDesktopChatOpen, setIsDesktopChatOpen] = React.useState(true)
+    const [isMobileChatOpen, setIsMobileChatOpen] = React.useState(false)
+    const [isMobileVolumeOpen, setIsMobileVolumeOpen] = React.useState(false)
 
     const chatInputRef = React.useRef<HTMLInputElement | null>(null)
 
-    React.useEffect(() => {
-        setIsReadyCheckVisible(!game.isSessionStarted)
-    }, [game.isSessionStarted])
+    const isReadyCheckButtonVisible = !game.isSessionStarted
+    const isCreatorView = lobby.members.find(member => member.memberIsCreator)?.id === user.id
 
-    const isCreatorView = user.userNickname === lobby.members.find(m => m.memberIsCreator)?.userNickname
-
-    let controlsHeight = 0
-
-    if (isCreatorView) {
-        controlsHeight += 36
+    const confirmDestroyLobby = () => {
+        globalModal.confirm({
+            title: 'Destroy lobby',
+            content: 'Destroy this lobby?',
+            onConfirm: () => {
+                lobby.destroy()
+                router.setFrame('Home')
+            }
+        })
     }
 
-    if (isReadyCheckButtonVisible) {
-        controlsHeight += 36
+    const confirmLeaveLobby = () => {
+        globalModal.confirm({
+            title: 'Leave lobby',
+            content: 'Want to leave?',
+            onConfirm: () => {
+                lobby.exit()
+                router.setFrame('Home')
+            }
+        })
     }
+
+    const menuActions: ControlAction[] = [
+        ...(isCreatorView
+            ? [
+                  {
+                      icon: <OctagonX className={controlIconClassName} strokeWidth={2.25} />,
+                      id: 'destroy',
+                      label: 'Destroy lobby',
+                      onClick: confirmDestroyLobby,
+                      variant: 'outlineDanger' as const
+                  }
+              ]
+            : []),
+        ...(isReadyCheckButtonVisible
+            ? [
+                  {
+                      icon: <Check className={controlIconClassName} strokeWidth={2.25} />,
+                      id: 'ready-check',
+                      label: 'Ready check',
+                      onClick: () => ws.send('Lobby-StartReadyCheck', { lobbyId: lobby.lobbyId }),
+                      variant: 'secondary' as const
+                  }
+              ]
+            : []),
+        {
+            icon: <LogOut className={controlIconClassName} strokeWidth={2.25} />,
+            id: 'leave',
+            label: 'Leave lobby',
+            onClick: confirmLeaveLobby,
+            variant: 'secondary'
+        }
+    ]
+
+    const extraButtons = props.buttons || []
+
+    const toggleDesktopVolume = () => {
+        setIsDesktopVolumeOpen(current => !current)
+    }
+
+    const toggleMobileChat = () => {
+        setIsMobileChatOpen(current => {
+            const next = !current
+
+            if (next) {
+                setIsMobileVolumeOpen(false)
+            }
+
+            return next
+        })
+    }
+
+    const toggleMobileVolume = () => {
+        setIsMobileVolumeOpen(current => {
+            const next = !current
+
+            if (next) {
+                setIsMobileChatOpen(false)
+            }
+
+            return next
+        })
+    }
+
+    const desktopChatHeight = 'min(24rem, calc(var(--fullHeight) - var(--playersHeaderHeight, 0px) - 8rem))'
+    const mobileChatHeight = 'min(20rem, 44vh)'
 
     return (
-        <OverlayedTabs
-            label="controls"
-            views={[
-                {
-                    onFullscreen: () => chatInputRef.current?.focus(),
-                    header: <MessageCircle className="size-4" />,
-                    view: ({ fullscreen }) => (
-                        <div style={{ height: `calc(${fullscreen ? `var(--fullHeight) - ${overlayedTabsToolbarHeight}` : '50vh'} - ${chatInputHeight})` }}>
-                            <Chat className="h-full p-4" scope="lobby" lobbyId={lobby.lobbyId} inputRef={chatInputRef} />
-                        </div>
-                    )
-                },
-                {
-                    type: 'popover',
-                    header: audio.volume === 0 ? <VolumeX className="size-4" /> : <Volume2 className="size-4" />,
-                    height: '270px',
-                    hideIconOnOpen: false,
-                    view: opts => (
-                        <div
-                            className="glass-panel flex w-[72px] items-center justify-center rounded-b-[30px] px-3"
-                            style={{ flexDirection: opts.direction === 'up' ? 'column' : 'column-reverse', paddingBottom: opts.direction === 'up' ? 16 : 0 }}
-                        >
+        <>
+            <div
+                className="pointer-events-none fixed left-0 right-0 z-30 hidden justify-between px-4 md:flex lg:px-6"
+                style={{ top: 'calc(var(--playersHeaderHeight, 0px) + 16px)' }}
+            >
+                <div className="pointer-events-auto flex flex-col items-start gap-3">
+                    <Button
+                        variant="secondary"
+                        size="icon"
+                        className="size-12 rounded-full"
+                        onClick={toggleDesktopVolume}
+                        aria-label={isDesktopVolumeOpen ? 'Hide volume controls' : 'Show volume controls'}
+                    >
+                        {audio.volume === 0 ? (
+                            <VolumeX className={controlIconClassName} strokeWidth={2.25} />
+                        ) : (
+                            <Volume2 className={controlIconClassName} strokeWidth={2.25} />
+                        )}
+                    </Button>
+
+                    {isDesktopVolumeOpen ? (
+                        <div className="glass-card pointer-events-auto w-[18rem] rounded-[1.75rem] p-3">
+                            <div className="flex items-center justify-between gap-3">
+                                <div>
+                                    <div className="text-xs text-slate-300">{audio.volume}%</div>
+                                </div>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 rounded-full px-3 text-[9px]! font-semibold tracking-[0.16em] text-slate-200"
+                                    onClick={() => audio.toggleMute()}
+                                    aria-label={audio.volume === 0 ? 'Unmute' : 'Mute'}
+                                >
+                                    {audio.volume === 0 ? 'UNMUTE' : 'MUTE'}
+                                </Button>
+                            </div>
                             <Slider
-                                className="my-4 h-[200px]"
-                                orientation="vertical"
+                                className="mt-3"
                                 min={0}
                                 max={100}
                                 step={1}
@@ -75,68 +177,179 @@ export const LobbyControls: React.FC<LobbyControlsProps> = props => {
                                 onValueChange={value => audio.setVolume(value[0] || 0)}
                                 aria-label="Volume"
                             />
-                            <Button size="sm" variant="ghost" className="px-2 text-[10px]" onClick={() => audio.toggleMute()}>
-                                {audio.volume === 0 ? 'Unmute' : 'Mute'}
-                            </Button>
                         </div>
-                    )
-                },
-                {
-                    type: 'popover',
-                    header: <MoreVertical className="size-4" />,
-                    height: `${controlsHeight}px`,
-                    hideIconOnOpen: true,
-                    view: opts => (
-                        <div
-                            className="glass-panel flex w-[72px] items-center justify-center rounded-b-[30px] px-3"
-                            style={{ flexDirection: opts.direction === 'up' ? 'column' : 'column-reverse', paddingBottom: opts.direction === 'up' ? 16 : 0 }}
+                    ) : null}
+
+                    <div className="flex flex-col items-start gap-2">
+                        <Button
+                            variant="secondary"
+                            size="icon"
+                            className="size-12 rounded-full"
+                            onClick={() => setIsDesktopMenuOpen(current => !current)}
+                            aria-label="Lobby menu"
                         >
-                            {isCreatorView && (
+                            <MoreHorizontal className={controlIconClassName} strokeWidth={2.25} />
+                        </Button>
+                        <div
+                            className={cn(
+                                'flex min-w-[12rem] flex-col gap-2 overflow-hidden transition-all duration-200',
+                                isDesktopMenuOpen ? 'pointer-events-auto max-h-64 opacity-100' : 'pointer-events-none max-h-0 opacity-0'
+                            )}
+                        >
+                            {menuActions.map(action => (
+                                <Button
+                                    key={action.id}
+                                    variant={action.variant || 'secondary'}
+                                    size="sm"
+                                    className="justify-start rounded-full px-4"
+                                    onClick={() => {
+                                        setIsDesktopMenuOpen(false)
+                                        action.onClick()
+                                    }}
+                                >
+                                    {action.icon}
+                                    {action.label}
+                                </Button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+
+                <div className="pointer-events-auto flex flex-col items-end gap-3">
+                    {isDesktopChatOpen ? (
+                        <div className="glass-card rounded-[2rem] p-3" style={{ width: MIN_DESKTOP_CHAT_WIDTH }}>
+                            <div className="flex items-center justify-between gap-3">
+                                <div className="min-w-0">
+                                    <div className="text-xs font-semibold uppercase tracking-[0.28em] text-violet-200/60">Lobby Chat</div>
+                                    <div className="truncate text-sm text-slate-300">{lobby.lobbyId}</div>
+                                </div>
                                 <Button
                                     variant="ghost"
                                     size="icon"
-                                    onClick={() =>
-                                        globalModal.confirm({
-                                            title: 'Destroy lobby',
-                                            content: 'Destroy this lobby?',
-                                            onConfirm: () => {
-                                                lobby.destroy()
-                                                router.setFrame('Home')
-                                            }
-                                        })
-                                    }
+                                    className={cn(iconButtonClassName, 'text-slate-200')}
+                                    onClick={() => setIsDesktopChatOpen(false)}
+                                    aria-label="Collapse chat"
                                 >
-                                    <OctagonX className="size-4" />
+                                    <ChevronUp className={controlIconClassName} strokeWidth={2.25} />
                                 </Button>
-                            )}
-                            {isReadyCheckButtonVisible && (
-                                <Button variant="ghost" size="icon" onClick={() => ws.send('Lobby-StartReadyCheck', { lobbyId: lobby.lobbyId })}>
-                                    <Check className="size-4" />
-                                </Button>
-                            )}
+                            </div>
+                            <div className="mt-3" style={{ height: desktopChatHeight }}>
+                                <Chat className="h-full" scope="lobby" lobbyId={lobby.lobbyId} inputRef={chatInputRef} />
+                            </div>
+                        </div>
+                    ) : (
+                        <Button variant="secondary" size="sm" className="h-12 rounded-full px-4" onClick={() => setIsDesktopChatOpen(true)}>
+                            <MessageCircle className={controlIconClassName} strokeWidth={2.25} />
+                            Chat
+                            <ChevronDown className={controlIconClassName} strokeWidth={2.25} />
+                        </Button>
+                    )}
+
+                    {extraButtons.length ? (
+                        <div className="flex w-full flex-col items-end gap-2" style={isDesktopChatOpen ? { width: MIN_DESKTOP_CHAT_WIDTH } : undefined}>
+                            {extraButtons.map((button, index) => (
+                                <div key={index} className="w-full max-w-[14rem]">
+                                    {button}
+                                </div>
+                            ))}
+                        </div>
+                    ) : null}
+                </div>
+            </div>
+
+            <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 flex flex-col items-center px-4 pb-[calc(env(safe-area-inset-bottom,0px)+12px)] md:hidden">
+                {isMobileChatOpen ? (
+                    <div className="glass-card pointer-events-auto mb-3 w-full max-w-md rounded-[1.75rem] p-3">
+                        <div className="flex items-center justify-between gap-3">
+                            <div className="min-w-0">
+                                <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-violet-200/60">Lobby Chat</div>
+                                <div className="truncate text-xs text-slate-300">{lobby.lobbyId}</div>
+                            </div>
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={() =>
-                                    globalModal.confirm({
-                                        title: 'Leave lobby',
-                                        content: 'Want to leave?',
-                                        onConfirm: () => {
-                                            lobby.exit()
-                                            router.setFrame('Home')
-                                        }
-                                    })
-                                }
+                                className={cn(iconButtonClassName, 'text-slate-200')}
+                                onClick={toggleMobileChat}
+                                aria-label="Collapse chat"
                             >
-                                <LogOut className="size-4" />
+                                <ChevronDown className={controlIconClassName} strokeWidth={2.25} />
                             </Button>
                         </div>
-                    )
-                }
-            ]}
-            buttons={props.buttons}
-            onViewOpen={() => (document.body.dataset.hideTips = 'true')}
-            onViewClose={() => (document.body.dataset.hideTips = 'false')}
-        />
+                        <div className="mt-3" style={{ height: mobileChatHeight }}>
+                            <Chat className="h-full" scope="lobby" lobbyId={lobby.lobbyId} inputRef={chatInputRef} />
+                        </div>
+                    </div>
+                ) : null}
+
+                {isMobileVolumeOpen ? (
+                    <div className="glass-card pointer-events-auto mb-3 w-full max-w-xs rounded-[1.75rem] p-3">
+                        <div className="flex items-center justify-between gap-3">
+                            <div>
+                                <div className="text-xs text-slate-300">{audio.volume}%</div>
+                            </div>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 rounded-full px-3 text-[9px]! font-semibold tracking-[0.16em] text-slate-200"
+                                onClick={() => audio.toggleMute()}
+                                aria-label={audio.volume === 0 ? 'Unmute' : 'Mute'}
+                            >
+                                {audio.volume === 0 ? 'UNMUTE' : 'MUTE'}
+                            </Button>
+                        </div>
+                        <Slider
+                            className="mt-3"
+                            min={0}
+                            max={100}
+                            step={1}
+                            value={[audio.volume]}
+                            onValueChange={value => audio.setVolume(value[0] || 0)}
+                            aria-label="Volume"
+                        />
+                    </div>
+                ) : null}
+
+                {extraButtons.length ? (
+                    <div className="pointer-events-auto mb-2 flex max-w-full flex-wrap justify-center gap-2">
+                        {extraButtons.map((button, index) => (
+                            <div key={index} className="min-w-[9rem] flex-1 basis-[9rem]">
+                                {button}
+                            </div>
+                        ))}
+                    </div>
+                ) : null}
+
+                <div className="glass-panel pointer-events-auto flex max-w-full flex-wrap items-center justify-center gap-2 rounded-full px-3 py-2">
+                    <Button variant="secondary" size="icon" onClick={toggleMobileChat} aria-label={isMobileChatOpen ? 'Hide chat' : 'Show chat'}>
+                        <MessageCircle className={controlIconClassName} strokeWidth={2.25} />
+                    </Button>
+                    <Button variant="secondary" size="icon" onClick={toggleMobileVolume} aria-label="Adjust volume">
+                        {audio.volume === 0 ? (
+                            <VolumeX className={controlIconClassName} strokeWidth={2.25} />
+                        ) : (
+                            <Volume2 className={controlIconClassName} strokeWidth={2.25} />
+                        )}
+                    </Button>
+                    {isReadyCheckButtonVisible ? (
+                        <Button
+                            variant="secondary"
+                            size="icon"
+                            onClick={() => ws.send('Lobby-StartReadyCheck', { lobbyId: lobby.lobbyId })}
+                            aria-label="Start ready check"
+                        >
+                            <Check className={controlIconClassName} strokeWidth={2.25} />
+                        </Button>
+                    ) : null}
+                    {isCreatorView ? (
+                        <Button variant="outlineDanger" size="icon" onClick={confirmDestroyLobby} aria-label="Destroy lobby">
+                            <OctagonX className={controlIconClassName} strokeWidth={2.25} />
+                        </Button>
+                    ) : null}
+                    <Button variant="secondary" size="icon" onClick={confirmLeaveLobby} aria-label="Leave lobby">
+                        <LogOut className={controlIconClassName} strokeWidth={2.25} />
+                    </Button>
+                </div>
+            </div>
+        </>
     )
 }
