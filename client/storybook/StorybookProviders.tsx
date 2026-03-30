@@ -7,6 +7,7 @@ import { HomeContext } from 'client/context/list/homeCtx'
 import { LobbyContext, type LobbyCtxValue } from 'client/context/list/lobbyCtx'
 import { UserContext } from 'client/context/list/userCtx'
 import { WSContext, type WSData } from 'client/context/list/wsCtx'
+import { RequestErrorDialog } from 'client/features/error-handling/RequestErrorDialog'
 import { GlobalModalProvider } from 'client/features/global-modal/GlobalModal'
 import { SvgFilters } from 'client/ui/filters/SvgFilters'
 import { ToastProvider } from 'client/ui/toast/ToastProvider'
@@ -143,7 +144,10 @@ export const StorybookProviders: React.FC<Props> = ({ children, user, lobby }) =
                             >
                                 <ViewportHeight />
                                 <SvgFilters />
-                                <GlobalModalProvider>{children}</GlobalModalProvider>
+                                <GlobalModalProvider>
+                                    <RequestErrorDialog />
+                                    {children}
+                                </GlobalModalProvider>
                             </AudioCtx.Provider>
                         </HomeContext.Provider>
                     </LobbyContext.Provider>

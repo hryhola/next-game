@@ -27,7 +27,73 @@ import {
 } from 'client/network-utils/realtimeAdapter'
 import { useUser } from './userCtx'
 
-type HandlerOn = <C extends StateEventName | WSRequestContext>(context: C, handler: Function) => void
+const CLIENT_REQUEST_ERROR_EVENT = 'Client-RequestError'
+
+const userFacingRequestContexts = [
+    'Chat-Send',
+    'Game-SendAction',
+    'Game-Start',
+    'Lobby-Kick',
+    'Lobby-StartReadyCheck',
+    'Lobby-Tip',
+    'ReadyCheck-Response'
+] as const
+
+type UserFacingRequestContext = (typeof userFacingRequestContexts)[number]
+type ClientRequestErrorContext = UserFacingRequestContext | 'Unknown'
+
+type ClientRequestErrorMeta = {
+    fallbackMessage: string
+    title: string
+}
+
+const clientRequestErrorMeta: Record<ClientRequestErrorContext, ClientRequestErrorMeta> = {
+    'Chat-Send': {
+        fallbackMessage: 'We could not send that message. Please try again.',
+        title: 'Message not sent'
+    },
+    'Game-SendAction': {
+        fallbackMessage: 'We could not complete that game action. Please try again.',
+        title: 'Action failed'
+    },
+    'Game-Start': {
+        fallbackMessage: 'We could not start the game. Please try again.',
+        title: 'Game not started'
+    },
+    'Lobby-Kick': {
+        fallbackMessage: 'We could not remove that player from the lobby. Please try again.',
+        title: 'Kick failed'
+    },
+    'Lobby-StartReadyCheck': {
+        fallbackMessage: 'We could not start the ready check. Please try again.',
+        title: 'Ready check failed'
+    },
+    'Lobby-Tip': {
+        fallbackMessage: 'We could not send that tip. Please try again.',
+        title: 'Tip failed'
+    },
+    'ReadyCheck-Response': {
+        fallbackMessage: 'We could not submit your ready check response. Please try again.',
+        title: 'Ready check response failed'
+    },
+    Unknown: {
+        fallbackMessage: 'We could not complete that request. Please try again.',
+        title: 'Request failed'
+    }
+}
+
+export type ClientRequestErrorEvent = {
+    code?: string
+    context: ClientRequestErrorContext
+    details?: unknown
+    friendlyMessage: string
+    message: string
+    requestData?: unknown
+    stack?: string
+    title: string
+}
+
+type HandlerOn = <C extends StateEventName | WSRequestContext | typeof CLIENT_REQUEST_ERROR_EVENT>(context: C, handler: Function) => void
 type HandlerSend = <H extends WSRequestContext>(context: H, data?: RequestData<H>) => void
 type RequestHandlerRegistrar = <C extends WSRequestContext>(context: C, handler: RequestHandler<C>) => void
 type EventHandlerRegistrar = <C extends StateEventName>(context: C, handler: TopicEventHandler<C>) => void
@@ -48,6 +114,43 @@ interface Props {
     children?: React.ReactNode
 }
 
+type LastWorkerRequest = {
+    context: UserFacingRequestContext
+    message: LobbyClientMessage
+    sentAt: number
+}
+
+function isUserFacingRequestContext(context: WSRequestContext): context is UserFacingRequestContext {
+    return userFacingRequestContexts.includes(context as UserFacingRequestContext)
+}
+
+function getUserFacingRequestContext(message: LobbyClientMessage): UserFacingRequestContext | null {
+    if (message.type === 'game.command') {
+        return 'Game-SendAction'
+    }
+
+    if (message.type !== 'lobby.command') {
+        return null
+    }
+
+    switch (message.payload.commandName) {
+        case 'chat.send':
+            return 'Chat-Send'
+        case 'tip':
+            return 'Lobby-Tip'
+        case 'kick':
+            return 'Lobby-Kick'
+        case 'ready.start':
+            return 'Lobby-StartReadyCheck'
+        case 'ready.set':
+            return 'ReadyCheck-Response'
+        case 'game.start':
+            return 'Game-Start'
+        default:
+            return null
+    }
+}
+
 export const WSProvider: React.FC<Props> = props => {
     const user = useUser()
     const wsRef = useRef<WebSocket | null>(null)
@@ -61,6 +164,7 @@ export const WSProvider: React.FC<Props> = props => {
     const workerLobbyListRef = useRef<RealtimeLobbyListItem[] | null>(null)
     const workerLobbySnapshotRef = useRef<RealtimeLobbySnapshot | null>(null)
     const workerLobbyIdRef = useRef('')
+    const lastWorkerRequestRef = useRef<LastWorkerRequest | null>(null)
 
     const [isConnected, setIsConnected] = useState<boolean | null>(null)
 
@@ -97,6 +201,68 @@ export const WSProvider: React.FC<Props> = props => {
         }
 
         return headers
+    }
+
+    const readWorkerErrorPayload = async (response: Response, fallbackMessage: string) => {
+        try {
+            const body = await response.json()
+
+            return {
+                code: typeof body?.code === 'string' ? body.code : undefined,
+                details:
+                    body && typeof body === 'object'
+                        ? {
+                              status: response.status,
+                              statusText: response.statusText,
+                              ...body
+                          }
+                        : {
+                              body,
+                              status: response.status,
+                              statusText: response.statusText
+                          },
+                message: typeof body?.message === 'string' ? body.message : fallbackMessage
+            }
+        } catch (_error) {
+            return {
+                code: undefined,
+                details: {
+                    status: response.status,
+                    statusText: response.statusText
+                },
+                message: fallbackMessage
+            }
+        }
+    }
+
+    const emitRequestError = ({
+        code,
+        context,
+        details,
+        message,
+        requestData,
+        stack
+    }: {
+        code?: string
+        context: ClientRequestErrorContext
+        details?: unknown
+        message?: string
+        requestData?: unknown
+        stack?: string
+    }) => {
+        const meta = clientRequestErrorMeta[context]
+        const friendlyMessage = message || meta.fallbackMessage
+
+        emit(CLIENT_REQUEST_ERROR_EVENT, {
+            code,
+            context,
+            details,
+            friendlyMessage,
+            message: message || meta.fallbackMessage,
+            requestData,
+            stack,
+            title: meta.title
+        } satisfies ClientRequestErrorEvent)
     }
 
     const emitPresenceSnapshot = (snapshot: PresenceSnapshot) => {
@@ -220,9 +386,32 @@ export const WSProvider: React.FC<Props> = props => {
     }
 
     const sendWorkerLobbyMessage = (message: LobbyClientMessage) => {
+        const requestContext = getUserFacingRequestContext(message)
+
         if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
             console.warn('Cannot send worker lobby message because the lobby websocket is not connected yet', message)
+
+            if (requestContext) {
+                emitRequestError({
+                    code: 'socket_not_connected',
+                    context: requestContext,
+                    details: {
+                        readyState: wsRef.current?.readyState ?? WebSocket.CLOSED
+                    },
+                    message: 'The live lobby connection is not ready yet. Please try again in a moment.',
+                    requestData: message
+                })
+            }
+
             return
+        }
+
+        if (requestContext) {
+            lastWorkerRequestRef.current = {
+                context: requestContext,
+                message,
+                sentAt: Date.now()
+            }
         }
 
         wsRef.current.send(JSON.stringify(message))
@@ -325,7 +514,19 @@ export const WSProvider: React.FC<Props> = props => {
                         })
 
                         if (!response.ok) {
-                            console.error(await getWorkerErrorMessage(response, 'Failed to send global chat message'))
+                            const errorPayload = await readWorkerErrorPayload(response, 'Failed to send global chat message')
+
+                            emit('Chat-Send', {
+                                success: false,
+                                message: errorPayload.message
+                            })
+                            emitRequestError({
+                                code: errorPayload.code,
+                                context: 'Chat-Send',
+                                details: errorPayload.details,
+                                message: errorPayload.message,
+                                requestData: payload
+                            })
                         }
                         return
                     }
@@ -452,6 +653,16 @@ export const WSProvider: React.FC<Props> = props => {
         } catch (error) {
             console.error(`Worker compatibility request failed for ${context}`, error)
 
+            if (isUserFacingRequestContext(context)) {
+                emitRequestError({
+                    code: 'client_request_failed',
+                    context,
+                    message: error instanceof Error ? error.message : undefined,
+                    requestData: data,
+                    stack: error instanceof Error ? error.stack : undefined
+                })
+            }
+
             if (context === 'Lobby-GetPublicInfo') {
                 emit('Lobby-GetPublicInfo', {
                     success: false,
@@ -540,6 +751,30 @@ export const WSProvider: React.FC<Props> = props => {
 
         if (workerMessage.type === 'lobby.error') {
             console.error('Worker lobby error', workerMessage.payload)
+
+            const lastRequest = lastWorkerRequestRef.current && Date.now() - lastWorkerRequestRef.current.sentAt < 15000 ? lastWorkerRequestRef.current : null
+
+            lastWorkerRequestRef.current = null
+
+            if (lastRequest) {
+                emit(lastRequest.context, {
+                    ...(workerMessage.payload.code
+                        ? {
+                              code: workerMessage.payload.code
+                          }
+                        : {}),
+                    message: workerMessage.payload.message,
+                    success: false
+                })
+            }
+
+            emitRequestError({
+                code: workerMessage.payload.code,
+                context: lastRequest?.context || 'Unknown',
+                details: workerMessage.payload,
+                message: workerMessage.payload.message,
+                requestData: lastRequest?.message
+            })
             return
         }
 
@@ -750,6 +985,18 @@ export const useEventHandler: EventHandlerRegistrar = (context, handler) => {
 
         return () => {
             unsubscribe(context, handler)
+        }
+    }, [])
+}
+
+export const useClientRequestErrorHandler = (handler: (data: ClientRequestErrorEvent) => void) => {
+    const { on, unsubscribe } = useWS()
+
+    useEffect(() => {
+        on(CLIENT_REQUEST_ERROR_EVENT, handler)
+
+        return () => {
+            unsubscribe(CLIENT_REQUEST_ERROR_EVENT, handler)
         }
     }, [])
 }
