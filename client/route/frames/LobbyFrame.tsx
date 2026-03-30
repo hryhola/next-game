@@ -2,10 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { useAudio, useEventHandler, useLobby, useUser, useWS } from 'client/context/list/'
 import { useClientRouter } from 'client/route/ClientRouter'
-import { ProfilePicture } from 'client/features/profile-picture/ProfilePicture'
 import { LoadingOverlay } from 'client/ui'
-import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Grid } from 'client/ui/mui-shim'
 import { useToast } from 'client/ui/toast/ToastProvider'
+import { ReadyCheckDialog } from 'client/features/ready-check/ReadyCheckDialog'
 
 export const LobbyFrame: React.FC = () => {
     const lobby = useLobby()
@@ -194,40 +193,12 @@ export const LobbyFrame: React.FC = () => {
         <>
             {isLoaded && game.current ? <game.current /> : null}
             {lobby.readyCheck && (
-                <Dialog open>
-                    <DialogTitle>Ready check</DialogTitle>
-                    <DialogContent>
-                        <Grid container>
-                            {lobby.readyCheckMembers.map(m => (
-                                <Grid item key={m.id}>
-                                    <ProfilePicture
-                                        size={90}
-                                        color={m.userColor}
-                                        url={m.userAvatarUrl}
-                                        {...(m.ready === true
-                                            ? {
-                                                  filter: "url('#teal-lightgreen')"
-                                              }
-                                            : {})}
-                                        {...(m.ready === false
-                                            ? {
-                                                  filter: "url('#cherry-icecream')"
-                                              }
-                                            : {})}
-                                    />
-                                </Grid>
-                            ))}
-                        </Grid>
-                    </DialogContent>
-                    <DialogActions sx={{ visibility: readyCheckVoted ? 'hidden' : 'visible' }}>
-                        <Button color="success" onClick={() => ws.send('ReadyCheck-Response', { lobbyId: lobby.lobbyId, ready: true })}>
-                            Ready
-                        </Button>
-                        <Button color="error" onClick={() => ws.send('ReadyCheck-Response', { lobbyId: lobby.lobbyId, ready: false })}>
-                            Not ready
-                        </Button>
-                    </DialogActions>
-                </Dialog>
+                <ReadyCheckDialog
+                    members={lobby.readyCheckMembers}
+                    voted={readyCheckVoted}
+                    onReady={() => ws.send('ReadyCheck-Response', { lobbyId: lobby.lobbyId, ready: true })}
+                    onNotReady={() => ws.send('ReadyCheck-Response', { lobbyId: lobby.lobbyId, ready: false })}
+                />
             )}
         </>
     )
