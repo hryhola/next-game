@@ -13,9 +13,9 @@ export const HomeFrame: React.FC = () => {
 
     return (
         <>
-            <div className="flex min-h-[var(--fullHeight)] flex-col">
+            <div className="flex h-[var(--fullHeight)] flex-col overflow-hidden">
                 <Header />
-                <div className="min-h-0 flex-1">
+                <div className="min-h-0 flex-1 overflow-hidden">
                     <HomeTabs className="flex-1" />
                 </div>
             </div>

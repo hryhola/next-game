@@ -3,6 +3,9 @@
 :root {
     --vh: 1vh;
     --fullHeight: calc(var(--vh, 1vh) * 100);
+    --app-background:
+        radial-gradient(circle at top, rgba(167, 139, 250, 0.2), transparent 38%),
+        radial-gradient(circle at 15% 20%, rgba(192, 132, 252, 0.18), transparent 28%), linear-gradient(180deg, #050816 0%, #0f172a 48%, #020617 100%);
     --surface-1: rgba(15, 23, 42, 0.8);
     --surface-2: rgba(30, 41, 59, 0.62);
     --surface-3: rgba(124, 58, 237, 0.18);
@@ -20,17 +23,25 @@
 
 html,
 body {
+    height: 100%;
     min-height: 100%;
     margin: 0;
     padding: 0;
+    overflow: hidden;
+}
+
+html {
+    background: var(--app-background);
+    background-attachment: fixed;
+    background-color: #020617;
+    overscroll-behavior: none;
 }
 
 body {
+    min-height: var(--fullHeight);
     color: var(--text-primary);
     font-family: 'Manrope', ui-sans-serif, system-ui, sans-serif;
-    background: radial-gradient(circle at top, rgba(167, 139, 250, 0.2), transparent 38%),
-        radial-gradient(circle at 15% 20%, rgba(192, 132, 252, 0.18), transparent 28%), linear-gradient(180deg, #050816 0%, #0f172a 48%, #020617 100%);
-    background-attachment: fixed;
+    background: transparent;
 }
 
 * {
@@ -95,7 +106,8 @@ body[data-hide-tips='true'] .lobby-tip {
 
 .glass-card {
     border: 1px solid var(--border-1);
-    background: linear-gradient(135deg, rgba(15, 23, 42, 0.72), rgba(30, 41, 59, 0.5)), linear-gradient(180deg, rgba(124, 58, 237, 0.18), rgba(15, 23, 42, 0.1));
+    background:
+        linear-gradient(135deg, rgba(15, 23, 42, 0.72), rgba(30, 41, 59, 0.5)), linear-gradient(180deg, rgba(124, 58, 237, 0.18), rgba(15, 23, 42, 0.1));
     backdrop-filter: blur(28px);
     box-shadow: var(--shadow-glow), var(--shadow-soft);
     border-radius: 1.75rem;

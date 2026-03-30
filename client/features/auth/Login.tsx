@@ -43,25 +43,27 @@ export const Login: React.FC = () => {
     }
 
     return (
-        <div className="flex min-h-[var(--fullHeight)] items-center justify-center px-6 py-10">
-            <Card className="w-full max-w-md">
-                <CardHeader>
-                    <p className="text-xs uppercase tracking-[0.35em] text-violet-200/55">Welcome</p>
-                    <h2 className="text-3xl font-semibold text-white">Enter Game Club</h2>
-                    <p className="text-sm text-slate-300">Choose a nickname to hop into lobbies, chat, and game sessions.</p>
-                </CardHeader>
-                <CardContent>
-                    <form className="space-y-4" onSubmit={handleSubmit}>
-                        <div className="space-y-2">
-                            <Input name="nickname" placeholder="Nickname" value={nickname} onChange={e => setNickname(e.target.value)} />
-                            {error ? <p className="text-sm text-rose-300">{error}</p> : null}
-                        </div>
-                        <Button className="w-full" size="lg" variant="primary" type="submit">
-                            Enter
-                        </Button>
-                    </form>
-                </CardContent>
-            </Card>
+        <div className="flex h-[var(--fullHeight)] overflow-y-auto px-6 py-10">
+            <div className="m-auto w-full max-w-md">
+                <Card className="w-full">
+                    <CardHeader>
+                        <p className="text-xs uppercase tracking-[0.35em] text-violet-200/55">Welcome</p>
+                        <h2 className="text-3xl font-semibold text-white">Enter Game Club</h2>
+                        <p className="text-sm text-slate-300">Choose a nickname to hop into lobbies, chat, and game sessions.</p>
+                    </CardHeader>
+                    <CardContent>
+                        <form className="space-y-4" onSubmit={handleSubmit}>
+                            <div className="space-y-2">
+                                <Input name="nickname" placeholder="Nickname" value={nickname} onChange={e => setNickname(e.target.value)} />
+                                {error ? <p className="text-sm text-rose-300">{error}</p> : null}
+                            </div>
+                            <Button className="w-full" size="lg" variant="primary" type="submit">
+                                Enter
+                            </Button>
+                        </form>
+                    </CardContent>
+                </Card>
+            </div>
         </div>
     )
 }

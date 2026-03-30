@@ -20,12 +20,14 @@ const JoinLobbyShell: React.FC<{ lobby: LobbyData }> = ({ lobby }) => {
     const [isOpen, setIsOpen] = useState(true)
 
     return (
-        <div className="flex min-h-[var(--fullHeight)] items-center justify-center px-6">
-            <div className="glass-card flex w-full max-w-2xl items-center justify-center p-10 text-center text-slate-200">
-                <div>
-                    <p className="text-sm uppercase tracking-[0.35em] text-violet-200/60">Lobby Access</p>
-                    <h1 className="mt-4 text-4xl font-semibold text-white">Join {lobby.id}</h1>
-                    <p className="mt-3 text-base text-slate-300">Open the lobby preview to join as a player or spectator.</p>
+        <div className="flex h-[var(--fullHeight)] overflow-y-auto px-6">
+            <div className="m-auto flex w-full items-center justify-center py-6">
+                <div className="glass-card flex w-full max-w-2xl items-center justify-center p-10 text-center text-slate-200">
+                    <div>
+                        <p className="text-sm uppercase tracking-[0.35em] text-violet-200/60">Lobby Access</p>
+                        <h1 className="mt-4 text-4xl font-semibold text-white">Join {lobby.id}</h1>
+                        <p className="mt-3 text-base text-slate-300">Open the lobby preview to join as a player or spectator.</p>
+                    </div>
                 </div>
             </div>
             <FullScreenModal
