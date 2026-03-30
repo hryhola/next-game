@@ -2,7 +2,7 @@
 
 import { RouteProviders } from 'client/app/RouteProviders'
 import { HomeFrame } from 'client/route/frames/HomeFrame'
-import type { UserData } from 'state'
+import type { UserData } from 'shared/contracts/app'
 
 type Props = {
     user: UserData

@@ -10,7 +10,7 @@ import { WSContext, type WSData } from 'client/context/list/wsCtx'
 import { GlobalModalProvider } from 'client/features/global-modal/GlobalModal'
 import { SvgFilters } from 'client/ui/filters/SvgFilters'
 import { ToastProvider } from 'client/ui/toast/ToastProvider'
-import type { LobbyData, TChatMessage, UserData } from 'state'
+import type { LobbyData, TChatMessage, UserData } from 'shared/contracts/app'
 import { storybookLobby, storybookUser } from './mocks'
 
 type Props = {

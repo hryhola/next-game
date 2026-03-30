@@ -1,8 +1,5 @@
-import type { GameData, LobbyData } from 'state'
-import type { InitialGameDataSchema } from 'state/common/game/GameInitialData'
-import type { GameName } from 'state/games'
-import type { LobbyJoiningResult, LobbyMemberRole } from 'state/lobby/Lobby'
 import type { GeneralFailure, GeneralSuccess } from 'util/universalTypes'
+import type { GameData, GameName, InitialGameDataSchema, LobbyData, LobbyJoiningResult, LobbyMemberRole } from './app'
 
 export type EndpointInfo<Req = null, Res = null> = {
     request: Req

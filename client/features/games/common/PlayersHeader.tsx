@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { PlayerData } from 'state'
+import type { PlayerData } from 'shared/contracts/app'
 import { Player } from './Player'
 
 interface HeaderProps {

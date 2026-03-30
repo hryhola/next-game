@@ -1,8 +1,8 @@
 import React from 'react'
-import { JeopardyState } from 'state/games/jeopardy/JeopardySessionState'
 import { Grid, Typography } from 'client/ui/mui-shim'
+import type { RealtimeJeopardyState } from 'shared/contracts/jeopardy'
 
-export const FinalScore: React.FC<JeopardyState.FinalScoreFrame> = props => {
+export const FinalScore: React.FC<RealtimeJeopardyState.FinalScoreFrame> = props => {
     return (
         <Grid
             sx={{ pt: 'calc(var(--playersHeaderHeight) + 10px)', paddingBottom: 7, transition: '0.5s' }}

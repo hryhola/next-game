@@ -1,7 +1,7 @@
 import { useUser, useLobby, useWS } from 'client/context/list'
 import { useGlobalModal } from 'client/features/global-modal/GlobalModal'
 import { useRef } from 'react'
-import { PlayerData } from 'state'
+import type { PlayerData } from 'shared/contracts/app'
 import { v4 } from 'uuid'
 import { useGame } from './GameFactory'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from 'client/ui/primitives'

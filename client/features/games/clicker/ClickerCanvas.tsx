@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import styles from './Clicker.module.css'
 import { useAudio, useEventHandler, useLobby, useUser } from 'client/context/list'
-import { ClickerPlayerData } from 'state'
+import type { ClickerPlayerData } from 'shared/contracts/app'
 import { useActionSender, useClicker, useClickerAction } from './ClickerView'
 
 export const ClickerCanvas: React.FC = () => {

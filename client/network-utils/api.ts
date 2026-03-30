@@ -1,6 +1,7 @@
 import { Resulted } from 'util/universalTypes'
 import { getCookie } from 'cookies-next'
 import { HTTPEndpointName as EndpointName, HTTPEndpoints as Endpoints } from 'shared/contracts'
+import { gameInitialDataSchemas, supportedGameNames } from 'shared/contracts/app'
 import { getCloudflareRealtimeApiUrl } from './realtimeMode'
 import { getWorkerErrorMessage, toAppGameData, toAppLobbyData } from './realtimeAdapter'
 
@@ -25,7 +26,7 @@ async function handleWorkerApiRequest<E extends EndpointName>(endpoint: E, data:
             case 'game-get-schema': {
                 const request = data as Endpoints['game-get-schema']['request']
 
-                if (!['TicTacToe', 'Clicker', 'Jeopardy'].includes(request.gameName)) {
+                if (!supportedGameNames.includes(request.gameName)) {
                     return [
                         {
                             success: false,
@@ -39,19 +40,7 @@ async function handleWorkerApiRequest<E extends EndpointName>(endpoint: E, data:
                     {
                         success: true,
                         gameName: request.gameName,
-                        initialDataScheme:
-                            request.gameName === 'Jeopardy'
-                                ? [
-                                      {
-                                          accept: ['.siq'],
-                                          label: 'Pack',
-                                          name: 'pack',
-                                          public: true,
-                                          required: true,
-                                          type: 'file'
-                                      }
-                                  ]
-                                : []
+                        initialDataScheme: gameInitialDataSchemas[request.gameName]
                     } as Endpoints[E]['response'],
                     undefined
                 ]
@@ -78,7 +67,7 @@ async function handleWorkerApiRequest<E extends EndpointName>(endpoint: E, data:
                     ]
                 }
 
-                if (!['TicTacToe', 'Clicker', 'Jeopardy'].includes(gameName)) {
+                if (!supportedGameNames.includes(gameName as (typeof supportedGameNames)[number])) {
                     return [
                         {
                             success: false,

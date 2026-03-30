@@ -1,10 +1,10 @@
 import React, { MutableRefObject, useEffect, useRef, useState } from 'react'
-import { JeopardySessionState, JeopardyState } from 'state/games/jeopardy/JeopardySessionState'
 import { Box, Button, Grid, List, ListItem, ListItemButton, Slider, Table, TableBody, TableCell, TableHead, TableRow, TextField } from 'client/ui/mui-shim'
 import { useUser } from 'client/context/list'
 import { useActionSender, useJeopardy } from '../JeopardyView'
 import { useGlobalModal } from 'client/features/global-modal/GlobalModal'
 import { JeopardyMedia } from '../utils/jeopardyPackLoading'
+import type { RealtimeJeopardySessionState, RealtimeJeopardyState } from 'shared/contracts/jeopardy'
 
 const FinalQuestion: React.FC<{ type: string; content: string; Resources: MutableRefObject<JeopardyMedia> }> = props => {
     const playerRef = useRef<HTMLAudioElement | HTMLVideoElement | null>(null)
@@ -39,7 +39,7 @@ const FinalQuestion: React.FC<{ type: string; content: string; Resources: Mutabl
 }
 
 export const FinalRoundBoard: React.FC<
-    JeopardyState.FinalRoundBoardFrame & {
+    RealtimeJeopardyState.FinalRoundBoardFrame & {
         Resources: MutableRefObject<JeopardyMedia>
     }
 > = props => {
@@ -103,7 +103,7 @@ export const FinalRoundBoard: React.FC<
         if (props.status === 'betting') showBettingModal()
     }, [props.status])
 
-    const internal = (game.session as JeopardySessionState).internal
+    const internal = (game.session as RealtimeJeopardySessionState).internal
 
     let content = <></>
 

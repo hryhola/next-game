@@ -1,9 +1,9 @@
 import React from 'react'
-import { JeopardyState } from 'state/games/jeopardy/JeopardySessionState'
 import { Box, Typography } from 'client/ui/mui-shim'
 import styles from './JeopardyPackPreview.module.css'
+import type { RealtimeJeopardyState } from 'shared/contracts/jeopardy'
 
-export const PackPreview: React.FC<JeopardyState.PackPreviewFrame> = props => {
+export const PackPreview: React.FC<RealtimeJeopardyState.PackPreviewFrame> = props => {
     return (
         <Box width="100vw" height="var(--fullHeight)" overflow="hidden">
             <Box className={styles.info}>

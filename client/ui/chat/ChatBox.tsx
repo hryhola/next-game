@@ -1,6 +1,6 @@
 import { FormEventHandler, RefObject, useState } from 'react'
 import { ChatMessageComponent } from './ChatMessage'
-import { TChatMessage } from 'state'
+import type { TChatMessage } from 'shared/contracts/app'
 import { Button, Input } from 'client/ui/primitives'
 import { cn } from 'client/ui/lib/cn'
 import { SendHorizontal } from 'lucide-react'

@@ -5,7 +5,7 @@ import { AppContext } from 'client/context/AppContext'
 import { GlobalModalProvider } from 'client/features/global-modal/GlobalModal'
 import { SvgFilters } from 'client/ui/filters/SvgFilters'
 import { ViewportHeight } from './ViewportHeight'
-import type { LobbyData, UserData } from 'state'
+import type { LobbyData, UserData } from 'shared/contracts/app'
 import { ToastProvider } from 'client/ui/toast/ToastProvider'
 
 type Props = {

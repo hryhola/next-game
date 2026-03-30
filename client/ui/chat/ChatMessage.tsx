@@ -1,4 +1,4 @@
-import { TChatMessage } from 'state'
+import type { TChatMessage } from 'shared/contracts/app'
 
 interface Props {
     message: TChatMessage

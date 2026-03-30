@@ -2,7 +2,7 @@ import { cookies, headers } from 'next/headers'
 import type { IdentitySession, RealtimeLobbyListItem, RealtimeLobbySnapshot } from 'shared/contracts'
 import { getCloudflareRealtimeApiUrl } from 'client/network-utils/realtimeMode'
 import { toAppLobbyData } from 'client/network-utils/realtimeAdapter'
-import type { LobbyData, UserData } from 'state'
+import type { LobbyData, UserData } from 'shared/contracts/app'
 
 type JsonValue = Record<string, unknown>
 

@@ -1,4 +1,4 @@
-import { UserData } from 'state'
+import type { UserData } from 'shared/contracts/app'
 import React, { useState, createContext } from 'react'
 
 export type RouteType = 'Login'

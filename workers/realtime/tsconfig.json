@@ -11,5 +11,5 @@
         "allowSyntheticDefaultImports": true
     },
     "include": ["./**/*.ts", "./worker-configuration.d.ts"],
-    "exclude": ["node_modules"]
+    "exclude": ["node_modules", "**/*.test.ts"]
 }

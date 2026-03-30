@@ -1,7 +1,7 @@
 import type { LobbyBaseInfo } from 'shared/contracts/lobby'
 import { LobbyPreview } from './LobbyPreview'
 import { MouseEventHandler, useState } from 'react'
-import { LobbyData } from 'state'
+import type { LobbyData } from 'shared/contracts/app'
 import { useRequestHandler, useWS } from 'client/context/list'
 import { Button, Card, CardContent } from 'client/ui/primitives'
 import { ChevronUp, Lock } from 'lucide-react'

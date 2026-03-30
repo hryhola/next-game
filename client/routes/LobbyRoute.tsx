@@ -7,7 +7,7 @@ import { useClientRouter } from 'client/route/ClientRouter'
 import { FullScreenModal } from 'client/ui/full-screen-modal/FullScreenModal'
 import { LobbyPreview } from 'client/features/lobby-browser/LobbyPreview'
 import { WsApp } from 'client/features/ws-app/WsApp'
-import type { LobbyData, UserData } from 'state'
+import type { LobbyData, UserData } from 'shared/contracts/app'
 
 type Props = {
     user: UserData

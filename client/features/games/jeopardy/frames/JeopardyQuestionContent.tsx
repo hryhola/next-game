@@ -4,11 +4,11 @@ import { useGlobalModal } from 'client/features/global-modal/GlobalModal'
 import { isCloudflareRealtimeEnabled } from 'client/network-utils/realtimeMode'
 import { overlayedTabsToolbarHeight } from 'client/ui/overlayed-tabs/OverlayedTabs'
 import React, { MutableRefObject, useEffect, useRef, useState } from 'react'
-import { JeopardySessionState, JeopardyState } from 'state/games/jeopardy/JeopardySessionState'
 import { useActionSender, useJeopardy, useJeopardyAction } from '../JeopardyView'
 import { JeopardyMedia } from '../utils/jeopardyPackLoading'
+import type { RealtimeJeopardySessionState, RealtimeJeopardyState } from 'shared/contracts/jeopardy'
 
-type QuestionContentProps = JeopardyState.QuestionContentFrame & {
+type QuestionContentProps = RealtimeJeopardyState.QuestionContentFrame & {
     Resources: MutableRefObject<JeopardyMedia>
     packFetchingTimeMs: number
     useMediaTimestamp: boolean
@@ -165,7 +165,7 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
     }
 
     useEffect(() => {
-        const session = game.session as JeopardySessionState
+        const session = game.session as RealtimeJeopardySessionState
 
         if (session?.internal?.currentAnsweringPlayerId) {
             showVerifyModal(session.internal)
@@ -173,7 +173,7 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
             closeVerifyModal.current.close()
             closeVerifyModal.current.close = null
         }
-    }, [(game.session as JeopardySessionState)?.internal?.currentAnsweringPlayerId])
+    }, [(game.session as RealtimeJeopardySessionState)?.internal?.currentAnsweringPlayerId])
 
     useJeopardyAction('$Pause', data => {
         if (!data.result.success) return

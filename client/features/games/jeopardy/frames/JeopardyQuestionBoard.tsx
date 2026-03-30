@@ -1,10 +1,10 @@
 import React from 'react'
-import { JeopardyState } from 'state/games/jeopardy/JeopardySessionState'
 import { Box, Button, Divider } from 'client/ui/mui-shim'
 import { useLobby, useUser } from 'client/context/list'
 import { useActionSender, useJeopardy } from '../JeopardyView'
+import type { RealtimeJeopardyState } from 'shared/contracts/jeopardy'
 
-export const QuestionBoard: React.FC<JeopardyState.QuestionBoardFrame> = props => {
+export const QuestionBoard: React.FC<RealtimeJeopardyState.QuestionBoardFrame> = props => {
     const sendAction = useActionSender()
     const user = useUser()
     const lobby = useLobby()

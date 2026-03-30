@@ -3,9 +3,8 @@ import { useLobby } from 'client/context/list'
 import { useClientRouter } from 'client/route/ClientRouter'
 import { LoadingOverlay } from 'client/ui'
 import { api } from 'client/network-utils/api'
-import { GameName } from 'state/games'
 import { HomeContext } from 'client/context/list/homeCtx'
-import { InitialGameDataSchema } from 'state/common/game/GameInitialData'
+import type { GameName, InitialGameDataSchema } from 'shared/contracts/app'
 import { Button, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from 'client/ui/primitives'
 
 export const LobbyCreator: React.FC = () => {

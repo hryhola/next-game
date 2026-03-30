@@ -11,7 +11,7 @@ import type {
     StateEventName,
     StateEvents
 } from 'shared/contracts'
-import type { GameData, LobbyData, LobbyMemberData, PlayerData, TChatMessage } from 'state'
+import type { GameData, LobbyData, LobbyMemberData, PlayerData, TChatMessage } from 'shared/contracts/app'
 
 export type AppEventEnvelope = {
     [E in StateEventName]: {

@@ -1,6 +1,5 @@
-import type { LobbyData, TChatMessage, UserData } from 'state'
-import type { LobbyMemberRole } from 'state/lobby/Lobby'
 import type { GeneralFailure, GeneralSuccess } from 'util/universalTypes'
+import type { LobbyData, LobbyMemberRole, TChatMessage, UserData } from './app'
 import type { LobbyBaseInfo } from './lobby'
 import type { StateEventName, StateEvents } from './state-events'
 import type { WSRequestContext } from './ws-context'

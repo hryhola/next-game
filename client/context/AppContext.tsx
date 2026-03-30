@@ -5,7 +5,7 @@ import { WSProvider } from './list/wsCtx'
 import { LobbyProvider } from './list/lobbyCtx'
 import { HomeProvider } from './list/homeCtx'
 import { AudioProvider } from './list/audioCtx'
-import type { LobbyData, UserData } from 'state'
+import type { LobbyData, UserData } from 'shared/contracts/app'
 
 type Props = {
     children: React.ReactNode

@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { useLobby, useUser } from 'client/context/list'
-import { PlayerData } from 'state'
+import type { PlayerData } from 'shared/contracts/app'
 import { ProfilePicture } from '../../profile-picture/ProfilePicture'
 import { PlayerMenu } from './PlayerMenu'
 import { Skeleton } from 'client/ui/primitives'

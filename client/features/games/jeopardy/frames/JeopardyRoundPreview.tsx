@@ -1,8 +1,8 @@
 import React from 'react'
-import { JeopardyState } from 'state/games/jeopardy/JeopardySessionState'
 import { Grid, Typography, Zoom } from 'client/ui/mui-shim'
+import type { RealtimeJeopardyState } from 'shared/contracts/jeopardy'
 
-export const RoundPreview: React.FC<JeopardyState.RoundPreviewFrame> = props => {
+export const RoundPreview: React.FC<RealtimeJeopardyState.RoundPreviewFrame> = props => {
     return (
         <Grid display="grid" justifyContent="center" alignContent="center" width="100vw" height="var(--fullHeight)" overflow="hidden">
             <Grid item>

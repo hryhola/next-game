@@ -1,26 +1,27 @@
 import React, { useEffect } from 'react'
-import { PlayerData, GameSessionData, GameSessionActionsName, GameSessionAction, Game as AbstractGame } from 'state'
 import { useLobby, useEventHandler, useWS } from 'client/context/list'
 import { api } from 'client/network-utils/api'
-import { InitialGameData } from 'state/common/game/GameInitialData'
-import { GameName } from 'state/games'
+import type { GameActionMap, GameActionName, GameActionPayload, TypedGameActionEvent } from 'shared/contracts/game-actions'
+import type { GameName, PlayerData } from 'shared/contracts/app'
 
 export type GameCtxValue = {
     players: PlayerData[]
     isLoading: boolean
     isSessionStarted: boolean
-    session: GameSessionData | null
-    initialData?: InitialGameData
+    session: unknown | null
+    initialData?: unknown
 }
 
 export const GameCtx = React.createContext<GameCtxValue | null>(null)
 
-export const createGame = <Game extends AbstractGame>(Component: React.ComponentType<{}>) => {
-    type ThisPlayerData = ReturnType<Game['players'][0]['data']>
-    type ThisSession = NonNullable<Game['currentSession']>
-    type ThisSessionData = ReturnType<ThisSession['data']>
-    type ThisInitialData = Game['initialData']
-
+export const createGame = <
+    ThisPlayerData extends PlayerData,
+    ThisSessionData,
+    ThisInitialData extends object,
+    ThisActionMap extends GameActionMap = GameActionMap
+>(
+    Component: React.ComponentType<{}>
+) => {
     type ThisGameCtxValue = {
         players: ThisPlayerData[]
         isLoading: boolean
@@ -35,7 +36,7 @@ export const createGame = <Game extends AbstractGame>(Component: React.Component
         const [players, setPlayers] = React.useState<ThisPlayerData[]>([])
         const [isLoading, setIsLoading] = React.useState(true)
         const [session, setSession] = React.useState<ThisSessionData | null>(null)
-        const [initialData, setInitialData] = React.useState<ThisInitialData>({})
+        const [initialData, setInitialData] = React.useState<ThisInitialData>({} as ThisInitialData)
 
         useEventHandler('Game-Join', data => {
             setPlayers(ps => [...ps.filter(p => p.id !== data.player.id), data.player as ThisPlayerData])
@@ -60,7 +61,7 @@ export const createGame = <Game extends AbstractGame>(Component: React.Component
 
         useEventHandler('Game-SessionStart', ({ lobbyId, session }) => {
             if (lobbyId === lobby.lobbyId) {
-                setSession(session)
+                setSession(session as ThisSessionData)
             }
         })
 
@@ -72,7 +73,7 @@ export const createGame = <Game extends AbstractGame>(Component: React.Component
 
         useEventHandler('Game-SessionUpdate', ({ lobbyId, data }) => {
             if (lobbyId === lobby.lobbyId) {
-                setSession(prev => ({ ...prev, ...data }))
+                setSession(prev => ({ ...(prev as object | null), ...(data as object) }) as ThisSessionData)
             }
         })
 
@@ -91,7 +92,7 @@ export const createGame = <Game extends AbstractGame>(Component: React.Component
                 lobby.setMembers(response.lobby.members)
                 lobby.setGameName(response.game.name as GameName)
 
-                setInitialData(response.game.initialData)
+                setInitialData(response.game.initialData as ThisInitialData)
                 setPlayers(response.game.players as ThisPlayerData[])
 
                 if (response.game.session) setSession(response.game.session as ThisSessionData)
@@ -107,7 +108,7 @@ export const createGame = <Game extends AbstractGame>(Component: React.Component
         }
 
         return (
-            <GameCtx.Provider value={game}>
+            <GameCtx.Provider value={game as GameCtxValue}>
                 <GameCtx.Consumer>{() => <Component />}</GameCtx.Consumer>
             </GameCtx.Provider>
         )
@@ -123,13 +124,7 @@ export const createGame = <Game extends AbstractGame>(Component: React.Component
         return ctx as ThisGameCtxValue
     }
 
-    type SessionActionName = GameSessionActionsName<ThisSession>
-
-    type SessionAction<ActionName extends SessionActionName = SessionActionName> = GameSessionAction<ThisSession, ActionName>
-
-    type SessionActionPayload<ActionName extends SessionActionName> = SessionAction<ActionName>['payload']
-
-    const useActionHandler = <T extends SessionActionName>(name: T, handler: (data: SessionAction<T>) => void) => {
+    const useActionHandler = <T extends GameActionName<ThisActionMap>>(name: T, handler: (data: TypedGameActionEvent<ThisActionMap, T>) => void) => {
         const lobby = useLobby()
         const lobbyRef = React.useRef(lobby)
 
@@ -142,7 +137,7 @@ export const createGame = <Game extends AbstractGame>(Component: React.Component
                 return
             }
 
-            handler(data as unknown as SessionAction<T>)
+            handler(data as TypedGameActionEvent<ThisActionMap, T>)
         })
     }
 
@@ -161,7 +156,7 @@ export const createGame = <Game extends AbstractGame>(Component: React.Component
             lobbyRef.current = lobby
         }, [lobby])
 
-        return <T extends SessionActionName>(name: T, payload: SessionActionPayload<T>) => {
+        return <T extends GameActionName<ThisActionMap>>(name: T, payload: GameActionPayload<ThisActionMap, T>) => {
             if (!wsRef.current || !lobbyRef.current) {
                 console.error('ws or lobby is not defined')
 

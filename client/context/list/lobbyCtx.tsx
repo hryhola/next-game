@@ -1,7 +1,6 @@
 import { api } from 'client/network-utils/api'
 import React, { useState, createContext, useEffect } from 'react'
-import { TChatMessage, LobbyMemberData, LobbyData, ReadyCheckMember } from 'state'
-import { GameName } from 'state/games'
+import type { GameName, LobbyData, LobbyMemberData, ReadyCheckMember, TChatMessage } from 'shared/contracts/app'
 import { useUser } from './userCtx'
 
 export type LobbyCtxValue = {

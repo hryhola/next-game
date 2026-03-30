@@ -1,4 +1,4 @@
-import type { LobbyData, TChatMessage, UserData } from 'state'
+import type { LobbyData, TChatMessage, UserData } from 'shared/contracts/app'
 
 const avatarDataUrl =
     "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'%3E%3Crect width='120' height='120' rx='60' fill='%238b5cf6'/%3E%3Ctext x='60' y='70' font-size='42' text-anchor='middle' fill='white' font-family='Arial'%3EN%3C/text%3E%3C/svg%3E"

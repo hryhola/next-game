@@ -67,6 +67,10 @@ export const TicTacToeCanvas: React.FC<Props> = ({ isLoading }) => {
         }
 
         setCellValues(value => {
+            if (!by.playerChar) {
+                return value.slice()
+            }
+
             value[x][y] = by.playerChar
 
             return value.slice()
@@ -74,9 +78,13 @@ export const TicTacToeCanvas: React.FC<Props> = ({ isLoading }) => {
 
         if (action.result.winner) {
             const winner = gameRef.current.players.find(p => p.id === action.result.winner)
-            const {
-                winLine: [startCell, , endCell]
-            } = action.result
+            const winLine = action.result.winLine
+
+            if (!winLine) {
+                return
+            }
+
+            const [startCell, , endCell] = winLine
 
             const winCell1 = boardRef.current?.querySelector<HTMLDivElement>(`[id='${startCell[0]}-${startCell[1]}']`)
             const winCell2 = boardRef.current?.querySelector<HTMLDivElement>(`[id='${endCell[0]}-${endCell[1]}']`)
