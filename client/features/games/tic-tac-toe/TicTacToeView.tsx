@@ -18,7 +18,13 @@ export const [TicTacToeView, useTicTacToe, useTicTacToeAction, useActionSender] 
     return (
         <>
             <PlayersHeader members={game.players} isLoading={game.isLoading} />
-            <TicTacToeCanvas />
+            <div
+                className={
+                    !game.isSessionStarted ? 'pointer-events-none select-none blur-sm transition-[filter] duration-200' : 'transition-[filter] duration-200'
+                }
+            >
+                <TicTacToeCanvas />
+            </div>
             <NoSession game={game} />
             <LobbyControls />
         </>

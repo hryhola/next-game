@@ -26,18 +26,18 @@ export const NoSession: React.FC<Props> = props => {
         myRole !== 'player'
             ? 'Players can start the session when the lobby is ready. General lobby controls stay available below.'
             : canStart
-            ? 'Start the session when everyone is ready. Ready check, leave, and other lobby tools remain available below.'
-            : 'Waiting for the game master to start the session. General lobby controls stay available below.'
+              ? 'Start the session when everyone is ready. Ready check, leave, and other lobby tools remain available below.'
+              : 'Waiting for the game master to start the session. General lobby controls stay available below.'
 
     return (
         <div
-            className="fixed left-4 right-4 z-10 flex items-center justify-center rounded-[2rem] bg-slate-950/45 backdrop-blur-sm sm:left-6 sm:right-6"
+            className="pointer-events-none fixed left-4 right-4 z-10 flex items-center justify-center sm:left-6 sm:right-6"
             style={{
                 top: 'calc(var(--playersHeaderHeight, 0px) + 16px)',
                 bottom: `calc(${overlayedTabsToolbarHeight} + 16px)`
             }}
         >
-            <div className="glass-card mx-auto flex w-full max-w-md flex-col items-center gap-4 px-6 py-7 text-center">
+            <div className="glass-card pointer-events-auto mx-auto flex w-full max-w-md flex-col items-center gap-4 px-6 py-7 text-center">
                 <div className="space-y-2">
                     <p className="text-xs uppercase tracking-[0.35em] text-violet-200/60">Session Gate</p>
                     <h2 className="text-2xl font-semibold text-white">No game in progress</h2>

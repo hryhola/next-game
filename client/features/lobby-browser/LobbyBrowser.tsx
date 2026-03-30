@@ -47,8 +47,13 @@ export const LobbyBrowser: React.FC = () => {
     return (
         <div className="flex h-full flex-col gap-4">
             <div className="flex items-center gap-3">
-                <Button variant="secondary" size="icon" aria-label="Create lobby" onClick={() => home.setIsCreateLobbyOpen(true)}>
-                    <Plus className="size-4" />
+                <Button
+                    variant="ghost"
+                    className="size-12 rounded-full border-0 bg-transparent p-0 text-violet-200 shadow-none hover:bg-white/6 lg:hidden"
+                    aria-label="Create lobby"
+                    onClick={() => home.setIsCreateLobbyOpen(true)}
+                >
+                    <Plus className="size-6 text-violet-200" strokeWidth={2.25} />
                 </Button>
                 <div className="relative flex-1">
                     <Search className="pointer-events-none absolute right-4 top-1/2 size-4 -translate-y-1/2 text-slate-400" />

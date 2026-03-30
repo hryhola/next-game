@@ -1,27 +1,20 @@
 import { ProfilePreview } from './ProfilePreview'
 import { useHome } from 'client/context/list'
-import { Button } from 'client/ui/primitives'
-import { Menu } from 'lucide-react'
 import { cn } from 'client/ui/lib/cn'
 
-export const headerHeight = '84px'
-
-export const Header: React.FC<React.HTMLAttributes<HTMLElement>> = props => {
+export const Header: React.FC<React.HTMLAttributes<HTMLElement>> = ({ className, ...props }) => {
     const home = useHome()
 
     return (
         <header
-            className={cn('glass-panel sticky top-0 z-30 flex h-[84px] items-center gap-4 border-b border-white/10 px-4 sm:px-6', props.className)}
+            className={cn(
+                'glass-panel sticky top-0 z-30 grid h-[84px] grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-b border-white/10 px-5 sm:px-6',
+                className
+            )}
             {...props}
         >
-            <Button variant="secondary" size="icon" onClick={() => home.setIsNavigationOpen(true)} aria-label="Open navigation">
-                <Menu className="size-5" />
-            </Button>
-            <div className="min-w-0 flex-1">
-                <p className="text-xs uppercase tracking-[0.35em] text-violet-200/55">Game Club</p>
-                <h1 className="truncate text-xl font-semibold text-white">Play together, instantly.</h1>
-            </div>
-            <ProfilePreview onClick={() => home.setIsProfileEditOpen(true)} />
+            <p className="min-w-0 truncate text-xs uppercase tracking-[0.35em] text-violet-200/55">Game Club</p>
+            <ProfilePreview className="shrink-0" onClick={() => home.setIsProfileEditOpen(true)} />
         </header>
     )
 }

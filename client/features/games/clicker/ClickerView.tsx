@@ -18,7 +18,13 @@ export const [ClickerView, useClicker, useClickerAction, useActionSender] = crea
     return (
         <>
             <PlayersHeader members={game.players} isLoading={game.isLoading} />
-            <ClickerCanvas />
+            <div
+                className={
+                    !game.isSessionStarted ? 'pointer-events-none select-none blur-sm transition-[filter] duration-200' : 'transition-[filter] duration-200'
+                }
+            >
+                <ClickerCanvas />
+            </div>
             <NoSession game={game} />
             <LobbyControls />
         </>

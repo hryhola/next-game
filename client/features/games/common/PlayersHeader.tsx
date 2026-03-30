@@ -33,7 +33,7 @@ export const PlayersHeader: React.FC<HeaderProps> = props => {
 
     return (
         <div className="fixed left-0 right-0 z-20 flex justify-center bg-gradient-to-b from-[#000024] to-transparent" id="players-header" ref={boxRef as never}>
-            <div className="flex w-auto flex-nowrap overflow-auto">
+            <div className="flex max-w-full flex-nowrap overflow-x-auto overflow-y-hidden">
                 {props.isLoading ? (
                     <div>
                         <Player isLoading size="medium" />

@@ -13,13 +13,13 @@ export const UsersListBox: React.FC<Props> = props => {
 
     return (
         <div className="flex h-full flex-col gap-4">
-            <div className="relative pt-2">
+            <div className="relative">
                 <Search className="pointer-events-none absolute right-4 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
                 <Input placeholder="Search..." value={searchString} onChange={e => setSearchString(e.target.value)} className="pr-10" />
             </div>
-            <div className="glass-card flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-3">
+            <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
                 {renderedUsers.map(user => (
-                    <div key={user.id} className="rounded-2xl border border-white/6 bg-white/4 px-4 py-3 text-sm text-slate-100">
+                    <div key={user.id} className="px-1 y-3 text-sm text-slate-100">
                         {user.userNickname}
                     </div>
                 ))}

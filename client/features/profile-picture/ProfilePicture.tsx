@@ -6,6 +6,7 @@ interface Props {
     url?: string
     local?: boolean
     size?: number
+    plain?: boolean
     editable?: boolean
     clickable?: boolean
     onClick?: (event: React.MouseEvent<HTMLElement>) => void
@@ -20,6 +21,9 @@ interface Props {
 
 export const ProfilePicture: React.FC<Props> = props => {
     const size = props.size || 300
+    const frameClassName = props.plain ? 'rounded-none border-none bg-transparent' : 'rounded-3xl border border-white/10 bg-white/5'
+    const emptyFrameClassName = props.plain ? 'rounded-none border-none bg-transparent' : 'rounded-3xl border border-white/10 bg-violet-500/10'
+    const editableFrameClassName = props.plain ? 'rounded-none border-none bg-transparent' : 'rounded-3xl border border-white/10 bg-violet-500/12'
 
     const sizeProps = {
         width: size + 'px',
@@ -36,18 +40,15 @@ export const ProfilePicture: React.FC<Props> = props => {
     if (!props.editable && !props.clickable) {
         if (!props.url) {
             return (
-                <div className="flex items-center justify-center overflow-hidden rounded-full border border-white/10 bg-violet-500/10" style={sizeProps}>
+                <div className={cn('flex items-center justify-center overflow-hidden', emptyFrameClassName)} style={sizeProps}>
                     <UserRound style={{ color: props.color, filter: props.filter, width: sizeProps.width, height: sizeProps.height }} />
                 </div>
             )
         }
 
         return (
-            <div
-                className="flex items-center justify-center overflow-hidden rounded-full border border-white/10 bg-white/5"
-                style={{ ...sizeProps, filter: props.filter }}
-            >
-                <img alt="user avatar" src={props.url} />
+            <div className={cn('flex items-center justify-center overflow-hidden', frameClassName)} style={{ ...sizeProps, filter: props.filter }}>
+                <img alt="user avatar" src={props.url} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
             </div>
         )
     }
@@ -64,10 +65,10 @@ export const ProfilePicture: React.FC<Props> = props => {
                 />
             )}
             {props.url ? (
-                <img alt="user avatar" src={props.url} style={{ filter: props.filter, width: '100%', height: '100%', objectFit: 'cover' }} />
+                <img alt="user avatar" src={props.url} style={{ filter: props.filter, width: '100%', height: '100%', objectFit: 'contain' }} />
             ) : (
                 <>
-                    <div className="flex size-full items-center justify-center rounded-full border border-white/10 bg-violet-500/12">
+                    <div className={cn('flex size-full items-center justify-center', editableFrameClassName)}>
                         {props.editIcon || <UserRound style={{ color: props.color, filter: props.filter, width: sizeProps.width, height: sizeProps.height }} />}
                     </div>
                     {props.editable ? <Upload className="absolute bottom-5 right-5 size-5 text-white/80" /> : null}
@@ -78,7 +79,8 @@ export const ProfilePicture: React.FC<Props> = props => {
     )
 
     const sharedClassName = cn(
-        'relative flex flex-col gap-2 overflow-hidden rounded-full p-0',
+        'relative flex flex-col gap-2 overflow-hidden p-0',
+        props.plain ? 'rounded-none' : 'rounded-3xl',
         props.editBorder === true ? 'border border-white/15' : 'border-none bg-transparent shadow-none'
     )
 

@@ -5,7 +5,7 @@ import { LoadingOverlay } from 'client/ui'
 import { api } from 'client/network-utils/api'
 import { HomeContext } from 'client/context/list/homeCtx'
 import type { GameName, InitialGameDataSchema } from 'shared/contracts/app'
-import { Button, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from 'client/ui/primitives'
+import { Button, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, VisuallyHidden } from 'client/ui/primitives'
 
 export const LobbyCreator: React.FC = () => {
     const home = useContext(HomeContext)
@@ -84,8 +84,10 @@ export const LobbyCreator: React.FC = () => {
             <form className="flex h-full flex-col gap-4" onSubmit={handleSubmit} ref={formRef}>
                 {error ? <div className="rounded-2xl border border-rose-300/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">{error}</div> : null}
                 <Input required placeholder="Lobby name" name="lobbyId" value={lobbyId} onChange={e => setLobbyId(e.target.value)} />
-                <div className="space-y-2">
-                    <Label htmlFor="game-type-selector">Game</Label>
+                <div>
+                    <VisuallyHidden asChild>
+                        <Label htmlFor="game-type-selector">Game</Label>
+                    </VisuallyHidden>
                     <Select value={gameName} onValueChange={value => setGameName(value as GameName)}>
                         <SelectTrigger id="game-type-selector">
                             <SelectValue placeholder="Select a game" />

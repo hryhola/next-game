@@ -35,7 +35,7 @@ export const Player: React.FC<Props> = props => {
     const withBox = (children: React.ReactNode) => (
         <div
             className={cn(
-                'rounded-[1.75rem] px-2 py-1 text-center',
+                size === 'medium' ? 'py-1 text-center' : 'rounded-[1.75rem] px-2 py-1 text-center',
                 props.player?.userIsOnline === false && 'grayscale brightness-50',
                 props.isHighlighted && 'bg-gradient-to-t from-cyan-300/25 to-transparent'
             )}
@@ -66,13 +66,21 @@ export const Player: React.FC<Props> = props => {
                             local={false}
                             url={props.player.userAvatarUrl}
                             color={props.player.userColor}
+                            plain={size === 'medium'}
                         />
                     </div>
                 </PlayerMenu>
             ) : (
-                <ProfilePicture size={sizes.width} maxSize={sizes.maxWidth} local={false} url={props.player.userAvatarUrl} color={props.player.userColor} />
+                <ProfilePicture
+                    size={sizes.width}
+                    maxSize={sizes.maxWidth}
+                    local={false}
+                    url={props.player.userAvatarUrl}
+                    color={props.player.userColor}
+                    plain={size === 'medium'}
+                />
             )}
-            <div className="mt-2 block overflow-auto truncate text-lg font-semibold" style={{ color: props.player.userColor }}>
+            <div className="mt-2 block overflow-hidden truncate whitespace-nowrap text-lg font-semibold" style={{ color: props.player.userColor }}>
                 {props.player.userNickname}
             </div>
             <div className="truncate text-sm text-slate-300">

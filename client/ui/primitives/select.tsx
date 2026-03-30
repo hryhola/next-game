@@ -44,15 +44,18 @@ export const SelectItem = React.forwardRef<React.ElementRef<typeof SelectPrimiti
     ({ className, children, ...props }, ref) => (
         <SelectPrimitive.Item
             ref={ref}
-            className={cn('relative flex cursor-default items-center rounded-2xl px-3 py-2 text-sm text-slate-200 outline-none hover:bg-white/8', className)}
+            className={cn(
+                'relative flex cursor-default items-center rounded-2xl py-2 pr-3 pl-10 text-sm text-slate-200 outline-none hover:bg-white/8',
+                className
+            )}
             {...props}
         >
-            <span className="absolute left-3 flex size-4 items-center justify-center">
+            <span className="absolute left-3 flex size-5 items-center justify-center">
                 <SelectPrimitive.ItemIndicator>
                     <Check className="size-4" />
                 </SelectPrimitive.ItemIndicator>
             </span>
-            <SelectPrimitive.ItemText className="pl-6">{children}</SelectPrimitive.ItemText>
+            <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
         </SelectPrimitive.Item>
     )
 )

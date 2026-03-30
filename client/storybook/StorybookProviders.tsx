@@ -55,7 +55,6 @@ export const StorybookProviders: React.FC<Props> = ({ children, user, lobby }) =
     const myRole = members.find(member => member.id === userId)?.memberRole || 'spectator'
 
     const [isProfileEditOpen, setIsProfileEditOpen] = React.useState(false)
-    const [isNavigationOpen, setIsNavigationOpen] = React.useState(false)
     const [isCreateLobbyOpen, setIsCreateLobbyOpen] = React.useState(false)
 
     const [volume, setVolume] = React.useState(50)
@@ -130,8 +129,6 @@ export const StorybookProviders: React.FC<Props> = ({ children, user, lobby }) =
                             value={{
                                 isProfileEditOpen,
                                 setIsProfileEditOpen,
-                                isNavigationOpen,
-                                setIsNavigationOpen,
                                 isCreateLobbyOpen,
                                 setIsCreateLobbyOpen
                             }}
