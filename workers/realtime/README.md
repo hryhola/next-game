@@ -4,66 +4,66 @@ This package contains the active Cloudflare Workers + Durable Objects migration 
 
 ## What Exists
 
--   a Worker entrypoint in `index.ts`
--   Durable Object classes in `durable-objects/LobbyRoomDO.ts` and `durable-objects/GlobalPresenceDO.ts`
--   a D1-backed identity/session layer in `auth/store.ts`
--   a D1-backed lobby index in `lobbies/store.ts`
--   a D1-backed room session summary store in `room-sessions/store.ts`
--   an R2-backed asset store in `assets/store.ts`
--   a local test playground served from `/playground`
--   a `wrangler.jsonc` config with Durable Object bindings, D1 binding, and migrations
--   a local TypeScript config for the worker package
+- a Worker entrypoint in `index.ts`
+- Durable Object classes in `durable-objects/LobbyRoomDO.ts` and `durable-objects/GlobalPresenceDO.ts`
+- a D1-backed identity/session layer in `auth/store.ts`
+- a D1-backed lobby index in `lobbies/store.ts`
+- a D1-backed room session summary store in `room-sessions/store.ts`
+- an R2-backed asset store in `assets/store.ts`
+- a local test playground served from `/playground`
+- a `wrangler.jsonc` config with Durable Object bindings, D1 binding, and migrations
+- a local TypeScript config for the worker package
 
 ## What It Does
 
 The current worker already supports a real localhost migration slice:
 
--   `GET /health` returns a worker health response
--   `POST /auth/register` creates a persistent user profile and session token in D1
--   `GET /auth/session` resolves the current cookie/bearer token to a persistent identity
--   `POST /auth/logout` revokes the current session and clears the cookie
--   `PATCH /auth/profile` and `POST /auth/profile` update nickname/color metadata and can upload avatars to R2
--   `GET /assets/:assetId` serves public uploaded assets from R2 through the worker
--   `GET /lobbies` lists active DO-backed lobbies from the D1 index
--   `POST /lobbies` creates a DO-backed TicTacToe, Clicker, or Jeopardy lobby
--   `DELETE /lobbies/:roomId` destroys a lobby
--   `POST /lobbies/:roomId/join` joins a lobby over HTTP for the main Next.js app
--   `POST /lobbies/:roomId/leave` leaves a lobby over HTTP for the main Next.js app
--   `GET /presence/state` returns the current DO-managed online user snapshot
--   `GET /presence/websocket` upgrades to a global presence websocket backed by a Durable Object
--   `GET /rooms/:roomId/state` returns the authoritative room snapshot from Durable Object storage
--   `GET /rooms/:roomId/history` returns low-frequency room session summaries from D1
--   `GET /rooms/:roomId/health` returns room health
--   `GET /rooms/:roomId/websocket` upgrades to a websocket handled by the room Durable Object
--   `GET /playground` serves a local browser-based test harness for the new flow
+- `GET /health` returns a worker health response
+- `POST /auth/register` creates a persistent user profile and session token in D1
+- `GET /auth/session` resolves the current cookie/bearer token to a persistent identity
+- `POST /auth/logout` revokes the current session and clears the cookie
+- `PATCH /auth/profile` and `POST /auth/profile` update nickname/color metadata and can upload avatars to R2
+- `GET /assets/:assetId` serves public uploaded assets from R2 through the worker
+- `GET /lobbies` lists active DO-backed lobbies from the D1 index
+- `POST /lobbies` creates a DO-backed TicTacToe, Clicker, or Jeopardy lobby
+- `DELETE /lobbies/:roomId` destroys a lobby
+- `POST /lobbies/:roomId/join` joins a lobby over HTTP for the main Next.js app
+- `POST /lobbies/:roomId/leave` leaves a lobby over HTTP for the main Next.js app
+- `GET /presence/state` returns the current DO-managed online user snapshot
+- `GET /presence/websocket` upgrades to a global presence websocket backed by a Durable Object
+- `GET /rooms/:roomId/state` returns the authoritative room snapshot from Durable Object storage
+- `GET /rooms/:roomId/history` returns low-frequency room session summaries from D1
+- `GET /rooms/:roomId/health` returns room health
+- `GET /rooms/:roomId/websocket` upgrades to a websocket handled by the room Durable Object
+- `GET /playground` serves a local browser-based test harness for the new flow
 
 The new identity/presence layer currently:
 
--   stores user profiles and session references in D1
--   stores uploaded asset metadata in D1
--   stores room session start/completion/abandonment summaries in D1
--   reuses the legacy `token` cookie name for an easier frontend migration
--   keeps online presence in a dedicated Durable Object instead of Node process memory
--   broadcasts websocket presence snapshots that survive reconnects within the worker runtime
+- stores user profiles and session references in D1
+- stores uploaded asset metadata in D1
+- stores room session start/completion/abandonment summaries in D1
+- reuses the legacy `token` cookie name for an easier frontend migration
+- keeps online presence in a dedicated Durable Object instead of Node process memory
+- broadcasts websocket presence snapshots that survive reconnects within the worker runtime
 
 The room object currently owns the Phase 5, 6, and 7 slice:
 
--   lobby creation and destruction
--   join and leave flow
--   member tracking and reconnect-aware connection state
--   ready checks
--   lobby chat
--   TicTacToe session lifecycle and move validation
--   Clicker session lifecycle, action fanout, and Durable Object alarm scheduling
--   Jeopardy pack upload, parsing, gameplay, media flow, and score control
--   room snapshot fanout over websocket
+- lobby creation and destruction
+- join and leave flow
+- member tracking and reconnect-aware connection state
+- ready checks
+- lobby chat
+- TicTacToe session lifecycle and move validation
+- Clicker session lifecycle, action fanout, and Durable Object alarm scheduling
+- Jeopardy pack upload, parsing, gameplay, media flow, and score control
+- room snapshot fanout over websocket
 
 ## Node Version
 
 This worker package is intentionally isolated from the root web app.
 
--   root app runtime: Node 24
--   worker toolchain runtime: Node 20+
+- root app runtime: Node 24
+- worker toolchain runtime: Node 24
 
 Use the local `.nvmrc` inside this folder before installing or running `wrangler`.
 
@@ -90,24 +90,24 @@ Use separate browser tabs to simulate two players. The playground stores the aut
 
 ## Notes
 
--   D1 is now used only for low-frequency durable metadata
--   D1 also keeps the lobby discovery index for active rooms
--   D1 now also stores room session history for recovery, debugging, and future stats screens
--   R2 now stores public avatar assets and Jeopardy pack assets
--   the main Next.js app can be started against this worker with:
-    -   `yarn dev:app` from the repo root
-    -   plus `npm run dev` inside `workers/realtime`
--   the root app now routes all migrated game flows through this worker:
-    -   auth/register/logout/session bootstrap
-    -   profile nickname/color/avatar updates
-    -   lobby list, preview, and live list updates
-    -   global chat
-    -   global users list and count
-    -   TicTacToe, Clicker, and Jeopardy lobby create/join/leave/destroy
-    -   lobby chat
-    -   lobby tip and kick actions
-    -   ready checks
-    -   TicTacToe gameplay
-    -   Clicker gameplay, including timed click-enable and cooldown flow
-    -   Jeopardy gameplay, including media timing and manual score changes
--   `/playground` remains the fastest low-level worker test harness
+- D1 is now used only for low-frequency durable metadata
+- D1 also keeps the lobby discovery index for active rooms
+- D1 now also stores room session history for recovery, debugging, and future stats screens
+- R2 now stores public avatar assets and Jeopardy pack assets
+- the main Next.js app can be started against this worker with:
+    - `yarn dev:app` from the repo root
+    - plus `npm run dev` inside `workers/realtime`
+- the root app now routes all migrated game flows through this worker:
+    - auth/register/logout/session bootstrap
+    - profile nickname/color/avatar updates
+    - lobby list, preview, and live list updates
+    - global chat
+    - global users list and count
+    - TicTacToe, Clicker, and Jeopardy lobby create/join/leave/destroy
+    - lobby chat
+    - lobby tip and kick actions
+    - ready checks
+    - TicTacToe gameplay
+    - Clicker gameplay, including timed click-enable and cooldown flow
+    - Jeopardy gameplay, including media timing and manual score changes
+- `/playground` remains the fastest low-level worker test harness

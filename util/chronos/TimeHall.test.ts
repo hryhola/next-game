@@ -48,7 +48,7 @@ describe('TimeHall', () => {
         it('should throw an error if the event is not found', () => {
             const timeHall = new TimeHall()
 
-            expect(() => timeHall.startEvent('event1')).toThrowError('Event "event1" not found')
+            expect(() => timeHall.startEvent('event1')).toThrow('Event "event1" not found')
         })
     })
 
@@ -87,13 +87,13 @@ describe('TimeHall', () => {
         it('should not throw an error if the event is not found', () => {
             const timeHall = new TimeHall()
 
-            expect(() => timeHall.cancelEvent('event1')).not.toThrowError()
+            expect(() => timeHall.cancelEvent('event1')).not.toThrow()
         })
 
         it('should throw an error if the event is not found and throwNotFound is true', () => {
             const timeHall = new TimeHall()
 
-            expect(() => timeHall.cancelEvent('event1', true)).toThrowError('Event "event1" not found')
+            expect(() => timeHall.cancelEvent('event1', true)).toThrow('Event "event1" not found')
         })
     })
 
@@ -113,7 +113,7 @@ describe('TimeHall', () => {
         it('should throw an error if the event is not found', () => {
             const timeHall = new TimeHall()
 
-            expect(() => timeHall.resolveEvent('event1')).toThrowError('Event "event1" not found')
+            expect(() => timeHall.resolveEvent('event1')).toThrow('Event "event1" not found')
         })
     })
 })
