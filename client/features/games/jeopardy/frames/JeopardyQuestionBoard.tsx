@@ -22,7 +22,18 @@ export const QuestionBoard: React.FC<RealtimeJeopardyState.QuestionBoardFrame> =
     }
 
     return (
-        <Box sx={{ pt: 'calc(var(--playersHeaderHeight) + 10px)', paddingBottom: 7, transition: '0.5s' }} width="100%">
+        <Box
+            sx={{
+                pt: 'calc(var(--playersHeaderHeight) + 10px)',
+                pb: '64px',
+                transition: '0.5s',
+                height: 'var(--fullHeight)',
+                overflowY: 'auto',
+                overflowX: 'hidden',
+                boxSizing: 'border-box'
+            }}
+            width="100%"
+        >
             {props.themes.map(t => (
                 <Box key={t.themeId}>
                     <Divider>{t.name}</Divider>
