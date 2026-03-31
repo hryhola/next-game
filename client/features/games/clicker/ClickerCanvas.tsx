@@ -75,9 +75,14 @@ export const ClickerCanvas: React.FC = () => {
         }
     })
 
-    const isCanvasClickable = (game.players.find(p => p.userNickname === user.userNickname) as ClickerPlayerData | undefined)?.playerIsClickAllowed ?? true
+    const player = game.players.find(p => p.userNickname === user.userNickname) as ClickerPlayerData | undefined
+    const isCanvasClickable = game.isSessionStarted && (player?.playerIsClickAllowed ?? game.session?.playerIsClickAllowed ?? false)
 
     const actionHandler = (clientX: number, clientY: number) => {
+        if (!isCanvasClickable) {
+            return
+        }
+
         const width = window.innerWidth
         const height = window.innerHeight
 
@@ -95,6 +100,36 @@ export const ClickerCanvas: React.FC = () => {
         actionHandler(e.touches[0].clientX, e.touches[0].clientY)
     }
 
+    const uploadedBackgroundUrl = game.initialData?.background?.value
+    const patternColor = '#8787ca'
+    const backgroundStyle: React.CSSProperties = gameClickAllowed
+        ? uploadedBackgroundUrl
+            ? {
+                  backgroundColor: '#000024',
+                  backgroundImage: `linear-gradient(rgba(0, 0, 36, 0.32), rgba(0, 0, 36, 0.32)), url("${uploadedBackgroundUrl}")`,
+                  backgroundPosition: 'center, center',
+                  backgroundRepeat: 'no-repeat, no-repeat',
+                  backgroundSize: 'cover, cover'
+              }
+            : {
+                  backgroundColor: '#000024',
+                  backgroundImage: [
+                      `radial-gradient(circle at center, ${patternColor} 1.6px, transparent 1.8px)`,
+                      `linear-gradient(rgba(135, 135, 202, 0.18) 1px, transparent 1px)`,
+                      `linear-gradient(90deg, rgba(135, 135, 202, 0.18) 1px, transparent 1px)`
+                  ].join(', '),
+                  backgroundPosition: '0 0, 0 0, 0 0',
+                  backgroundRepeat: 'repeat, repeat, repeat',
+                  backgroundSize: '32px 32px, 32px 32px, 32px 32px'
+              }
+        : {
+              backgroundColor: '#000024',
+              backgroundImage: 'none',
+              backgroundPosition: '0 0',
+              backgroundRepeat: 'repeat',
+              backgroundSize: 'auto'
+          }
+
     return (
         <div
             ref={canvasRef}
@@ -107,19 +142,11 @@ export const ClickerCanvas: React.FC = () => {
                 alignItems: 'center',
                 width: '100vw',
                 height: 'var(--fullHeight)',
-                backgroundColor: '#000024',
                 overflow: 'hidden',
-                pointerEvents: isCanvasClickable === false ? 'none' : 'auto',
+                pointerEvents: isCanvasClickable ? 'auto' : 'none',
                 opacity: '0.8',
-                background: gameClickAllowed
-                    ? 'radial-gradient(circle, transparent 20%, #000024 20%, #000024 80%, transparent 80%, transparent), radial-gradient(circle, transparent 20%, #000024 20%, #000024 80%, transparent 80%, transparent) 32.5px 32.5px, linear-gradient(#8787ca 2.6px, transparent 2.6px) 0 -1.3px, linear-gradient(90deg, #8787ca 2.6px, #000024 2.6px) -1.3px 0'
-                    : '#000024',
-                backgroundSize: '65px 65px, 65px 65px, 32.5px 32.5px, 32.5px 32.5px'
+                ...backgroundStyle
             }}
-        >
-            {gameClickAllowed && game.initialData?.background?.value && (
-                <img style={{ pointerEvents: 'none', userSelect: 'none' }} src={game.initialData.background.value} alt="background" />
-            )}
-        </div>
+        ></div>
     )
 }
