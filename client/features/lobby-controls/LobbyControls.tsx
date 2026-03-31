@@ -53,6 +53,7 @@ export const LobbyControls: React.FC<LobbyControlsProps> = props => {
 
     const isReadyCheckButtonVisible = !game.isSessionStarted
     const isCreatorView = lobby.members.find(member => member.memberIsCreator)?.id === user.id
+    const isBottomDockOccupied = lobby.activeBottomDock !== null
 
     const confirmDestroyLobby = () => {
         globalModal.confirm({
@@ -331,7 +332,13 @@ export const LobbyControls: React.FC<LobbyControlsProps> = props => {
                 </div>
 
                 <div className="pointer-events-none flex flex-col items-end gap-3">
-                    <Button variant="secondary" size="sm" className="pointer-events-auto h-12 rounded-full px-4" onClick={toggleLobbyChat}>
+                    <Button
+                        variant="secondary"
+                        size="sm"
+                        className="pointer-events-auto h-12 rounded-full px-4"
+                        onClick={toggleLobbyChat}
+                        disabled={isBottomDockOccupied}
+                    >
                         <MessageCircle className={controlIconClassName} strokeWidth={2.25} />
                         Chat
                         <ChevronDown className={controlIconClassName} strokeWidth={2.25} />
@@ -394,6 +401,7 @@ export const LobbyControls: React.FC<LobbyControlsProps> = props => {
                         size="icon"
                         className="pointer-events-auto"
                         onClick={toggleLobbyChat}
+                        disabled={isBottomDockOccupied}
                         aria-label={isLobbyChatOpen ? 'Hide chat' : 'Show chat'}
                     >
                         <MessageCircle className={controlIconClassName} strokeWidth={2.25} />
@@ -428,7 +436,7 @@ export const LobbyControls: React.FC<LobbyControlsProps> = props => {
             </div>
 
             <div className="pointer-events-none fixed inset-x-0 z-40 flex justify-center px-4 bottom-[calc(env(safe-area-inset-bottom,0px)+88px)] md:bottom-6">
-                {isLobbyChatOpen ? (
+                {!isBottomDockOccupied && isLobbyChatOpen ? (
                     <div className="glass-card pointer-events-auto w-full max-w-xl rounded-[2rem] p-3">
                         <div className="flex items-center justify-between gap-3">
                             <div className="min-w-0">
@@ -443,7 +451,7 @@ export const LobbyControls: React.FC<LobbyControlsProps> = props => {
                             <ChatBox messages={lobby.chatMessages} onSendMessage={handleSendLobbyMessage} inputRef={chatInputRef} className="h-full" />
                         </div>
                     </div>
-                ) : chatPreviewMessages.length ? (
+                ) : !isBottomDockOccupied && chatPreviewMessages.length ? (
                     <div className="pointer-events-none w-full max-w-xl text-sm text-slate-100">
                         <div className="flex flex-col gap-2">
                             {chatPreviewMessages.map(previewMessage => (

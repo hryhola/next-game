@@ -1,6 +1,5 @@
-import { Box, Grid, LinearProgress, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from 'client/ui/mui-shim'
+import { Box, Button, Grid, LinearProgress, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from 'client/ui/mui-shim'
 import { useAudio, useLobby, useUser, useWS } from 'client/context/list'
-import { useGlobalModal } from 'client/features/global-modal/GlobalModal'
 import { isCloudflareRealtimeEnabled } from 'client/network-utils/realtimeMode'
 import React, { MutableRefObject, useEffect, useRef, useState } from 'react'
 import { useActionSender, useJeopardy, useJeopardyAction } from '../JeopardyView'
@@ -87,17 +86,16 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
     const lobby = useLobby()
     const ws = useWS()
     const game = useJeopardy()
-    const globalModal = useGlobalModal()
-    const actionSender = useActionSender()
+    const sendAction = useActionSender()
     const playerRef = useRef<HTMLAudioElement | HTMLVideoElement | null>(null)
     const audio = useAudio()
-    const sendAction = useActionSender()
     const isWorkerMode = isCloudflareRealtimeEnabled()
     const [timerNowMs, setTimerNowMs] = useState(() => Date.now())
+    const session = game.session as RealtimeJeopardySessionState | null
+    const isMasterView = game.players.some(p => p.id === user.id && p.playerIsMaster)
+    const setActiveBottomDock = lobby.setActiveBottomDock
 
     const answerInputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null)
-    const closeAnswerModal = useRef<{ close: (() => void) | null }>({ close: null })
-    const closeVerifyModal = useRef<{ close: (() => void) | null }>({ close: null })
     const isPausedRef = useRef(game.session?.isPaused ?? false)
     const answerGivingProgressSourceRef = useRef<TimedProgressSource>({
         startedAt: props.answerGivingStartedAt,
@@ -134,6 +132,13 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
     const answerGivingProgress = getTimedProgress(props.answerGivingStartedAt, props.answerGivingEndsAt, props.answerGivingTimeLeft, timerNowMs)
     const answerVerifyingProgress = getTimedProgress(props.answerVerifyingStartedAt, props.answerVerifyingEndsAt, props.answerVerifyingTimeLeft, timerNowMs)
     const progressBarPositionClassName = 'fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom,0px)+148px)] md:bottom-0'
+    const bottomDockPositionClassName =
+        'pointer-events-none fixed inset-x-0 z-40 flex justify-center px-4 bottom-[calc(env(safe-area-inset-bottom,0px)+88px)] md:bottom-6'
+    const bottomDockPanelClassName = 'glass-card pointer-events-auto w-full max-w-xl rounded-[2rem] p-3'
+    const answerDockVisible = props.answeringStatus === 'answering' && props.answeringPlayerId === user.id
+    const verifyDockVisible = props.answeringStatus === 'answer-verifying' && isMasterView && Boolean(session?.internal?.currentAnsweringPlayerId)
+    const showAnswerGivingProgressBar = props.answeringStatus === 'answering' && answerGivingProgress !== null && !answerDockVisible
+    const showAnswerVerifyingProgressBar = props.answeringStatus === 'answer-verifying' && answerVerifyingProgress !== null && !verifyDockVisible
 
     function updatePlayerVolume() {
         if (!playerRef.current) return
@@ -189,113 +194,20 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
     ])
 
     useEffect(() => {
-        if (props.answeringPlayerId === user.id) {
-            closeAnswerModal.current.close = globalModal.confirm({
-                title: 'Your answer',
-                header: 'Your answer',
-                actionRequired: 'confirm',
-                closeOnConfirm: false,
-                content: (
-                    <Box>
-                        <TextField multiline inputRef={answerInputRef} />
-                        <LiveTimedProgressBar
-                            color="secondary"
-                            initialProgress={answerGivingProgress}
-                            getIsPaused={() => isPausedRef.current}
-                            style={{ marginTop: '16px' }}
-                            getProgress={nowMs => {
-                                const { startedAt, endsAt, fallback } = answerGivingProgressSourceRef.current
-
-                                return getTimedProgress(startedAt, endsAt, fallback ?? null, nowMs)
-                            }}
-                        />
-                    </Box>
-                ),
-                hideClose: true,
-                onConfirm: () =>
-                    actionSender('$GiveAnswer', {
-                        text: answerInputRef.current?.value
-                    })
-            })
-        } else if (closeAnswerModal.current.close) {
-            closeAnswerModal.current.close()
+        if (answerDockVisible) {
+            answerInputRef.current?.focus()
         }
-    }, [props.answeringPlayerId])
-
-    function showVerifyModal(data: {
-        currentAnsweringPlayerId: string | null
-        currentAnsweringPlayerAnswerText?: string | null
-        correctAnswers?: string[] | null
-        incorrectAnswers?: string[] | null
-    }) {
-        const correctAnswers = data.correctAnswers || []
-        const incorrectAnswers = data.incorrectAnswers || []
-
-        const mostAnswersList: string[] = correctAnswers.length > incorrectAnswers.length ? correctAnswers : incorrectAnswers
-
-        closeVerifyModal.current.close = globalModal.confirm({
-            title: 'Verify answer',
-            header: 'Verify answer',
-            actionRequired: true,
-            closeOnCancel: false,
-            closeOnConfirm: false,
-            hideClose: true,
-            inContainer: false,
-            content: (
-                <Box>
-                    <Typography sx={{ pt: 2, pb: 3, pl: 2, pr: 2 }}>
-                        Answer: {data.currentAnsweringPlayerAnswerText ? data.currentAnsweringPlayerAnswerText : <i>no answer</i>}
-                    </Typography>
-                    {mostAnswersList.length ? (
-                        <Table aria-label="Answers" size="small">
-                            <TableHead>
-                                <TableRow>
-                                    <TableCell>Correct</TableCell>
-                                    <TableCell>Wrong</TableCell>
-                                </TableRow>
-                            </TableHead>
-                            <TableBody>
-                                {mostAnswersList.map((_, i) => (
-                                    <TableRow key={i}>
-                                        <TableCell sx={{ color: theme => theme.palette.success.light }}>{correctAnswers[i] ? correctAnswers[i] : ''}</TableCell>
-                                        <TableCell sx={{ color: theme => theme.palette.error.light }}>
-                                            {incorrectAnswers[i] ? incorrectAnswers[i] : ''}
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    ) : (
-                        <></>
-                    )}
-                    <LiveTimedProgressBar
-                        color="success"
-                        initialProgress={answerVerifyingProgress}
-                        getIsPaused={() => isPausedRef.current}
-                        style={{ marginTop: '16px' }}
-                        getProgress={nowMs => {
-                            const { startedAt, endsAt, fallback } = answerVerifyingProgressSourceRef.current
-
-                            return getTimedProgress(startedAt, endsAt, fallback ?? null, nowMs)
-                        }}
-                    />
-                </Box>
-            ),
-            onConfirm: () => sendAction('$RateAnswer', { rating: 'approved' }),
-            onCancel: () => sendAction('$RateAnswer', { rating: 'declined' })
-        })
-    }
+    }, [answerDockVisible])
 
     useEffect(() => {
-        const session = game.session as RealtimeJeopardySessionState
+        setActiveBottomDock(answerDockVisible ? 'jeopardy-answer' : verifyDockVisible ? 'jeopardy-verify' : null)
+    }, [answerDockVisible, setActiveBottomDock, verifyDockVisible])
 
-        if (session?.internal?.currentAnsweringPlayerId) {
-            showVerifyModal(session.internal)
-        } else if (closeVerifyModal.current.close) {
-            closeVerifyModal.current.close()
-            closeVerifyModal.current.close = null
+    useEffect(() => {
+        return () => {
+            setActiveBottomDock(null)
         }
-    }, [(game.session as RealtimeJeopardySessionState)?.internal?.currentAnsweringPlayerId])
+    }, [setActiveBottomDock])
 
     useJeopardyAction('$Pause', data => {
         if (!data.result.success) return
@@ -320,6 +232,11 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
             lobbyId: lobby.lobbyId
         })
     }
+
+    const verifyingAnswerText = session?.internal?.currentAnsweringPlayerAnswerText
+    const correctAnswers = session?.internal?.correctAnswers || []
+    const incorrectAnswers = session?.internal?.incorrectAnswers || []
+    const mostAnswersList: string[] = correctAnswers.length > incorrectAnswers.length ? correctAnswers : incorrectAnswers
 
     let content!: React.ReactNode
 
@@ -362,12 +279,93 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
                     {content}
                 </Grid>
             </Grid>
-            {props.answeringStatus === 'answer-verifying' && answerVerifyingProgress !== null && (
+            {verifyDockVisible ? (
+                <div className={bottomDockPositionClassName}>
+                    <div className={bottomDockPanelClassName}>
+                        <div className="text-xs font-semibold uppercase tracking-[0.28em] text-violet-200/60">Verify Answer</div>
+                        <Typography sx={{ pt: 2, pb: 3 }}>Answer: {verifyingAnswerText ? verifyingAnswerText : <i>no answer</i>}</Typography>
+                        {mostAnswersList.length ? (
+                            <Table aria-label="Answers" size="small">
+                                <TableHead>
+                                    <TableRow>
+                                        <TableCell>Correct</TableCell>
+                                        <TableCell>Wrong</TableCell>
+                                    </TableRow>
+                                </TableHead>
+                                <TableBody>
+                                    {mostAnswersList.map((_, i) => (
+                                        <TableRow key={i}>
+                                            <TableCell sx={{ color: theme => theme.palette.success.light }}>
+                                                {correctAnswers[i] ? correctAnswers[i] : ''}
+                                            </TableCell>
+                                            <TableCell sx={{ color: theme => theme.palette.error.light }}>
+                                                {incorrectAnswers[i] ? incorrectAnswers[i] : ''}
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        ) : null}
+                        <LiveTimedProgressBar
+                            color="success"
+                            initialProgress={answerVerifyingProgress}
+                            getIsPaused={() => isPausedRef.current}
+                            style={{ marginTop: '16px' }}
+                            getProgress={nowMs => {
+                                const { startedAt, endsAt, fallback } = answerVerifyingProgressSourceRef.current
+
+                                return getTimedProgress(startedAt, endsAt, fallback ?? null, nowMs)
+                            }}
+                        />
+                        <div className="mt-3 flex flex-wrap justify-end gap-3">
+                            <Button color="error" onClick={() => sendAction('$RateAnswer', { rating: 'declined' })}>
+                                Decline
+                            </Button>
+                            <Button color="success" onClick={() => sendAction('$RateAnswer', { rating: 'approved' })}>
+                                Approve
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            ) : null}
+            {answerDockVisible ? (
+                <div className={bottomDockPositionClassName}>
+                    <div className={bottomDockPanelClassName}>
+                        <div className="text-xs font-semibold uppercase tracking-[0.28em] text-violet-200/60">Your Answer</div>
+                        <div className="mt-3">
+                            <TextField multiline inputRef={answerInputRef} />
+                        </div>
+                        <LiveTimedProgressBar
+                            color="secondary"
+                            initialProgress={answerGivingProgress}
+                            getIsPaused={() => isPausedRef.current}
+                            style={{ marginTop: '16px' }}
+                            getProgress={nowMs => {
+                                const { startedAt, endsAt, fallback } = answerGivingProgressSourceRef.current
+
+                                return getTimedProgress(startedAt, endsAt, fallback ?? null, nowMs)
+                            }}
+                        />
+                        <div className="mt-3 flex justify-end">
+                            <Button
+                                onClick={() =>
+                                    sendAction('$GiveAnswer', {
+                                        text: answerInputRef.current?.value
+                                    })
+                                }
+                            >
+                                Confirm
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            ) : null}
+            {showAnswerVerifyingProgressBar && (
                 <Box className={progressBarPositionClassName}>
                     <LinearProgress variant="determinate" value={answerVerifyingProgress} color="success" />
                 </Box>
             )}
-            {props.answeringStatus === 'answering' && answerGivingProgress !== null && (
+            {showAnswerGivingProgressBar && (
                 <Box className={progressBarPositionClassName}>
                     <LinearProgress variant="determinate" value={answerGivingProgress} color="secondary" />
                 </Box>
