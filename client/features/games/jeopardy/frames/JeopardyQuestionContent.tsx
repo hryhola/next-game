@@ -201,6 +201,7 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
     const answerRequestProgress = getTimedProgress(props.answerRequestStartedAt, props.answerRequestEndsAt, props.answerRequestTimeLeft, timerNowMs)
     const answerGivingProgress = getTimedProgress(props.answerGivingStartedAt, props.answerGivingEndsAt, props.answerGivingTimeLeft, timerNowMs)
     const answerVerifyingProgress = getTimedProgress(props.answerVerifyingStartedAt, props.answerVerifyingEndsAt, props.answerVerifyingTimeLeft, timerNowMs)
+    const progressBarPositionClassName = 'fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom,0px)+148px)] md:bottom-0'
 
     let content!: React.ReactNode
 
@@ -244,17 +245,17 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
                 </Grid>
             </Grid>
             {props.answeringStatus === 'answer-verifying' && answerVerifyingProgress !== null && (
-                <Box sx={{ position: 'fixed', width: '100vw', bottom: { md: 0, xs: 'calc(env(safe-area-inset-bottom, 0px) + 148px)' } }}>
+                <Box className={progressBarPositionClassName}>
                     <LinearProgress variant="determinate" value={answerVerifyingProgress} color="success" />
                 </Box>
             )}
             {props.answeringStatus === 'answering' && answerGivingProgress !== null && (
-                <Box sx={{ position: 'fixed', width: '100vw', bottom: { md: 0, xs: 'calc(env(safe-area-inset-bottom, 0px) + 148px)' } }}>
+                <Box className={progressBarPositionClassName}>
                     <LinearProgress variant="determinate" value={answerGivingProgress} color="secondary" />
                 </Box>
             )}
             {props.answeringStatus === 'allowed' && answerRequestProgress !== null && (
-                <Box sx={{ position: 'fixed', width: '100vw', bottom: { md: 0, xs: 'calc(env(safe-area-inset-bottom, 0px) + 148px)' } }}>
+                <Box className={progressBarPositionClassName}>
                     <LinearProgress variant="determinate" value={answerRequestProgress} />
                 </Box>
             )}
