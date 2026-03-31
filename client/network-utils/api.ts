@@ -259,7 +259,7 @@ async function handleWorkerApiRequest<E extends EndpointName>(endpoint: E, data:
                 return [
                     {
                         success: true,
-                        userAvatarUrl: body.session?.user?.userAvatarUrl
+                        user: body.session?.user
                     } as Endpoints[E]['response'],
                     undefined
                 ]

@@ -956,7 +956,7 @@ export const WSProvider: React.FC<Props> = props => {
                 }
             }
         }
-    }, [user.id])
+    }, [user.id, user.userAvatarUrl, user.userColor, user.userNickname])
 
     return <WSContext.Provider value={{ wsRef, isConnected, setIsConnected, on, send, unsubscribe }}>{props.children}</WSContext.Provider>
 }

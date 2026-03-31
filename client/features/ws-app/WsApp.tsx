@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { LoadingOverlay } from 'client/ui/loading-overlay/LoadingOverlay'
 import { connectToWebSocket } from 'client/network-utils/socket'
-import { useLobby, useWS } from 'client/context/list'
+import { useLobby, useUser, useWS } from 'client/context/list'
 import { DevToolsOverlay } from 'client/features/dev/DevToolsOverlay'
 import { useClientRouter } from 'client/route/ClientRouter'
 import { getCloudflareLobbyWebSocketUrl } from 'client/network-utils/realtimeMode'
@@ -15,22 +15,41 @@ type Props = {
 export const WsApp: React.FC<Props> = props => {
     const ws = useWS()
     const lobby = useLobby()
+    const user = useUser()
     const router = useClientRouter()
     const roomSocketRef = ws.wsRef
     const setConnected = ws.setIsConnected
 
     const isFirstConnection = useRef(true)
     const currentTargetUrl = useRef<string | null>(null)
+    const currentIdentityKeyRef = useRef<string | null>(null)
     const isHandlingConnectionRef = useRef(false)
+    const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+    const shouldReconnectRef = useRef(false)
     const [isHandlingConnection, setIsHandlingConnection] = useState(false)
+    const identityKey = JSON.stringify([user.id, user.userNickname, user.userColor, user.userAvatarUrl || ''])
 
     const updateHandlingConnection = (value: boolean) => {
         isHandlingConnectionRef.current = value
         setIsHandlingConnection(value)
     }
 
-    const closeSocket = () => {
+    const clearReconnectTimeout = () => {
+        if (reconnectTimeoutRef.current) {
+            clearTimeout(reconnectTimeoutRef.current)
+            reconnectTimeoutRef.current = null
+        }
+    }
+
+    const closeSocket = (resetTarget: boolean = true) => {
+        clearReconnectTimeout()
+
         if (!ws.wsRef.current) {
+            if (resetTarget) {
+                currentTargetUrl.current = null
+                currentIdentityKeyRef.current = null
+            }
+
             return
         }
 
@@ -40,17 +59,42 @@ export const WsApp: React.FC<Props> = props => {
             return
         } finally {
             ws.wsRef.current = null
-            currentTargetUrl.current = null
+
+            if (resetTarget) {
+                currentTargetUrl.current = null
+                currentIdentityKeyRef.current = null
+            }
         }
     }
 
+    const scheduleReconnect = () => {
+        clearReconnectTimeout()
+
+        if (!shouldReconnectRef.current || !currentTargetUrl.current) {
+            return
+        }
+
+        reconnectTimeoutRef.current = setTimeout(() => {
+            if (!shouldReconnectRef.current || isHandlingConnectionRef.current) {
+                return
+            }
+
+            startConnecting(currentTargetUrl.current || undefined)
+        }, 1500)
+    }
+
     const startConnecting = (targetUrl?: string) => {
+        if (!targetUrl) {
+            return
+        }
+
         if (isHandlingConnectionRef.current) {
             console.log('Already connecting.')
             return
         }
 
         updateHandlingConnection(true)
+        clearReconnectTimeout()
 
         isFirstConnection.current = false
 
@@ -58,18 +102,31 @@ export const WsApp: React.FC<Props> = props => {
             pingMessage: JSON.stringify({ type: 'ping' }),
             onClose: () => {
                 ws.wsRef.current = null
+                currentIdentityKeyRef.current = null
                 ws.setIsConnected(false)
                 updateHandlingConnection(false)
+
+                if (shouldReconnectRef.current && currentTargetUrl.current === targetUrl) {
+                    scheduleReconnect()
+                }
             },
             onError: () => {
                 ws.wsRef.current = null
+                currentIdentityKeyRef.current = null
                 ws.setIsConnected(false)
                 updateHandlingConnection(false)
+
+                if (shouldReconnectRef.current && currentTargetUrl.current === targetUrl) {
+                    scheduleReconnect()
+                }
             },
             onOpen: (webSocket: WebSocket) => {
                 console.log('Connection is set.')
                 ws.wsRef.current = webSocket
+                currentTargetUrl.current = targetUrl
+                currentIdentityKeyRef.current = identityKey
                 ws.setIsConnected(true)
+                clearReconnectTimeout()
 
                 if (!isFirstConnection.current) {
                     setTimeout(() => webSocket.send(JSON.stringify({ type: 'ping' })), 0)
@@ -83,6 +140,7 @@ export const WsApp: React.FC<Props> = props => {
 
     useEffect(() => {
         const requiresLobbySocket = router.frame === 'Lobby' && Boolean(lobby.lobbyId)
+        shouldReconnectRef.current = requiresLobbySocket
 
         if (!requiresLobbySocket) {
             closeSocket()
@@ -95,19 +153,23 @@ export const WsApp: React.FC<Props> = props => {
         const token = getCookie('token')
 
         if (typeof token !== 'string' || !token.length) {
+            shouldReconnectRef.current = false
+            closeSocket()
             ws.setIsConnected(false)
             return
         }
 
         const targetUrl = getCloudflareLobbyWebSocketUrl(lobby.lobbyId, token)
         const currentSocket = ws.wsRef.current
+        const sameIdentity = currentIdentityKeyRef.current === identityKey
 
-        if (currentSocket && currentTargetUrl.current === targetUrl && currentSocket.readyState === WebSocket.OPEN) {
+        if (currentSocket && currentTargetUrl.current === targetUrl && currentSocket.readyState === WebSocket.OPEN && sameIdentity) {
+            clearReconnectTimeout()
             ws.setIsConnected(true)
             return
         }
 
-        if (currentSocket && currentTargetUrl.current !== targetUrl) {
+        if (currentSocket && (currentTargetUrl.current !== targetUrl || !sameIdentity)) {
             closeSocket()
         }
 
@@ -117,10 +179,13 @@ export const WsApp: React.FC<Props> = props => {
         if (!isHandlingConnectionRef.current) {
             startConnecting(targetUrl)
         }
-    }, [lobby.lobbyId, router.frame])
+    }, [identityKey, lobby.lobbyId, router.frame])
 
     useEffect(() => {
         return () => {
+            shouldReconnectRef.current = false
+            clearReconnectTimeout()
+
             if (!roomSocketRef.current) {
                 return
             }
@@ -132,6 +197,7 @@ export const WsApp: React.FC<Props> = props => {
             } finally {
                 roomSocketRef.current = null
                 currentTargetUrl.current = null
+                currentIdentityKeyRef.current = null
                 setConnected(false)
             }
         }

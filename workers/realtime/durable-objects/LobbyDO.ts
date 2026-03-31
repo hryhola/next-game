@@ -130,7 +130,7 @@ export class LobbyDO extends DurableObject<RealtimeWorkerEnv> {
                 createdAt: record.lobby.createdAt,
                 updatedAt: record.lobby.updatedAt,
                 members: record.members.length,
-                activeConnections: this.ctx.getWebSockets().length,
+                activeConnections: this.getOpenSockets().length,
                 gameStatus: aggregate.buildLobbyListItem().status
             })
         }
@@ -215,7 +215,13 @@ export class LobbyDO extends DurableObject<RealtimeWorkerEnv> {
         await this.applyMutationResult(aggregate, result)
     }
 
-    async webSocketClose(): Promise<void> {
+    async webSocketClose(ws: WebSocket, code: number, reason: string): Promise<void> {
+        try {
+            ws.close(code, reason)
+        } catch (_error) {
+            // Ignore sockets that are already closing or closed.
+        }
+
         const record = await this.repository.get()
 
         if (record) {
@@ -223,7 +229,13 @@ export class LobbyDO extends DurableObject<RealtimeWorkerEnv> {
         }
     }
 
-    async webSocketError(): Promise<void> {
+    async webSocketError(ws: WebSocket): Promise<void> {
+        try {
+            ws.close(1011, 'socket error')
+        } catch (_error) {
+            // Ignore sockets that are already closing or closed.
+        }
+
         const record = await this.repository.get()
 
         if (record) {
@@ -556,6 +568,12 @@ export class LobbyDO extends DurableObject<RealtimeWorkerEnv> {
         const identity = readIdentityHeaders(request)
         const aggregate = this.createAggregate(record)
 
+        const didSyncMemberProfile = await this.syncMemberProfileIfNeeded(aggregate, identity?.user)
+
+        if (didSyncMemberProfile) {
+            this.broadcastState(aggregate)
+        }
+
         return json({
             ok: true,
             lobby: aggregate.buildState(identity?.user.id)
@@ -591,14 +609,18 @@ export class LobbyDO extends DurableObject<RealtimeWorkerEnv> {
             )
         }
 
+        const aggregate = this.createAggregate(record)
+
+        await this.syncMemberProfileIfNeeded(aggregate, identity.user)
+
         const pair = new WebSocketPair()
         const [client, server] = Object.values(pair) as [WebSocket, WebSocket]
 
         server.serializeAttachment(identity)
         this.ctx.acceptWebSocket(server, [userTag(identity.user.id), sessionTag(identity.sessionId)])
 
-        this.sendState(server, this.createAggregate(record))
-        this.broadcastState(this.createAggregate(record))
+        this.sendState(server, aggregate)
+        this.broadcastState(aggregate)
 
         return new Response(null, {
             status: 101,
@@ -643,7 +665,7 @@ export class LobbyDO extends DurableObject<RealtimeWorkerEnv> {
         const aggregate = this.createAggregate(record)
         await this.sessionHistory.persistFinalized(aggregate.createSessionRecord(reason))
 
-        this.ctx.getWebSockets().forEach(socket => {
+        this.getOpenSockets().forEach(socket => {
             try {
                 socket.send(
                     JSON.stringify({
@@ -675,7 +697,7 @@ export class LobbyDO extends DurableObject<RealtimeWorkerEnv> {
     private broadcastServerMessage(message: LobbyServerMessage): void {
         const payload = JSON.stringify(message)
 
-        this.ctx.getWebSockets().forEach(socket => {
+        this.getOpenSockets().forEach(socket => {
             try {
                 socket.send(payload)
             } catch (_error) {
@@ -689,13 +711,13 @@ export class LobbyDO extends DurableObject<RealtimeWorkerEnv> {
     }
 
     private broadcastState(aggregate: LobbyAggregate): void {
-        this.ctx.getWebSockets().forEach(socket => {
+        this.getOpenSockets().forEach(socket => {
             this.sendState(socket, aggregate)
         })
     }
 
     private closeUserSockets(userId: string, code: number, reason: string): void {
-        this.ctx.getWebSockets(userTag(userId)).forEach(socket => {
+        this.getOpenSockets(userTag(userId)).forEach(socket => {
             try {
                 socket.close(code, reason)
             } catch (_error) {
@@ -704,13 +726,17 @@ export class LobbyDO extends DurableObject<RealtimeWorkerEnv> {
         })
     }
 
+    private getOpenSockets(tag?: string): WebSocket[] {
+        return this.ctx.getWebSockets(tag).filter(socket => socket.readyState === WebSocket.OPEN)
+    }
+
     private createAggregate(record: LobbyRecordV2): LobbyAggregate {
         return new LobbyAggregate(record, this.createRegistry(), {
             createGameActionMessage: payload => ({
                 type: 'game.event',
                 payload
             }),
-            getConnectedSocketsCount: userId => this.ctx.getWebSockets(userTag(userId)).length,
+            getConnectedSocketsCount: userId => this.getOpenSockets(userTag(userId)).length,
             persistFinalizedLobbySession: session => this.sessionHistory.persistFinalized(session),
             scheduler: this.scheduler
         })
@@ -722,7 +748,7 @@ export class LobbyDO extends DurableObject<RealtimeWorkerEnv> {
                 type: 'game.event',
                 payload
             }),
-            getConnectedSocketsCount: userId => this.ctx.getWebSockets(userTag(userId)).length,
+            getConnectedSocketsCount: userId => this.getOpenSockets(userTag(userId)).length,
             persistFinalizedLobbySession: session => this.sessionHistory.persistFinalized(session),
             scheduler: this.scheduler
         })
@@ -773,6 +799,19 @@ export class LobbyDO extends DurableObject<RealtimeWorkerEnv> {
             type: 'lobby.state',
             payload: aggregate.buildState(attachment?.user.id)
         })
+    }
+
+    private async syncMemberProfileIfNeeded(aggregate: LobbyAggregate, user?: IdentityProfile): Promise<boolean> {
+        if (!user || !aggregate.syncMemberProfile(user)) {
+            return false
+        }
+
+        const record = aggregate.getRecord()
+        const shouldNotifyLobbyList = record.lobby.creatorUserId === user.id
+
+        await this.persistRecord(record, shouldNotifyLobbyList)
+
+        return true
     }
 
     private async syncLobbyMetadata(aggregate: LobbyAggregate): Promise<void> {

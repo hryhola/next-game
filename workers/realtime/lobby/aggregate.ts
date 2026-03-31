@@ -83,6 +83,38 @@ export class LobbyAggregate {
         return projectLobbyState(this.record, this.getFeature(), this.ctx, viewerUserId)
     }
 
+    syncMemberProfile(user: IdentityProfile): boolean {
+        const member = this.record.members.find(item => item.id === user.id)
+
+        if (!member) {
+            return false
+        }
+
+        let changed = false
+
+        if (member.userNickname !== user.userNickname) {
+            member.userNickname = user.userNickname
+            changed = true
+        }
+
+        if (member.userColor !== user.userColor) {
+            member.userColor = user.userColor
+            changed = true
+        }
+
+        if (member.userAvatarUrl !== user.userAvatarUrl) {
+            if (user.userAvatarUrl) {
+                member.userAvatarUrl = user.userAvatarUrl
+            } else {
+                delete member.userAvatarUrl
+            }
+
+            changed = true
+        }
+
+        return changed
+    }
+
     createSessionRecord(reason?: string) {
         return this.getFeature().createSessionRecord(this.record, reason)
     }

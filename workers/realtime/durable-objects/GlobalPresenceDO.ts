@@ -132,12 +132,28 @@ export class GlobalPresenceDO extends DurableObject<RealtimeWorkerEnv> {
         await this.sendInitialState(ws)
     }
 
-    webSocketClose(): void {
-        this.broadcastPresenceSnapshot()
+    webSocketClose(ws: WebSocket, code: number, reason: string): void {
+        try {
+            ws.close(code, reason)
+        } catch (_error) {
+            return
+        } finally {
+            this.broadcastPresenceSnapshot()
+        }
     }
 
-    webSocketError(): void {
-        this.broadcastPresenceSnapshot()
+    webSocketError(ws: WebSocket): void {
+        try {
+            ws.close(1011, 'socket error')
+        } catch (_error) {
+            return
+        } finally {
+            this.broadcastPresenceSnapshot()
+        }
+    }
+
+    private getOpenSockets(tag?: string): WebSocket[] {
+        return this.ctx.getWebSockets(tag).filter(socket => socket.readyState === WebSocket.OPEN)
     }
 
     private async handleChatRequest(request: Request): Promise<Response> {
@@ -278,8 +294,9 @@ export class GlobalPresenceDO extends DurableObject<RealtimeWorkerEnv> {
 
     private buildSnapshot(): PresenceSnapshot {
         const onlineUsers = new Map<string, PresenceUser>()
+        const openSockets = this.getOpenSockets()
 
-        this.ctx.getWebSockets().forEach(socket => {
+        openSockets.forEach(socket => {
             const attachment = socket.deserializeAttachment() as PresenceAttachment | null
 
             if (!attachment) {
@@ -301,7 +318,7 @@ export class GlobalPresenceDO extends DurableObject<RealtimeWorkerEnv> {
 
         return {
             onlineUsers: Array.from(onlineUsers.values()).sort((a, b) => a.userNickname.localeCompare(b.userNickname)),
-            totalConnections: this.ctx.getWebSockets().length,
+            totalConnections: openSockets.length,
             updatedAt: new Date().toISOString()
         }
     }
@@ -314,7 +331,7 @@ export class GlobalPresenceDO extends DurableObject<RealtimeWorkerEnv> {
 
         const staleSockets: WebSocket[] = []
 
-        this.ctx.getWebSockets().forEach(socket => {
+        this.getOpenSockets().forEach(socket => {
             try {
                 socket.send(payload)
             } catch (_error) {
@@ -354,7 +371,7 @@ export class GlobalPresenceDO extends DurableObject<RealtimeWorkerEnv> {
     private broadcastToSockets(payload: string): void {
         const staleSockets: WebSocket[] = []
 
-        this.ctx.getWebSockets().forEach(socket => {
+        this.getOpenSockets().forEach(socket => {
             try {
                 socket.send(payload)
             } catch (_error) {

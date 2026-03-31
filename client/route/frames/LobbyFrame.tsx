@@ -86,6 +86,16 @@ export const LobbyFrame: React.FC = () => {
                         : member
                 )
             )
+            lobby.setReadyCheckMembers(members =>
+                members.map(member =>
+                    member.id === data.data.id
+                        ? {
+                              ...member,
+                              ...data.data
+                          }
+                        : member
+                )
+            )
         }
     })
 

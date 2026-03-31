@@ -1,5 +1,6 @@
 import type { GeneralFailure, GeneralSuccess } from 'util/universalTypes'
 import type { GameData, GameName, InitialGameDataSchema, LobbyData, LobbyJoiningResult, LobbyMemberRole } from './app'
+import type { IdentityProfile } from './identity'
 
 export type EndpointInfo<Req = null, Res = null> = {
     request: Req
@@ -65,7 +66,7 @@ export type ProfileRequest = FormData
 export type ProfileResponse =
     | GeneralFailure
     | (GeneralSuccess & {
-          userAvatarUrl?: string
+          user: IdentityProfile
       })
 
 export type HTTPEndpoints = {
