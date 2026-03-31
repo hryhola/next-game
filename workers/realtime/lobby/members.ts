@@ -12,6 +12,12 @@ function refreshMember(member: StoredLobbyMember, profile: IdentityProfile): voi
     member.userNickname = profile.userNickname
 }
 
+function pickNextCreatorMember(members: StoredLobbyMember[]): StoredLobbyMember {
+    const orderedMembers = [...members].sort((left, right) => left.joinedAt.localeCompare(right.joinedAt))
+
+    return orderedMembers.find(member => member.role === 'player') || orderedMembers[0]
+}
+
 export async function joinLobbyMember(
     record: LobbyRecordV2,
     user: IdentityProfile,
@@ -136,13 +142,13 @@ export async function leaveLobbyMember(
     let membersChangedReason: 'creator_reassigned' | 'member_kicked' | 'member_left' = removalReason
 
     if (member.isCreator) {
-        record.members
-            .sort((left, right) => left.joinedAt.localeCompare(right.joinedAt))
-            .forEach((item, index) => {
-                item.isCreator = index === 0
-            })
+        const nextCreator = pickNextCreatorMember(record.members)
 
-        record.lobby.creatorUserId = record.members.find(item => item.isCreator)?.id || record.members[0].id
+        record.members.forEach(item => {
+            item.isCreator = item.id === nextCreator.id
+        })
+
+        record.lobby.creatorUserId = nextCreator.id
         membersChangedReason = 'creator_reassigned'
     }
 

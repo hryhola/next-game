@@ -23,9 +23,9 @@ export const NoSession: React.FC<Props> = props => {
 
     const supportingText =
         myRole !== 'player'
-            ? 'Players can start the session when the lobby is ready. Floating chat and lobby controls stay around the frame.'
+            ? 'Players can start the session at any time. Floating chat and lobby controls stay around the frame.'
             : canStart
-              ? 'Start the session when everyone is ready. Ready check, leave, chat, and the rest of the lobby tools stay available around the frame.'
+              ? 'Start the session whenever you want. Ready check, leave, chat, and the rest of the lobby tools stay available around the frame.'
               : 'Waiting for the game master to start the session. Floating chat and lobby controls stay available around the frame.'
 
     return (

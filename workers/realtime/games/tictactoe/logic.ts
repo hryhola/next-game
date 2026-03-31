@@ -124,14 +124,6 @@ export function startTicTacToeGame(record: LobbyRecordV2, userId: string): Lobby
         }
     }
 
-    if (!players.every(player => record.readyCheck.votes[player.id] === true)) {
-        return {
-            success: false,
-            message: 'Run the ready check and wait for both players to confirm',
-            code: 'players_not_ready'
-        }
-    }
-
     const orderedPlayers = [...players].sort((a, b) => a.joinedAt.localeCompare(b.joinedAt))
     const sessionId = crypto.randomUUID()
     const startedAt = nowIso()

@@ -176,14 +176,6 @@ export class JeopardyLobbyFeature {
             }
         }
 
-        if (!players.every(player => player.ready === true)) {
-            return {
-                success: false,
-                message: 'Run the ready check and wait for all players to confirm',
-                code: 'players_not_ready'
-            }
-        }
-
         const sessionId = crypto.randomUUID()
         const startedAt = nowIso()
 
@@ -322,7 +314,8 @@ export class JeopardyLobbyFeature {
                             sessionId,
                             type: 'jeopardy.pick-question.complete'
                         },
-                        JEOPARDY_PICK_QUESTION_DELAY_MS
+                        JEOPARDY_PICK_QUESTION_DELAY_MS,
+                        state
                     )
                 }
 
@@ -368,7 +361,8 @@ export class JeopardyLobbyFeature {
                                 type: 'jeopardy.cooldown.complete',
                                 userId
                             },
-                            JEOPARDY_ANSWER_COOLDOWN_MS
+                            JEOPARDY_ANSWER_COOLDOWN_MS,
+                            state
                         )
                     }
 
@@ -403,7 +397,7 @@ export class JeopardyLobbyFeature {
                 const sessionId = this.getActiveLobbySessionId(state)
 
                 if (sessionId) {
-                    await this.cancelTask(sessionId, 'answer-request.complete')
+                    await this.cancelTask(sessionId, 'answer-request.complete', state)
                     await this.scheduleTask(
                         sessionId,
                         'answer-giving.complete',
@@ -411,7 +405,8 @@ export class JeopardyLobbyFeature {
                             sessionId,
                             type: 'jeopardy.answer-giving.complete'
                         },
-                        JEOPARDY_ANSWER_GIVING_DURATION_MS
+                        JEOPARDY_ANSWER_GIVING_DURATION_MS,
+                        state
                     )
                 }
 
@@ -465,7 +460,7 @@ export class JeopardyLobbyFeature {
                 const sessionId = this.getActiveLobbySessionId(state)
 
                 if (sessionId) {
-                    await this.cancelTask(sessionId, 'answer-giving.complete')
+                    await this.cancelTask(sessionId, 'answer-giving.complete', state)
                 }
 
                 await this.beginAnswerVerifying(state)
@@ -535,7 +530,7 @@ export class JeopardyLobbyFeature {
                 const sessionId = this.getActiveLobbySessionId(state)
 
                 if (sessionId) {
-                    await this.cancelTask(sessionId, 'answer-verifying.complete')
+                    await this.cancelTask(sessionId, 'answer-verifying.complete', state)
                 }
 
                 this.updateInternal(state, {
@@ -631,11 +626,11 @@ export class JeopardyLobbyFeature {
 
                 switch (session.frame.id) {
                     case 'pack-preview':
-                        await this.cancelTask(sessionId, 'pack-preview.complete')
+                        await this.cancelTask(sessionId, 'pack-preview.complete', state)
                         await this.beginRoundPreview(state, session.internal.currentRoundId)
                         return { stateChanged: true, success: true }
                     case 'rounds-preview':
-                        await this.cancelTask(sessionId, 'round-preview.complete')
+                        await this.cancelTask(sessionId, 'round-preview.complete', state)
                         await this.deps.scheduler.cancelByPrefix(this.getTaskKey(sessionId, 'round-preview.theme.'))
 
                         if (isFinalRound(game.packDeclaration, session.internal.currentRoundId)) {
@@ -647,13 +642,13 @@ export class JeopardyLobbyFeature {
                         return { stateChanged: true, success: true }
                     case 'question-content':
                         if (session.frame.answeringStatus === 'allowed') {
-                            await this.cancelTask(sessionId, 'answer-request.complete')
+                            await this.cancelTask(sessionId, 'answer-request.complete', state)
                             await this.handleAnswerRequestCompleteTask(state, sessionId)
                             return { stateChanged: true, success: true }
                         }
 
                         if (session.frame.answeringStatus === 'answering') {
-                            await this.cancelTask(sessionId, 'answer-giving.complete')
+                            await this.cancelTask(sessionId, 'answer-giving.complete', state)
                             this.updateInternal(state, {
                                 currentAnsweringPlayerAnswerText: null,
                                 currentAnsweringPlayerId: session.frame.answeringPlayerId
@@ -663,7 +658,7 @@ export class JeopardyLobbyFeature {
                         }
 
                         if (session.frame.answeringStatus === 'answer-verifying') {
-                            await this.cancelTask(sessionId, 'answer-verifying.complete')
+                            await this.cancelTask(sessionId, 'answer-verifying.complete', state)
                             const currentAnsweringPlayerId = session.internal.currentAnsweringPlayerId
                             const question = getJeopardyQuestionById(game.packDeclaration, session.frame.questionId)
 
@@ -685,7 +680,7 @@ export class JeopardyLobbyFeature {
                             return { stateChanged: true, success: true }
                         }
 
-                        await this.cancelTask(sessionId, 'question.atom.complete').catch(() => null)
+                        await this.cancelTask(sessionId, 'question.atom.complete', state).catch(() => null)
 
                         await this.showNextQuestionAtom(state)
                         return { stateChanged: true, success: true }
@@ -1004,19 +999,168 @@ export class JeopardyLobbyFeature {
         }
     }
 
-    async handlePlayerRemoved(state: StoredLobbyState, removalReason: 'player_kicked' | 'player_left'): Promise<void> {
-        if (state.game.name !== 'Jeopardy' || !state.game.session) {
+    async reconcileSessionMembers(state: StoredLobbyState): Promise<void> {
+        const session = this.getSession(state)
+
+        if (!session) {
             return
         }
 
-        const sessionId = this.getActiveLobbySessionId(state)
+        const playerIds = new Set(state.members.filter(member => member.role === 'player').map(member => member.id))
+        const contestantIds = new Set(this.getContestants(state).map(member => member.id))
 
-        if (sessionId) {
-            await this.cancelSessionTasks(sessionId)
+        session.internal.finalAnswers = Object.fromEntries(Object.entries(session.internal.finalAnswers).filter(([playerId]) => contestantIds.has(playerId)))
+        session.internal.finalBets = Object.fromEntries(Object.entries(session.internal.finalBets).filter(([playerId]) => contestantIds.has(playerId)))
+
+        if (session.internal.pickerId && !playerIds.has(session.internal.pickerId)) {
+            session.internal.pickerId = this.getFallbackPickerId(state)
         }
 
-        await this.deps.persistFinalizedLobbySession(this.createAbandonedLobbySessionRecord(state, removalReason))
-        state.game.session = null
+        switch (session.frame.id) {
+            case 'question-board': {
+                if (playerIds.has(session.frame.pickerId)) {
+                    return
+                }
+
+                this.updateFrame(state, {
+                    ...session.frame,
+                    pickerId: this.getFallbackPickerId(state)
+                })
+                return
+            }
+            case 'question-content': {
+                const playersOnCooldown = this.filterMemberIds(session.frame.playersOnCooldown, contestantIds)
+                const playersWhoAnswered = this.filterMemberIds(session.frame.playersWhoAnswered, contestantIds)
+                const skipVoted = this.filterMemberIds(session.frame.skipVoted, playerIds)
+                const sessionId = this.getActiveLobbySessionId(state)
+                const nextFrameBase = {
+                    ...session.frame,
+                    playersOnCooldown,
+                    playersWhoAnswered,
+                    skipVoted
+                }
+
+                if (
+                    session.frame.answeringStatus === 'answering' &&
+                    (!session.frame.answeringPlayerId || !contestantIds.has(session.frame.answeringPlayerId))
+                ) {
+                    this.updateFrame(state, {
+                        ...nextFrameBase,
+                        answeringPlayerId: null
+                    })
+                    this.updateInternal(state, {
+                        currentAnsweringPlayerAnswerText: null,
+                        currentAnsweringPlayerId: null
+                    })
+
+                    if (sessionId) {
+                        await this.cancelTask(sessionId, 'answer-giving.complete', state)
+                    }
+
+                    await this.continueQuestionAfterAnswerResolution(state, false)
+                    return
+                }
+
+                if (
+                    session.frame.answeringStatus === 'answer-verifying' &&
+                    (!session.internal.currentAnsweringPlayerId || !contestantIds.has(session.internal.currentAnsweringPlayerId))
+                ) {
+                    this.updateFrame(state, {
+                        ...nextFrameBase,
+                        result: undefined
+                    })
+                    this.updateInternal(state, {
+                        correctAnswers: null,
+                        currentAnsweringPlayerAnswerText: null,
+                        currentAnsweringPlayerId: null,
+                        incorrectAnswers: null
+                    })
+
+                    if (sessionId) {
+                        await this.cancelTask(sessionId, 'answer-verifying.complete', state)
+                    }
+
+                    await this.continueQuestionAfterAnswerResolution(state, false)
+                    return
+                }
+
+                this.updateFrame(state, {
+                    ...nextFrameBase,
+                    answeringPlayerId:
+                        session.frame.answeringPlayerId && contestantIds.has(session.frame.answeringPlayerId) ? session.frame.answeringPlayerId : null
+                })
+
+                if (session.internal.currentAnsweringPlayerId && !contestantIds.has(session.internal.currentAnsweringPlayerId)) {
+                    this.updateInternal(state, {
+                        currentAnsweringPlayerAnswerText: null,
+                        currentAnsweringPlayerId: null
+                    })
+                }
+
+                return
+            }
+            case 'final-round-board': {
+                const playersThatMadeBet = this.filterMemberIds(session.frame.playersThatMadeBet, contestantIds)
+                const playersThatAnswered = this.filterMemberIds(session.frame.playersThatAnswered, contestantIds)
+                const nextSkipperId =
+                    session.frame.status === 'skipping'
+                        ? session.frame.skipperId && playerIds.has(session.frame.skipperId)
+                            ? session.frame.skipperId
+                            : this.getFallbackSkipperId(state)
+                        : session.frame.skipperId && playerIds.has(session.frame.skipperId)
+                          ? session.frame.skipperId
+                          : null
+
+                this.updateFrame(state, {
+                    ...session.frame,
+                    playersThatAnswered,
+                    playersThatMadeBet,
+                    skipperId: nextSkipperId
+                })
+
+                if (session.frame.status === 'betting') {
+                    const eligibleBetters = this.getContestants(state).filter(player => player.playerScore > 0)
+
+                    if (!eligibleBetters.length) {
+                        await this.showFinalScores(state)
+                        return
+                    }
+
+                    if (playersThatMadeBet.length >= eligibleBetters.length) {
+                        await this.beginFinalQuestionAnswering(state)
+                    }
+
+                    return
+                }
+
+                if (session.frame.status === 'answering') {
+                    const eligibleAnswerers = this.getContestants(state).filter(player => player.playerScore > 0)
+
+                    if (!eligibleAnswerers.length) {
+                        await this.showFinalScores(state)
+                        return
+                    }
+
+                    if (playersThatAnswered.length >= eligibleAnswerers.length) {
+                        this.beginFinalQuestionVerifying(state)
+                    }
+
+                    return
+                }
+
+                if (session.frame.status === 'answer-verifying') {
+                    const hasValidFinalAnswers = this.getContestants(state)
+                        .filter(player => player.playerScore > 0)
+                        .some(player => Boolean(session.internal.finalAnswers[player.id]))
+
+                    if (!hasValidFinalAnswers) {
+                        await this.showFinalScores(state)
+                    }
+                }
+
+                return
+            }
+        }
     }
 
     createCompletedLobbySessionRecord(state: StoredLobbyState): FinalizeLobbySessionInput | null {
@@ -1118,6 +1262,18 @@ export class JeopardyLobbyFeature {
         return state.game.name === 'Jeopardy' ? state.game.session : null
     }
 
+    private getFallbackPickerId(state: StoredLobbyState): string {
+        return this.getMaster(state)?.id || state.members.find(member => member.role === 'player')?.id || state.creatorUserId || state.members[0]?.id || ''
+    }
+
+    private getFallbackSkipperId(state: StoredLobbyState): string | null {
+        return this.getContestants(state)[0]?.id || this.getFallbackPickerId(state) || null
+    }
+
+    private filterMemberIds(ids: string[], allowedIds: Set<string>): string[] {
+        return ids.filter(id => allowedIds.has(id))
+    }
+
     private createSuccessfulGameAction(actor: { id: string; type: 'game' | 'player' }, actionName: string, actionPayload: unknown, actionResult?: unknown) {
         return this.deps.createGameActionMessage({
             actor,
@@ -1138,20 +1294,58 @@ export class JeopardyLobbyFeature {
         return `${this.getSessionTaskPrefix(sessionId)}${suffix}`
     }
 
-    private async scheduleTask(sessionId: string, suffix: string, payload: LobbyScheduledTaskPayload, delayMs: number): Promise<void> {
+    private async scheduleTask(
+        sessionId: string,
+        suffix: string,
+        payload: LobbyScheduledTaskPayload,
+        delayMs: number,
+        state?: StoredLobbyState
+    ): Promise<void> {
+        const session = state ? this.getSession(state) : null
+        const key = this.getTaskKey(sessionId, suffix)
+        const remainingMs = Math.max(delayMs, 0)
+
+        if (session?.isPaused) {
+            session.meta.pausedTasks = [
+                ...session.meta.pausedTasks.filter(task => task.key !== key),
+                {
+                    key,
+                    payload,
+                    remainingMs
+                }
+            ].sort((left, right) => left.remainingMs - right.remainingMs)
+            return
+        }
+
         await this.deps.scheduler.schedule({
-            key: this.getTaskKey(sessionId, suffix),
+            key,
             payload,
-            scheduledAt: Date.now() + Math.max(delayMs, 0)
+            scheduledAt: Date.now() + remainingMs
         })
     }
 
-    private async cancelTask(sessionId: string, suffix: string): Promise<void> {
-        await this.deps.scheduler.cancel(this.getTaskKey(sessionId, suffix))
+    private async cancelTask(sessionId: string, suffix: string, state?: StoredLobbyState): Promise<void> {
+        const session = state ? this.getSession(state) : null
+        const key = this.getTaskKey(sessionId, suffix)
+
+        if (session?.isPaused) {
+            session.meta.pausedTasks = session.meta.pausedTasks.filter(task => task.key !== key)
+            return
+        }
+
+        await this.deps.scheduler.cancel(key)
     }
 
-    private async cancelSessionTasks(sessionId: string): Promise<void> {
-        await this.deps.scheduler.cancelByPrefix(this.getSessionTaskPrefix(sessionId))
+    private async cancelSessionTasks(sessionId: string, state?: StoredLobbyState): Promise<void> {
+        const session = state ? this.getSession(state) : null
+        const prefix = this.getSessionTaskPrefix(sessionId)
+
+        if (session?.isPaused) {
+            session.meta.pausedTasks = session.meta.pausedTasks.filter(task => !task.key.startsWith(prefix))
+            return
+        }
+
+        await this.deps.scheduler.cancelByPrefix(prefix)
     }
 
     private updateInternal(state: StoredLobbyState, patch: Partial<RealtimeJeopardySessionInternal>): void {
@@ -1201,7 +1395,13 @@ export class JeopardyLobbyFeature {
             themes: shuffle([...getNonFinalThemes(game.packDeclaration)])
         }
 
-        await this.scheduleTask(sessionId, 'pack-preview.complete', { sessionId, type: 'jeopardy.pack-preview.complete' }, JEOPARDY_PACK_PREVIEW_DURATION_MS)
+        await this.scheduleTask(
+            sessionId,
+            'pack-preview.complete',
+            { sessionId, type: 'jeopardy.pack-preview.complete' },
+            JEOPARDY_PACK_PREVIEW_DURATION_MS,
+            state
+        )
     }
 
     private async beginRoundPreview(state: StoredLobbyState, roundId: number): Promise<void> {
@@ -1226,7 +1426,7 @@ export class JeopardyLobbyFeature {
         }
 
         await this.deps.scheduler.cancelByPrefix(this.getTaskKey(sessionId, 'round-preview.theme.'))
-        await this.cancelTask(sessionId, 'round-preview.complete').catch(() => null)
+        await this.cancelTask(sessionId, 'round-preview.complete', state).catch(() => null)
 
         if (!round.themeNames.length) {
             await this.scheduleTask(
@@ -1237,7 +1437,8 @@ export class JeopardyLobbyFeature {
                     sessionId,
                     type: 'jeopardy.round-preview.complete'
                 },
-                JEOPARDY_ROUND_NAME_PREVIEW_DURATION_MS
+                JEOPARDY_ROUND_NAME_PREVIEW_DURATION_MS,
+                state
             )
             return
         }
@@ -1251,7 +1452,8 @@ export class JeopardyLobbyFeature {
                 themeIndex: 0,
                 type: 'jeopardy.round-preview.theme'
             },
-            JEOPARDY_ROUND_NAME_PREVIEW_DURATION_MS
+            JEOPARDY_ROUND_NAME_PREVIEW_DURATION_MS,
+            state
         )
     }
 
@@ -1263,7 +1465,10 @@ export class JeopardyLobbyFeature {
             return
         }
 
-        const pickerId = session.internal.pickerId || state.creatorUserId
+        const pickerId =
+            session.internal.pickerId && state.members.some(member => member.id === session.internal.pickerId && member.role === 'player')
+                ? session.internal.pickerId
+                : this.getFallbackPickerId(state)
         const themes = getRoundQuestionViewData(game.packDeclaration, roundId)
 
         if (!themes) {
@@ -1394,7 +1599,8 @@ export class JeopardyLobbyFeature {
                 sessionId,
                 type: 'jeopardy.question.atom.complete'
             },
-            JEOPARDY_CONTENT_DEFAULT_DURATION_MS
+            JEOPARDY_CONTENT_DEFAULT_DURATION_MS,
+            state
         )
     }
 
@@ -1434,7 +1640,8 @@ export class JeopardyLobbyFeature {
                 sessionId,
                 type: 'jeopardy.answer-request.complete'
             },
-            remainingMs
+            remainingMs,
+            state
         )
     }
 
@@ -1482,7 +1689,8 @@ export class JeopardyLobbyFeature {
                 sessionId,
                 type: 'jeopardy.answer-verifying.complete'
             },
-            JEOPARDY_ANSWER_VERIFYING_DURATION_MS
+            JEOPARDY_ANSWER_VERIFYING_DURATION_MS,
+            state
         )
     }
 
@@ -1577,7 +1785,10 @@ export class JeopardyLobbyFeature {
                 name,
                 skipped: false
             })),
-            skipperId: session.internal.pickerId,
+            skipperId:
+                session.internal.pickerId && state.members.some(member => member.id === session.internal.pickerId && member.role === 'player')
+                    ? session.internal.pickerId
+                    : this.getFallbackSkipperId(state),
             playersThatAnswered: [],
             playersThatMadeBet: [],
             status: 'skipping'
@@ -1869,7 +2080,8 @@ export class JeopardyLobbyFeature {
                     themeIndex: nextThemeIndex,
                     type: 'jeopardy.round-preview.theme'
                 },
-                JEOPARDY_ROUND_THEME_PREVIEW_DURATION_MS
+                JEOPARDY_ROUND_THEME_PREVIEW_DURATION_MS,
+                state
             )
         } else {
             await this.scheduleTask(
@@ -1880,7 +2092,8 @@ export class JeopardyLobbyFeature {
                     sessionId,
                     type: 'jeopardy.round-preview.complete'
                 },
-                JEOPARDY_ROUND_THEME_PREVIEW_DURATION_MS
+                JEOPARDY_ROUND_THEME_PREVIEW_DURATION_MS,
+                state
             )
         }
 

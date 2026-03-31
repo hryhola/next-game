@@ -12,15 +12,7 @@ export function resetReadyCheck(record: LobbyRecordV2): void {
     }
 }
 
-export function startReadyCheck(record: LobbyRecordV2, userId: string, policy: LobbyGamePolicy): LobbyMutationResult {
-    if (record.lobby.creatorUserId !== userId) {
-        return {
-            success: false,
-            message: 'Only the lobby creator can start the ready check',
-            code: 'forbidden'
-        }
-    }
-
+export function startReadyCheck(record: LobbyRecordV2, _userId: string, policy: LobbyGamePolicy): LobbyMutationResult {
     if (policy.isInProgress(record)) {
         return {
             success: false,

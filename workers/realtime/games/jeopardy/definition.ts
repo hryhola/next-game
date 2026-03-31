@@ -1,6 +1,6 @@
 import type { IdentityProfile } from '../../../../shared/contracts/identity'
 import type { LobbyGameFeature } from '../../lobby/game-contract'
-import type { LobbyMutationResult, LobbyMutationSuccess } from '../../lobby/operations'
+import type { LobbyMutationResult } from '../../lobby/operations'
 import type { LobbyRecordV2, StoredJeopardyGameState, StoredJeopardyParticipant } from '../../lobby/types'
 import { createJeopardyFeatureDeps, syncJeopardyRecordFromLobbyState, toJeopardyLobbyState } from './adapter'
 import { JeopardyLobbyFeature } from './feature'
@@ -217,7 +217,7 @@ export function createJeopardyGameFeature(ctx: Parameters<LobbyGameFeature['star
                 success: true as const
             }
         },
-        onMembersChanged: async (record, reason, featureCtx) => {
+        onMembersChanged: async (record, _reason, featureCtx) => {
             const game = record.game as StoredJeopardyGameState
             const nextParticipants = toParticipants(record)
             const didChangeParticipants = participantsChanged(game.participants, nextParticipants)
@@ -239,15 +239,12 @@ export function createJeopardyGameFeature(ctx: Parameters<LobbyGameFeature['star
             }
 
             const lobbyState = toJeopardyLobbyState(record)
-            const finalizedSessionRef: { current?: LobbyMutationSuccess['finalizedSession'] } = {}
-            const feature = new JeopardyLobbyFeature(createJeopardyFeatureDeps(featureCtx, {}, finalizedSessionRef))
+            const feature = new JeopardyLobbyFeature(createJeopardyFeatureDeps(featureCtx, {}, {}))
 
-            await feature.handlePlayerRemoved(lobbyState, reason === 'member_kicked' ? 'player_kicked' : 'player_left')
+            await feature.reconcileSessionMembers(lobbyState)
             syncJeopardyRecordFromLobbyState(record, lobbyState)
 
             return {
-                finalizedSession: finalizedSessionRef.current,
-                notifyLobbyList: true,
                 stateChanged: true,
                 success: true
             }

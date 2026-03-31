@@ -313,6 +313,26 @@ describe('jeopardy flow', () => {
         expect(state.game.session?.frame.id).toBe('question-board')
     })
 
+    it('starts without requiring a ready check', async () => {
+        const state = createState()
+        const { feature } = createFeatureHarness()
+
+        state.members.forEach(member => {
+            member.ready = null
+        })
+        state.readyCheck = {
+            participants: [],
+            status: 'idle',
+            updatedAt: '2026-03-31T12:00:00.000Z',
+            votes: {}
+        }
+
+        const result = await feature.startGame(state, 'master')
+
+        expect(result.success).toBe(true)
+        expect(state.game.session?.frame.id).toBe('pack-preview')
+    })
+
     it('preserves remaining answer time when pausing and resuming mid-answer', async () => {
         const state = createState()
         const { feature, scheduler } = createFeatureHarness()
@@ -387,5 +407,34 @@ describe('jeopardy flow', () => {
 
         expect(revealFrame.answeringStatus).toBe('too-late')
         expect(revealFrame.content).toBe('Answer 1')
+    })
+
+    it('reopens the answer request when the active answering player leaves', async () => {
+        const state = createState()
+        const { feature, scheduler } = createFeatureHarness()
+
+        await advanceToAnswerRequest(feature, state, scheduler)
+
+        jest.setSystemTime(new Date('2026-03-31T12:00:02.000Z'))
+
+        const answerRequestResult = await feature.handleAction(state, 'contestant-1', '$AnswerRequest', null)
+
+        expect(answerRequestResult.success).toBe(true)
+        expect(getQuestionFrame(state).answeringStatus).toBe('answering')
+
+        state.members = state.members.filter(member => member.id !== 'contestant-1')
+
+        await feature.reconcileSessionMembers(state)
+
+        const frame = getQuestionFrame(state)
+
+        expect(feature.getActiveLobbySessionId(state)).toBeTruthy()
+        expect(frame.answeringPlayerId).toBeNull()
+        expect(frame.answeringStatus).toBe('allowed')
+        expect(frame.answerRequestStartedAt).toBe('2026-03-31T12:00:00.000Z')
+        expect(frame.answerRequestEndsAt).toBe('2026-03-31T12:00:05.000Z')
+        expect(frame.answerRequestTimeLeft).toBe(60)
+        expect(scheduler.listSuffixes()).toContain('answer-request.complete')
+        expect(scheduler.listSuffixes()).not.toContain('answer-giving.complete')
     })
 })
