@@ -10,21 +10,34 @@ interface HeaderProps {
 }
 
 export const PlayersHeader: React.FC<HeaderProps> = props => {
-    const boxRef = useRef<HTMLElement | null>(null)
+    const boxRef = useRef<HTMLDivElement | null>(null)
 
     function setPlayersHeaderHeight() {
-        const header = document.getElementById('players-header')
+        const header = boxRef.current
 
         if (!header) return
 
-        document.documentElement.style.setProperty('--playersHeaderHeight', header.offsetHeight + 'px')
+        document.documentElement.style.setProperty('--playersHeaderHeight', `${Math.ceil(header.getBoundingClientRect().height)}px`)
     }
 
     useEffect(() => {
         setPlayersHeaderHeight()
 
+        const header = boxRef.current
+        const resizeObserver = typeof ResizeObserver !== 'undefined' && header ? new ResizeObserver(() => setPlayersHeaderHeight()) : null
+
+        if (header && resizeObserver) {
+            resizeObserver.observe(header)
+        }
+
         addEventListener('resize', setPlayersHeaderHeight)
         addEventListener('orientationchange', setPlayersHeaderHeight)
+
+        return () => {
+            removeEventListener('resize', setPlayersHeaderHeight)
+            removeEventListener('orientationchange', setPlayersHeaderHeight)
+            resizeObserver?.disconnect()
+        }
     }, [])
 
     useEffect(() => {
@@ -32,17 +45,21 @@ export const PlayersHeader: React.FC<HeaderProps> = props => {
     }, [props.isLoading, props.members.length])
 
     return (
-        <div className="fixed left-0 right-0 z-20 flex justify-center bg-gradient-to-b from-[#000024] to-transparent" id="players-header" ref={boxRef as never}>
-            <div className="flex max-w-full flex-nowrap overflow-x-auto overflow-y-hidden">
+        <div
+            className="pointer-events-none fixed left-0 right-0 z-20 flex justify-center bg-gradient-to-b from-[#000024] to-transparent"
+            id="players-header"
+            ref={boxRef}
+        >
+            <div className="pointer-events-none flex max-w-full flex-nowrap overflow-x-auto overflow-y-hidden">
                 {props.isLoading ? (
-                    <div>
+                    <div className="pointer-events-auto">
                         <Player isLoading size="medium" />
                     </div>
                 ) : (
                     props.members
                         .sort((a, b) => a.memberPosition - b.memberPosition)
                         .map(p => (
-                            <div key={p.id}>
+                            <div key={p.id} className="pointer-events-auto">
                                 <Player
                                     player={p}
                                     isHighlighted={props.highlightedPlayedIds?.includes(p.id)}

@@ -51,6 +51,7 @@ export const StorybookProviders: React.FC<Props> = ({ children, user, lobby }) =
     const [lobbyId, setLobbyId] = React.useState(initialLobby.id)
     const [gameName, setGameName] = React.useState(initialLobby.gameName)
     const [chatMessages, setChatMessages] = React.useState<TChatMessage[]>([])
+    const [isChatHydrated, setIsChatHydrated] = React.useState(true)
     const [readyCheck, setReadyCheck] = React.useState(Boolean(initialLobby.readyCheck))
     const [readyCheckMembers, setReadyCheckMembers] = React.useState(initialLobby.readyCheck?.members || [])
     const myRole = members.find(member => member.id === userId)?.memberRole || 'spectator'
@@ -93,7 +94,9 @@ export const StorybookProviders: React.FC<Props> = ({ children, user, lobby }) =
         gameName,
         setGameName,
         chatMessages,
+        isChatHydrated,
         setChatMessages,
+        setIsChatHydrated,
         readyCheck,
         setReadyCheck,
         readyCheckMembers,
@@ -104,6 +107,7 @@ export const StorybookProviders: React.FC<Props> = ({ children, user, lobby }) =
             setMembers([])
             setLobbyId('')
             setChatMessages([])
+            setIsChatHydrated(false)
             setReadyCheck(false)
             setReadyCheckMembers([])
         },

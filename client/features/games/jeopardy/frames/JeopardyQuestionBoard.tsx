@@ -34,30 +34,33 @@ export const QuestionBoard: React.FC<RealtimeJeopardyState.QuestionBoardFrame> =
             }}
             width="100%"
         >
-            {props.themes.map(t => (
-                <Box key={t.themeId}>
-                    <Divider>{t.name}</Divider>
-                    <Box display="flex" justifyContent="space-evenly">
-                        {t.question.map(q => (
-                            <Button
-                                fullWidth
-                                size="large"
-                                key={q.questionId}
-                                id={q.questionId}
-                                sx={{
-                                    height: '90px',
-                                    background: t => (props.pickedQuestion === q.questionId ? t.palette.success.main + '!important' : undefined),
-                                    color: t => (props.pickedQuestion === q.questionId ? t.palette.success.contrastText + '!important' : undefined)
-                                }}
-                                disabled={lobby.myRole === 'spectator' || (isMasterView ? false : !isMyTurn) || q.isAnswered}
-                                onClick={handleQuestionPick}
-                            >
-                                {!q.isAnswered ? q.price : ''}
-                            </Button>
-                        ))}
+            <Box className="mx-auto w-full px-4 lg:max-w-[1080px] xl:max-w-[1240px]">
+                {props.themes.map(t => (
+                    <Box key={t.themeId}>
+                        <Divider>{t.name}</Divider>
+                        <Box display="flex" justifyContent="space-evenly">
+                            {t.question.map(q => (
+                                <Button
+                                    fullWidth
+                                    size="large"
+                                    variant="text"
+                                    key={q.questionId}
+                                    id={q.questionId}
+                                    className="h-[90px] border-0 bg-white/4 text-violet-100 shadow-none hover:bg-gradient-to-r hover:from-violet-500 hover:via-purple-500 hover:to-fuchsia-500 hover:text-slate-950 hover:shadow-[0_18px_40px_rgba(139,92,246,0.35)] disabled:bg-white/4 disabled:text-violet-100/45"
+                                    sx={{
+                                        background: t => (props.pickedQuestion === q.questionId ? t.palette.success.main + '!important' : undefined),
+                                        color: t => (props.pickedQuestion === q.questionId ? t.palette.success.contrastText + '!important' : undefined)
+                                    }}
+                                    disabled={lobby.myRole === 'spectator' || (isMasterView ? false : !isMyTurn) || q.isAnswered}
+                                    onClick={handleQuestionPick}
+                                >
+                                    {!q.isAnswered ? q.price : ''}
+                                </Button>
+                            ))}
+                        </Box>
                     </Box>
-                </Box>
-            ))}
+                ))}
+            </Box>
         </Box>
     )
 }

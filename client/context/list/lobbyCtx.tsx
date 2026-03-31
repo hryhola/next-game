@@ -11,7 +11,9 @@ export type LobbyCtxValue = {
     gameName?: GameName
     setGameName: (value: GameName) => void
     chatMessages: TChatMessage[]
-    setChatMessages: (value: TChatMessage[]) => void
+    isChatHydrated: boolean
+    setChatMessages: React.Dispatch<React.SetStateAction<TChatMessage[]>>
+    setIsChatHydrated: React.Dispatch<React.SetStateAction<boolean>>
     readyCheck: boolean
     setReadyCheck: (value: boolean) => void
     readyCheckMembers: ReadyCheckMember[]
@@ -36,6 +38,7 @@ export const LobbyProvider: React.FC<Props> = ({ children, lobby }) => {
     const [members, setMembers] = useState<LobbyMemberData[]>(lobby?.members || [])
     const [gameName, setGameName] = useState<GameName | undefined>(lobby?.gameName)
     const [chatMessages, setChatMessages] = useState<TChatMessage[]>([])
+    const [isChatHydrated, setIsChatHydrated] = useState(false)
 
     const [readyCheck, setReadyCheck] = useState(Boolean(lobby?.readyCheck))
     const [readyCheckMembers, setReadyCheckMembers] = useState<ReadyCheckMember[]>(lobby?.readyCheck?.members || [])
@@ -45,6 +48,7 @@ export const LobbyProvider: React.FC<Props> = ({ children, lobby }) => {
         setLobbyId('')
         setGameName(undefined)
         setChatMessages([])
+        setIsChatHydrated(false)
     }
 
     const exit = () => {
@@ -75,7 +79,9 @@ export const LobbyProvider: React.FC<Props> = ({ children, lobby }) => {
         gameName,
         setGameName,
         chatMessages,
+        isChatHydrated,
         setChatMessages,
+        setIsChatHydrated,
         exit,
         destroy,
         reset,

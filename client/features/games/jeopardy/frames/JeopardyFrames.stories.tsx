@@ -93,8 +93,7 @@ const storybookWinner = {
 }
 
 const viewportStyle = {
-    '--fullHeight': '100vh',
-    '--playersHeaderHeight': '88px'
+    '--fullHeight': '100vh'
 } as React.CSSProperties
 
 const StoryShell: React.FC<{

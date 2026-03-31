@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
-import { useAudio, useEventHandler, useLobby, useUser, useWS } from 'client/context/list/'
+import { useAudio, useEventHandler, useLobby, useRequestHandler, useUser, useWS } from 'client/context/list/'
 import { useClientRouter } from 'client/route/ClientRouter'
 import { LoadingOverlay } from 'client/ui'
 import { useToast } from 'client/ui/toast/ToastProvider'
 import { ReadyCheckDialog } from 'client/features/ready-check/ReadyCheckDialog'
+import type { TChatMessage, TChatMessagePart } from 'shared/contracts/app'
 
 export const LobbyFrame: React.FC = () => {
     const lobby = useLobby()
@@ -19,28 +20,58 @@ export const LobbyFrame: React.FC = () => {
 
     const { push } = useToast()
 
+    const appendLobbyMessage = (message: TChatMessage) => {
+        lobbyRef.current.setChatMessages(curr => [message, ...curr.filter(existing => existing.id !== message.id)])
+    }
+
+    const createLobbySystemMessage = (parts: TChatMessagePart[]): TChatMessage => ({
+        id: crypto.randomUUID(),
+        from: 'Lobby',
+        kind: 'system',
+        parts,
+        text: parts.map(part => part.text).join('')
+    })
+
+    useRequestHandler('Chat-Get', data => {
+        if (!data.success || data.scope !== 'lobby' || data.lobbyId !== lobbyRef.current.lobbyId) {
+            return
+        }
+
+        lobbyRef.current.setChatMessages(curr => [...curr.filter(message => message.kind === 'system'), ...data.messages])
+        lobbyRef.current.setIsChatHydrated(true)
+    })
+
+    useEventHandler('Chat-NewMessage', data => {
+        if (data.scope !== 'lobby' || data.lobbyId !== lobbyRef.current.lobbyId) {
+            return
+        }
+
+        appendLobbyMessage(data.message)
+    })
+
     useEventHandler('Lobby-Join', data => {
         if (data.lobbyId !== lobbyRef.current.lobbyId) {
             return
         }
 
         lobby.setMembers(ms => [...ms.filter(m => m.id !== data.member.id), data.member])
+        appendLobbyMessage(
+            createLobbySystemMessage([
+                { color: data.member.userColor, text: data.member.userNickname },
+                { text: ' joined as ' },
+                { color: data.member.memberRole === 'player' ? '#00ff00' : '#777777', text: data.member.memberRole },
+                { text: '.' }
+            ])
+        )
+    })
 
-        push({
-            className: 'lobby-tip noselect',
-            content: (
-                <>
-                    <span style={{ color: data.member?.userColor }}>{data.member.userNickname}</span> joined as{' '}
-                    <span
-                        style={{
-                            color: data.member.memberRole === 'player' ? '#00ff00' : '#777777'
-                        }}
-                    >
-                        {data.member.memberRole}
-                    </span>
-                </>
-            )
-        })
+    useEventHandler('Lobby-Leave', data => {
+        if (data.lobbyId !== lobbyRef.current.lobbyId) {
+            return
+        }
+
+        lobby.setMembers(ms => ms.filter(member => member.id !== data.member.id))
+        appendLobbyMessage(createLobbySystemMessage([{ color: data.member.userColor, text: data.member.userNickname }, { text: ' left the lobby.' }]))
     })
 
     useEventHandler('Lobby-MemberUpdate', data => {
@@ -67,15 +98,14 @@ export const LobbyFrame: React.FC = () => {
         const to = lobbyRef.current.members.find(member => member.userNickname === data.to)
 
         audio.play(Math.random() > 0.1 ? 'comp_coin.wav' : 'coins.wav')
-
-        push({
-            className: 'lobby-tip noselect',
-            content: (
-                <>
-                    <span style={{ color: to?.userColor }}>{data.to}</span> tipped by <span style={{ color: from?.userColor }}>{data.from}</span>
-                </>
-            )
-        })
+        appendLobbyMessage(
+            createLobbySystemMessage([
+                { color: from?.userColor, text: data.from },
+                { text: ' tipped ' },
+                { color: to?.userColor, text: data.to },
+                { text: '.' }
+            ])
+        )
     })
 
     useEventHandler('Lobby-Destroy', data => {
@@ -123,13 +153,14 @@ export const LobbyFrame: React.FC = () => {
     })
 
     useEventHandler('Lobby-Kicked', data => {
-        push({
-            content: `${data.member.userNickname} has been kicked`
-        })
-
         lobby.setMembers(members => members.filter(m => m.id !== data.member.id))
+        appendLobbyMessage(createLobbySystemMessage([{ color: data.member.userColor, text: data.member.userNickname }, { text: ' has been kicked.' }]))
 
         if (data.member.id === user.id) {
+            push({
+                content: `${data.member.userNickname} has been kicked`
+            })
+
             ws.send('Universal-Subscription', {
                 mode: 'unsubscribe',
                 lobbyId: lobby.lobbyId,
@@ -184,6 +215,10 @@ export const LobbyFrame: React.FC = () => {
     useEffect(() => {
         if (ws.isConnected) {
             sendSubscribeRequest()
+            ws.send('Chat-Get', {
+                lobbyId: lobby.lobbyId,
+                scope: 'lobby'
+            })
         }
     }, [ws.isConnected])
 

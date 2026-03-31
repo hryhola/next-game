@@ -8,10 +8,17 @@ export type LobbyMemberRole = RealtimeLobbyMemberRole
 
 export const supportedGameNames: GameName[] = ['TicTacToe', 'Clicker', 'Jeopardy']
 
+export interface TChatMessagePart {
+    color?: string
+    text: string
+}
+
 export interface TChatMessage {
     id: string
     from: string
     fromColor?: string
+    kind?: 'chat' | 'system'
+    parts?: TChatMessagePart[]
     text: string
 }
 
