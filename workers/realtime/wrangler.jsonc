@@ -36,11 +36,20 @@
     "migrations": [
         {
             "tag": "v1",
-            "new_sqlite_classes": ["LobbyDO"]
+            "new_sqlite_classes": ["LobbyRoomDO"]
         },
         {
             "tag": "v2",
             "new_sqlite_classes": ["GlobalPresenceDO"]
+        },
+        {
+            "tag": "v3",
+            "renamed_classes": [
+                {
+                    "from": "LobbyRoomDO",
+                    "to": "LobbyDO"
+                }
+            ]
         }
     ]
 }

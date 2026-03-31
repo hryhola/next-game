@@ -1,6 +1,5 @@
 import type { LobbyGameActionMessage } from '../../../../shared/contracts/realtime-lobby'
 import type {
-    JeopardyDeclaration,
     RealtimeJeopardyPublicSession,
     RealtimeJeopardyQuestionId,
     RealtimeJeopardySessionInternal,
@@ -14,6 +13,7 @@ import {
     getFinalThemes,
     getNonFinalThemes,
     getQuestionById as getJeopardyQuestionById,
+    getNormalizedQuestionById,
     getQuestionScenarioById,
     getRoundQuestionViewData,
     getRoundQuestions,
@@ -36,6 +36,13 @@ const JEOPARDY_ANSWER_REQUEST_DURATION_MS = 5_000
 const JEOPARDY_ANSWER_GIVING_DURATION_MS = 10_000
 const JEOPARDY_ANSWER_VERIFYING_DURATION_MS = 10_000
 const JEOPARDY_ANSWER_COOLDOWN_MS = 2_000
+const JEOPARDY_SPECIAL_PLAYER_SELECTION_DURATION_MS = 30_000
+const JEOPARDY_SPECIAL_STAKE_DURATION_MS = 30_000
+const JEOPARDY_SPECIAL_DIRECT_ANSWER_DURATION_MS = 25_000
+const JEOPARDY_SPECIAL_HIDDEN_ANSWER_DURATION_MS = 45_000
+const JEOPARDY_FINAL_THEME_SELECTION_DURATION_MS = 30_000
+const JEOPARDY_FINAL_BETTING_DURATION_MS = 30_000
+const JEOPARDY_FINAL_ANSWERING_DURATION_MS = 45_000
 
 function getPhaseTimingWindow(nowMs: number, totalMs: number, remainingMs: number) {
     const boundedRemainingMs = Math.max(0, Math.min(remainingMs, totalMs))
@@ -46,6 +53,14 @@ function getPhaseTimingWindow(nowMs: number, totalMs: number, remainingMs: numbe
         startedAt: new Date(startedAtMs).toISOString(),
         timeLeft: totalMs > 0 ? (boundedRemainingMs / totalMs) * 100 : 0
     }
+}
+
+function getQuestionAnswerDurationMs(questionType: string | undefined, answerDurationMs: number | null): number {
+    if (answerDurationMs && answerDurationMs > 0) {
+        return answerDurationMs
+    }
+
+    return questionType === 'forAll' || questionType === 'stakeAll' ? JEOPARDY_SPECIAL_HIDDEN_ANSWER_DURATION_MS : JEOPARDY_SPECIAL_DIRECT_ANSWER_DURATION_MS
 }
 
 type JeopardyDeps = {
@@ -63,6 +78,11 @@ export function createEmptyJeopardySessionInternal(): RealtimeJeopardySessionInt
     return {
         answeredQuestions: [],
         currentAnsweringPlayerId: null,
+        currentQuestionAnswers: {},
+        currentQuestionBets: {},
+        currentQuestionPrice: null,
+        currentQuestionSelectedPlayerId: null,
+        currentQuestionVerificationQueue: [],
         currentRoundId: 0,
         finalAnswers: {},
         finalBets: {},
@@ -324,6 +344,171 @@ export class JeopardyLobbyFeature {
                     success: true
                 }
             }
+            case '$SelectQuestionPlayer': {
+                if (session.frame.id !== 'question-content' || session.frame.specialPhase !== 'selecting-player') {
+                    return {
+                        code: 'invalid_frame',
+                        message: 'Player selection is not active',
+                        success: false
+                    }
+                }
+
+                if (!isMaster && session.internal.pickerId !== userId) {
+                    return {
+                        code: 'forbidden',
+                        message: 'Only the current chooser can transfer this question',
+                        success: false
+                    }
+                }
+
+                const payload = actionPayload as { playerId?: string } | null
+                const playerId = payload?.playerId
+                const flow = session.meta.currentQuestionFlow
+
+                if (!playerId || !flow) {
+                    return {
+                        code: 'invalid_payload',
+                        message: 'Player id is required',
+                        success: false
+                    }
+                }
+
+                const eligibleTargets = this.getEligibleSecretTargets(state, flow.selectionMode)
+
+                if (!eligibleTargets.some(player => player.id === playerId)) {
+                    return {
+                        code: 'invalid_player',
+                        message: 'Selected player is not eligible for this question',
+                        success: false
+                    }
+                }
+
+                const sessionId = this.getActiveLobbySessionId(state)
+
+                if (sessionId) {
+                    await this.cancelTask(sessionId, 'phase.selecting-player.complete', state)
+                }
+
+                this.updateInternal(state, {
+                    currentQuestionSelectedPlayerId: playerId
+                })
+
+                if (flow.priceOptions.length > 1) {
+                    await this.beginQuestionValueSelection(state)
+                } else {
+                    flow.currentPrice = flow.priceOptions[0] || flow.currentPrice
+                    this.updateInternal(state, {
+                        currentQuestionPrice: flow.currentPrice
+                    })
+
+                    if (flow.questionType === 'secretNoQuestion') {
+                        await this.resolveSecretNoQuestion(state)
+                    } else {
+                        await this.showNextQuestionAtom(state)
+                    }
+                }
+
+                return {
+                    stateChanged: true,
+                    success: true
+                }
+            }
+            case '$SetQuestionValue': {
+                if (
+                    session.frame.id !== 'question-content' ||
+                    !['choosing-price', 'making-hidden-stakes', 'making-stake'].includes(session.frame.specialPhase || '')
+                ) {
+                    return {
+                        code: 'invalid_frame',
+                        message: 'Question value selection is not active',
+                        success: false
+                    }
+                }
+
+                const payload = actionPayload as { value?: number } | null
+                const value = payload?.value
+                const flow = session.meta.currentQuestionFlow
+
+                if (!flow || typeof value !== 'number' || value < 1) {
+                    return {
+                        code: 'invalid_payload',
+                        message: 'A valid value is required',
+                        success: false
+                    }
+                }
+
+                const sessionId = this.getActiveLobbySessionId(state)
+
+                if (session.frame.specialPhase === 'making-hidden-stakes') {
+                    if (actor.id === state.creatorUserId || actor.playerScore <= 0) {
+                        return {
+                            code: 'invalid_bettor',
+                            message: 'Only eligible contestants can make hidden stakes',
+                            success: false
+                        }
+                    }
+
+                    session.internal.currentQuestionBets = {
+                        ...(session.internal.currentQuestionBets || {}),
+                        [userId]: Math.min(value, actor.playerScore)
+                    }
+
+                    const playersThatMadeBet = Array.from(new Set([...(session.frame.playersThatMadeBet || []), userId]))
+
+                    this.updateFrame(state, {
+                        ...session.frame,
+                        playersThatMadeBet
+                    })
+
+                    const eligiblePlayers = this.getContestants(state).filter(player => player.playerScore > 0)
+
+                    if (playersThatMadeBet.length >= eligiblePlayers.length) {
+                        if (sessionId) {
+                            await this.cancelTask(sessionId, 'phase.making-hidden-stakes.complete', state)
+                        }
+
+                        await this.showNextQuestionAtom(state)
+                    }
+
+                    return {
+                        stateChanged: true,
+                        success: true
+                    }
+                }
+
+                const allowedPlayerId =
+                    session.frame.specialPhase === 'making-stake' ? session.internal.pickerId : session.internal.currentQuestionSelectedPlayerId
+
+                if (!isMaster && allowedPlayerId !== userId) {
+                    return {
+                        code: 'forbidden',
+                        message: 'You cannot set the value for this phase',
+                        success: false
+                    }
+                }
+
+                flow.currentPrice = value
+                this.updateInternal(state, {
+                    currentQuestionPrice: value
+                })
+
+                if (sessionId) {
+                    const taskSuffix = session.frame.specialPhase === 'making-stake' ? 'phase.making-stake.complete' : 'phase.choosing-price.complete'
+
+                    await this.cancelTask(sessionId, taskSuffix, state)
+                }
+
+                if (flow.questionType === 'secretNoQuestion') {
+                    await this.resolveSecretNoQuestion(state)
+                } else {
+                    await this.showNextQuestionAtom(state)
+                }
+
+                return {
+                    stateChanged: true,
+                    success: true
+                }
+            }
             case '$AnswerRequest': {
                 if (session.frame.id !== 'question-content') {
                     return {
@@ -442,7 +627,7 @@ export class JeopardyLobbyFeature {
                 }
             }
             case '$GiveAnswer': {
-                if (session.frame.id !== 'question-content' || session.frame.answeringStatus !== 'answering' || session.frame.answeringPlayerId !== userId) {
+                if (session.frame.id !== 'question-content' || session.frame.answeringStatus !== 'answering') {
                     return {
                         code: 'invalid_answer_turn',
                         message: 'It is not your turn to answer',
@@ -451,10 +636,76 @@ export class JeopardyLobbyFeature {
                 }
 
                 const payload = actionPayload as { text?: string } | null
+                const flow = session.meta.currentQuestionFlow
+                const isMultiAnswerQuestion = flow?.questionType === 'forAll' || flow?.questionType === 'stakeAll'
+
+                if (isMultiAnswerQuestion) {
+                    if (actor.id === state.creatorUserId || session.frame.playersWhoAnswered.includes(userId)) {
+                        return {
+                            code: 'invalid_answer_turn',
+                            message: 'It is not your turn to answer',
+                            success: false
+                        }
+                    }
+
+                    session.internal.currentQuestionAnswers = {
+                        ...(session.internal.currentQuestionAnswers || {}),
+                        [userId]: {
+                            value: payload?.text || '',
+                            wager: session.internal.currentQuestionBets?.[userId]
+                        }
+                    }
+
+                    const playersWhoAnswered = Array.from(new Set([...(session.frame.playersWhoAnswered || []), userId]))
+
+                    this.updateFrame(state, {
+                        ...session.frame,
+                        playersWhoAnswered
+                    })
+
+                    const eligiblePlayers =
+                        flow?.questionType === 'stakeAll'
+                            ? this.getContestants(state).filter(player => Boolean(session.internal.currentQuestionBets?.[player.id]))
+                            : this.getContestants(state)
+
+                    if (playersWhoAnswered.length >= eligiblePlayers.length) {
+                        const sessionId = this.getActiveLobbySessionId(state)
+
+                        if (sessionId) {
+                            await this.cancelTask(sessionId, 'phase.multi-answering.complete', state)
+                        }
+
+                        await this.beginAnswerVerifying(
+                            state,
+                            eligiblePlayers.map(player => player.id).filter(id => Boolean(session.internal.currentQuestionAnswers?.[id]))
+                        )
+                    }
+
+                    return {
+                        stateChanged: true,
+                        success: true
+                    }
+                }
+
+                if (session.frame.answeringPlayerId !== userId) {
+                    return {
+                        code: 'invalid_answer_turn',
+                        message: 'It is not your turn to answer',
+                        success: false
+                    }
+                }
 
                 this.updateInternal(state, {
                     currentAnsweringPlayerAnswerText: payload?.text,
-                    currentAnsweringPlayerId: userId
+                    currentAnsweringPlayerId: userId,
+                    currentQuestionAnswers: {
+                        ...(session.internal.currentQuestionAnswers || {}),
+                        [userId]: {
+                            value: payload?.text || '',
+                            wager: session.internal.currentQuestionBets?.[userId]
+                        }
+                    },
+                    currentQuestionVerificationQueue: [userId]
                 })
 
                 const sessionId = this.getActiveLobbySessionId(state)
@@ -463,7 +714,7 @@ export class JeopardyLobbyFeature {
                     await this.cancelTask(sessionId, 'answer-giving.complete', state)
                 }
 
-                await this.beginAnswerVerifying(state)
+                await this.beginAnswerVerifying(state, [userId])
 
                 return {
                     stateChanged: true,
@@ -501,26 +752,7 @@ export class JeopardyLobbyFeature {
                     }
                 }
 
-                const answeringPlayer = state.members.find(member => member.id === session.internal.currentAnsweringPlayerId && member.role === 'player')
-                const question = getJeopardyQuestionById(game.packDeclaration, session.frame.questionId)
-
-                if (!answeringPlayer || !question) {
-                    return {
-                        code: 'invalid_answer_state',
-                        message: 'Answer state is invalid',
-                        success: false
-                    }
-                }
-
-                const delta = parseInt(question._attributes.price, 10)
-
-                answeringPlayer.playerScore += payload.rating === 'approved' ? delta : -delta
-
-                if (payload.rating === 'approved') {
-                    this.updateInternal(state, {
-                        pickerId: answeringPlayer.id
-                    })
-                }
+                const currentPlayerId = session.internal.currentAnsweringPlayerId
 
                 this.updateFrame(state, {
                     ...session.frame,
@@ -533,14 +765,26 @@ export class JeopardyLobbyFeature {
                     await this.cancelTask(sessionId, 'answer-verifying.complete', state)
                 }
 
-                this.updateInternal(state, {
-                    correctAnswers: null,
-                    currentAnsweringPlayerAnswerText: null,
-                    currentAnsweringPlayerId: null,
-                    incorrectAnswers: null
-                })
+                this.applyQuestionAnswerRating(state, currentPlayerId, payload.rating)
 
-                await this.continueQuestionAfterAnswerResolution(state, payload.rating === 'approved')
+                const remainingQueue = (session.internal.currentQuestionVerificationQueue || []).filter(playerId => playerId !== currentPlayerId)
+
+                if (remainingQueue.length) {
+                    await this.beginAnswerVerifying(state, remainingQueue)
+                } else {
+                    const approvedAny =
+                        payload.rating === 'approved' || Object.values(session.internal.currentQuestionAnswers || {}).some(answer => answer.rate === 'approved')
+
+                    this.updateInternal(state, {
+                        correctAnswers: null,
+                        currentAnsweringPlayerAnswerText: null,
+                        currentAnsweringPlayerId: null,
+                        currentQuestionVerificationQueue: [],
+                        incorrectAnswers: null
+                    })
+
+                    await this.continueQuestionAfterAnswerResolution(state, approvedAny)
+                }
 
                 return {
                     action: this.createSuccessfulGameAction(
@@ -641,6 +885,17 @@ export class JeopardyLobbyFeature {
 
                         return { stateChanged: true, success: true }
                     case 'question-content':
+                        if (
+                            session.frame.specialPhase &&
+                            ['choosing-price', 'making-hidden-stakes', 'making-stake', 'selecting-player'].includes(session.frame.specialPhase)
+                        ) {
+                            const suffix = `phase.${session.frame.specialPhase}.complete`
+
+                            await this.cancelTask(sessionId, suffix, state).catch(() => null)
+                            await this.handlePhaseCompleteTask(state, sessionId, session.frame.specialPhase)
+                            return { stateChanged: true, success: true }
+                        }
+
                         if (session.frame.answeringStatus === 'allowed') {
                             await this.cancelTask(sessionId, 'answer-request.complete', state)
                             await this.handleAnswerRequestCompleteTask(state, sessionId)
@@ -648,35 +903,61 @@ export class JeopardyLobbyFeature {
                         }
 
                         if (session.frame.answeringStatus === 'answering') {
-                            await this.cancelTask(sessionId, 'answer-giving.complete', state)
-                            this.updateInternal(state, {
-                                currentAnsweringPlayerAnswerText: null,
-                                currentAnsweringPlayerId: session.frame.answeringPlayerId
-                            })
-                            await this.beginAnswerVerifying(state)
+                            if (session.meta.currentQuestionFlow?.questionType === 'forAll' || session.meta.currentQuestionFlow?.questionType === 'stakeAll') {
+                                await this.cancelTask(sessionId, 'phase.multi-answering.complete', state).catch(() => null)
+                                await this.beginAnswerVerifying(
+                                    state,
+                                    Object.keys(session.internal.currentQuestionAnswers || {}).filter(playerId =>
+                                        session.frame.playersWhoAnswered.includes(playerId)
+                                    )
+                                )
+                            } else {
+                                await this.cancelTask(sessionId, 'answer-giving.complete', state)
+                                const answeringPlayerId = session.frame.answeringPlayerId
+
+                                this.updateInternal(state, {
+                                    currentAnsweringPlayerAnswerText: null,
+                                    currentAnsweringPlayerId: answeringPlayerId,
+                                    currentQuestionAnswers: answeringPlayerId
+                                        ? {
+                                              ...(session.internal.currentQuestionAnswers || {}),
+                                              [answeringPlayerId]: {
+                                                  value: '',
+                                                  wager: session.internal.currentQuestionBets?.[answeringPlayerId]
+                                              }
+                                          }
+                                        : session.internal.currentQuestionAnswers,
+                                    currentQuestionVerificationQueue: answeringPlayerId ? [answeringPlayerId] : []
+                                })
+                                await this.beginAnswerVerifying(state, answeringPlayerId ? [answeringPlayerId] : [])
+                            }
+
                             return { stateChanged: true, success: true }
                         }
 
                         if (session.frame.answeringStatus === 'answer-verifying') {
                             await this.cancelTask(sessionId, 'answer-verifying.complete', state)
                             const currentAnsweringPlayerId = session.internal.currentAnsweringPlayerId
-                            const question = getJeopardyQuestionById(game.packDeclaration, session.frame.questionId)
+                            const remainingQueue = (session.internal.currentQuestionVerificationQueue || []).filter(
+                                playerId => playerId !== currentAnsweringPlayerId
+                            )
 
-                            if (currentAnsweringPlayerId && question) {
-                                const answeringPlayer = state.members.find(member => member.id === currentAnsweringPlayerId && member.role === 'player')
-
-                                if (answeringPlayer) {
-                                    answeringPlayer.playerScore -= parseInt(question._attributes.price, 10)
-                                }
+                            if (currentAnsweringPlayerId) {
+                                this.applyQuestionAnswerRating(state, currentAnsweringPlayerId, 'declined')
                             }
 
-                            this.updateInternal(state, {
-                                correctAnswers: null,
-                                currentAnsweringPlayerAnswerText: null,
-                                currentAnsweringPlayerId: null,
-                                incorrectAnswers: null
-                            })
-                            await this.continueQuestionAfterAnswerResolution(state, false)
+                            if (remainingQueue.length) {
+                                await this.beginAnswerVerifying(state, remainingQueue)
+                            } else {
+                                this.updateInternal(state, {
+                                    correctAnswers: null,
+                                    currentAnsweringPlayerAnswerText: null,
+                                    currentAnsweringPlayerId: null,
+                                    currentQuestionVerificationQueue: [],
+                                    incorrectAnswers: null
+                                })
+                                await this.continueQuestionAfterAnswerResolution(state, false)
+                            }
                             return { stateChanged: true, success: true }
                         }
 
@@ -827,6 +1108,12 @@ export class JeopardyLobbyFeature {
                 const eligibleBetters = this.getContestants(state).filter(player => player.playerScore > 0)
 
                 if (session.frame.playersThatMadeBet.length + 1 >= eligibleBetters.length) {
+                    const sessionId = this.getActiveLobbySessionId(state)
+
+                    if (sessionId) {
+                        await this.cancelTask(sessionId, 'final.phase.betting.complete', state).catch(() => null)
+                    }
+
                     await this.beginFinalQuestionAnswering(state)
                 }
 
@@ -874,6 +1161,12 @@ export class JeopardyLobbyFeature {
                 const eligibleAnswerers = this.getContestants(state).filter(player => player.playerScore > 0)
 
                 if (session.frame.playersThatAnswered.length + 1 >= eligibleAnswerers.length) {
+                    const sessionId = this.getActiveLobbySessionId(state)
+
+                    if (sessionId) {
+                        await this.cancelTask(sessionId, 'final.phase.answering.complete', state).catch(() => null)
+                    }
+
                     this.beginFinalQuestionVerifying(state)
                 }
 
@@ -992,6 +1285,10 @@ export class JeopardyLobbyFeature {
                 return this.handleAnswerVerifyingCompleteTask(state, task.sessionId)
             case 'jeopardy.cooldown.complete':
                 return this.handleCooldownCompleteTask(state, task.sessionId, task.userId)
+            case 'jeopardy.phase.complete':
+                return this.handlePhaseCompleteTask(state, task.sessionId, task.phase)
+            case 'jeopardy.final.phase.complete':
+                return this.handleFinalPhaseCompleteTask(state, task.sessionId, task.phase)
             default:
                 return {
                     stateChanged: false
@@ -1011,9 +1308,22 @@ export class JeopardyLobbyFeature {
 
         session.internal.finalAnswers = Object.fromEntries(Object.entries(session.internal.finalAnswers).filter(([playerId]) => contestantIds.has(playerId)))
         session.internal.finalBets = Object.fromEntries(Object.entries(session.internal.finalBets).filter(([playerId]) => contestantIds.has(playerId)))
+        session.internal.currentQuestionAnswers = Object.fromEntries(
+            Object.entries(session.internal.currentQuestionAnswers || {}).filter(([playerId]) => contestantIds.has(playerId))
+        )
+        session.internal.currentQuestionBets = Object.fromEntries(
+            Object.entries(session.internal.currentQuestionBets || {}).filter(([playerId]) => contestantIds.has(playerId))
+        )
+        session.internal.currentQuestionVerificationQueue = (session.internal.currentQuestionVerificationQueue || []).filter(playerId =>
+            contestantIds.has(playerId)
+        )
 
         if (session.internal.pickerId && !playerIds.has(session.internal.pickerId)) {
             session.internal.pickerId = this.getFallbackPickerId(state)
+        }
+
+        if (session.internal.currentQuestionSelectedPlayerId && !contestantIds.has(session.internal.currentQuestionSelectedPlayerId)) {
+            session.internal.currentQuestionSelectedPlayerId = null
         }
 
         switch (session.frame.id) {
@@ -1030,18 +1340,26 @@ export class JeopardyLobbyFeature {
             }
             case 'question-content': {
                 const playersOnCooldown = this.filterMemberIds(session.frame.playersOnCooldown, contestantIds)
+                const playersThatMadeBet = this.filterMemberIds(session.frame.playersThatMadeBet || [], contestantIds)
                 const playersWhoAnswered = this.filterMemberIds(session.frame.playersWhoAnswered, contestantIds)
                 const skipVoted = this.filterMemberIds(session.frame.skipVoted, playerIds)
                 const sessionId = this.getActiveLobbySessionId(state)
                 const nextFrameBase = {
                     ...session.frame,
                     playersOnCooldown,
+                    playersThatMadeBet,
                     playersWhoAnswered,
+                    selectedPlayerId:
+                        session.internal.currentQuestionSelectedPlayerId && contestantIds.has(session.internal.currentQuestionSelectedPlayerId)
+                            ? session.internal.currentQuestionSelectedPlayerId
+                            : null,
                     skipVoted
                 }
 
                 if (
                     session.frame.answeringStatus === 'answering' &&
+                    session.meta.currentQuestionFlow?.questionType !== 'forAll' &&
+                    session.meta.currentQuestionFlow?.questionType !== 'stakeAll' &&
                     (!session.frame.answeringPlayerId || !contestantIds.has(session.frame.answeringPlayerId))
                 ) {
                     this.updateFrame(state, {
@@ -1080,7 +1398,11 @@ export class JeopardyLobbyFeature {
                         await this.cancelTask(sessionId, 'answer-verifying.complete', state)
                     }
 
-                    await this.continueQuestionAfterAnswerResolution(state, false)
+                    if ((session.internal.currentQuestionVerificationQueue || []).length > 0) {
+                        await this.beginAnswerVerifying(state, session.internal.currentQuestionVerificationQueue || [])
+                    } else {
+                        await this.continueQuestionAfterAnswerResolution(state, false)
+                    }
                     return
                 }
 
@@ -1175,12 +1497,10 @@ export class JeopardyLobbyFeature {
         }
 
         const winner =
-            state.members
-                .filter(member => member.role === 'player')
-                .reduce(
-                    (previous, current) => (previous && previous.playerScore >= current.playerScore ? previous : current),
-                    null as StoredLobbyMember | null
-                ) || null
+            this.getContestants(state).reduce(
+                (previous, current) => (previous && previous.playerScore >= current.playerScore ? previous : current),
+                null as StoredLobbyMember | null
+            ) || null
 
         return {
             endedAt: nowIso(),
@@ -1263,7 +1583,7 @@ export class JeopardyLobbyFeature {
     }
 
     private getFallbackPickerId(state: StoredLobbyState): string {
-        return this.getMaster(state)?.id || state.members.find(member => member.role === 'player')?.id || state.creatorUserId || state.members[0]?.id || ''
+        return this.getContestants(state)[0]?.id || this.getMaster(state)?.id || state.members.find(member => member.role === 'player')?.id || ''
     }
 
     private getFallbackSkipperId(state: StoredLobbyState): string | null {
@@ -1272,6 +1592,87 @@ export class JeopardyLobbyFeature {
 
     private filterMemberIds(ids: string[], allowedIds: Set<string>): string[] {
         return ids.filter(id => allowedIds.has(id))
+    }
+
+    private getCurrentQuestionPrice(session: StoredJeopardySession): number {
+        return session.meta.currentQuestionFlow?.currentPrice || session.internal.currentQuestionPrice || 0
+    }
+
+    private getEligibleSecretTargets(state: StoredLobbyState, selectionMode: 'any' | 'exceptCurrent'): StoredLobbyMember[] {
+        const session = this.getSession(state)
+        const pickerId = session?.internal.pickerId
+
+        return this.getContestants(state).filter(player => selectionMode === 'any' || player.id !== pickerId)
+    }
+
+    private getHighestScoringContestant(state: StoredLobbyState): StoredLobbyMember | null {
+        return (
+            this.getContestants(state).reduce(
+                (previous, current) => (previous && previous.playerScore >= current.playerScore ? previous : current),
+                null as StoredLobbyMember | null
+            ) || null
+        )
+    }
+
+    private setQuestionPhaseTimer(
+        state: StoredLobbyState,
+        totalMs: number,
+        remainingMs: number,
+        patch: Partial<RealtimeJeopardyState.QuestionContentFrame>
+    ): void {
+        const session = this.getSession(state)
+
+        if (!session || session.frame.id !== 'question-content') {
+            return
+        }
+
+        const timing = getPhaseTimingWindow(Date.now(), totalMs, remainingMs)
+
+        this.updateFrame(state, {
+            ...session.frame,
+            ...patch,
+            phaseEndsAt: timing.endsAt,
+            phaseStartedAt: timing.startedAt,
+            phaseTimeLeft: timing.timeLeft
+        })
+    }
+
+    private clearQuestionPhaseTimer(state: StoredLobbyState): void {
+        const session = this.getSession(state)
+
+        if (!session || session.frame.id !== 'question-content') {
+            return
+        }
+
+        this.updateFrame(state, {
+            ...session.frame,
+            phaseEndsAt: null,
+            phaseStartedAt: null,
+            phaseTimeLeft: null
+        })
+    }
+
+    private setFinalPhaseTimer(
+        state: StoredLobbyState,
+        totalMs: number,
+        remainingMs: number,
+        patch: Partial<RealtimeJeopardyState.FinalRoundBoardFrame>
+    ): void {
+        const session = this.getSession(state)
+
+        if (!session || session.frame.id !== 'final-round-board') {
+            return
+        }
+
+        const timing = getPhaseTimingWindow(Date.now(), totalMs, remainingMs)
+
+        this.updateFrame(state, {
+            ...session.frame,
+            ...patch,
+            phaseEndsAt: timing.endsAt,
+            phaseStartedAt: timing.startedAt,
+            phaseTimeLeft: timing.timeLeft
+        })
     }
 
     private createSuccessfulGameAction(actor: { id: string; type: 'game' | 'player' }, actionName: string, actionPayload: unknown, actionResult?: unknown) {
@@ -1497,20 +1898,62 @@ export class JeopardyLobbyFeature {
             return
         }
 
-        const scenario = getQuestionScenarioById(game.packDeclaration, questionId)
+        const activePickerId =
+            session.internal.pickerId && state.members.some(member => member.id === session.internal.pickerId && member.role === 'player')
+                ? session.internal.pickerId
+                : session.frame.id === 'question-board'
+                  ? session.frame.pickerId
+                  : this.getFallbackPickerId(state)
 
-        if (!scenario) {
+        const question = getNormalizedQuestionById(game.packDeclaration, questionId)
+
+        if (!question) {
             return
         }
 
         session.meta.currentQuestionFlow = {
-            afterAtoms: scenario[1],
-            beforeAtoms: scenario[0],
+            afterAtoms: question.answerItems,
+            answerDurationMs: question.answerDurationMs,
+            beforeAtoms: question.questionItems,
+            currentPrice: question.price * question.priceMultiplier,
+            priceMultiplier: question.priceMultiplier,
+            priceOptions: question.priceOptions,
+            questionTheme: question.questionTheme,
             questionId,
+            questionType: question.type,
+            selectionMode: question.selectionMode,
             shownAtomIndex: -1,
             stage: 'before'
         }
         session.meta.answerRequestRemainingMs = null
+        this.updateInternal(state, {
+            answerIsApproved: null,
+            correctAnswers: null,
+            currentAnsweringPlayerAnswerText: null,
+            currentAnsweringPlayerId: null,
+            currentQuestionAnswers: {},
+            currentQuestionBets: {},
+            currentQuestionPrice: session.meta.currentQuestionFlow.currentPrice,
+            currentQuestionSelectedPlayerId: null,
+            currentQuestionVerificationQueue: [],
+            incorrectAnswers: null,
+            pickerId: activePickerId
+        })
+
+        if (question.type === 'stake') {
+            await this.beginStakeSelection(state)
+            return
+        }
+
+        if (question.type === 'secret' || question.type === 'secretPublicPrice' || question.type === 'secretNoQuestion') {
+            await this.beginSecretQuestionSelection(state)
+            return
+        }
+
+        if (question.type === 'stakeAll') {
+            await this.beginHiddenStakeCollection(state)
+            return
+        }
 
         await this.showNextQuestionAtom(state)
     }
@@ -1528,7 +1971,17 @@ export class JeopardyLobbyFeature {
 
         if (nextIndex >= atoms.length) {
             if (flow.stage === 'before') {
-                await this.beginAnswerRequest(state, JEOPARDY_ANSWER_REQUEST_DURATION_MS)
+                if (flow.questionType === 'simple' || flow.questionType === 'custom') {
+                    await this.beginAnswerRequest(state, JEOPARDY_ANSWER_REQUEST_DURATION_MS)
+                    return
+                }
+
+                if (flow.questionType === 'forAll' || flow.questionType === 'stakeAll') {
+                    await this.beginMultiPlayerAnswering(state)
+                    return
+                }
+
+                await this.beginDirectAnswering(state)
                 return
             }
 
@@ -1543,7 +1996,7 @@ export class JeopardyLobbyFeature {
     private async showQuestionAtom(
         state: StoredLobbyState,
         questionId: RealtimeJeopardyQuestionId,
-        atom: JeopardyDeclaration.QuestionScenarioContentAtom,
+        atom: NonNullable<StoredJeopardySession['meta']['currentQuestionFlow']>['beforeAtoms'][number],
         beforeMarker: boolean
     ): Promise<void> {
         const session = this.getSession(state)
@@ -1555,7 +2008,8 @@ export class JeopardyLobbyFeature {
 
         const previousPlayersOnCooldown = session.frame.id === 'question-content' ? [...session.frame.playersOnCooldown] : ([] as string[])
         const previousPlayersWhoAnswered = session.frame.id === 'question-content' ? [...session.frame.playersWhoAnswered] : ([] as string[])
-        const type = '_attributes' in atom ? atom._attributes.type : 'text'
+        const previousPlayersThatMadeBet = session.frame.id === 'question-content' ? [...(session.frame.playersThatMadeBet || [])] : ([] as string[])
+        const type = atom.type
 
         if (beforeMarker) {
             this.updateInternal(state, {
@@ -1571,24 +2025,37 @@ export class JeopardyLobbyFeature {
         session.meta.mediaStartedAt = type === 'video' || type === 'voice' ? nowIso() : null
 
         this.updateFrame(state, {
-            questionId,
-            id: 'question-content',
-            type,
-            content: atom._text,
-            answeringStatus: beforeMarker ? 'too-early' : 'too-late',
             answerRequestTimeLeft: null,
             answerGivingTimeLeft: null,
             answerVerifyingTimeLeft: null,
-            playersOnCooldown: previousPlayersOnCooldown,
-            playersWhoAnswered: previousPlayersWhoAnswered,
             answeringPlayerId: null,
-            skipVoted: [],
-            result: undefined,
+            elapsedMediaTimeMs: this.getMediaElapsedTimeMs(session),
+            content: atom.content,
+            contentPlacement: atom.placement,
+            id: 'question-content',
+            isRef: atom.isRef,
             mediaStartedAt: session.meta.mediaStartedAt,
-            elapsedMediaTimeMs: this.getMediaElapsedTimeMs(session)
+            phaseEndsAt: null,
+            phaseStartedAt: null,
+            phaseTimeLeft: null,
+            playersOnCooldown: previousPlayersOnCooldown,
+            playersThatMadeBet: previousPlayersThatMadeBet,
+            playersWhoAnswered: previousPlayersWhoAnswered,
+            questionId,
+            questionPrice: this.getCurrentQuestionPrice(session),
+            questionTheme: session.meta.currentQuestionFlow?.questionTheme,
+            questionType: session.meta.currentQuestionFlow?.questionType,
+            selectedPlayerId: session.internal.currentQuestionSelectedPlayerId,
+            skipVoted: [],
+            specialPhase: beforeMarker ? 'showing-question' : 'showing-answer',
+            answeringStatus: beforeMarker ? 'too-early' : 'too-late',
+            result: undefined,
+            type
         })
 
-        if (type === 'video' || type === 'voice') {
+        const autoAdvanceDelayMs = atom.durationMs ?? JEOPARDY_CONTENT_DEFAULT_DURATION_MS
+
+        if ((type === 'video' || type === 'voice') && atom.waitForFinish) {
             return
         }
 
@@ -1599,7 +2066,344 @@ export class JeopardyLobbyFeature {
                 sessionId,
                 type: 'jeopardy.question.atom.complete'
             },
-            JEOPARDY_CONTENT_DEFAULT_DURATION_MS,
+            Math.max(autoAdvanceDelayMs, 0),
+            state
+        )
+    }
+
+    private async beginStakeSelection(state: StoredLobbyState): Promise<void> {
+        const session = this.getSession(state)
+        const sessionId = this.getActiveLobbySessionId(state)
+        const flow = session?.meta.currentQuestionFlow
+        const stakerId = session?.internal.pickerId || this.getFallbackPickerId(state)
+        const staker = this.getContestants(state).find(player => player.id === stakerId)
+
+        if (!session || !sessionId || !flow || !staker) {
+            return
+        }
+
+        const minimumStake = Math.max(1, Math.min(flow.currentPrice, Math.max(staker.playerScore, 1)))
+        const maximumStake = Math.max(minimumStake, Math.max(staker.playerScore, flow.currentPrice, 1))
+        const priceOptions = minimumStake === maximumStake ? [minimumStake] : [minimumStake, maximumStake]
+
+        this.updateFrame(state, {
+            answerGivingTimeLeft: null,
+            answerRequestTimeLeft: null,
+            answerVerifyingTimeLeft: null,
+            answeringPlayerId: staker.id,
+            answeringStatus: 'too-early',
+            content: 'Select your stake',
+            id: 'question-content',
+            playersOnCooldown: [],
+            playersThatMadeBet: [],
+            playersWhoAnswered: [],
+            priceOptions,
+            questionId: flow.questionId,
+            questionPrice: flow.currentPrice,
+            questionTheme: flow.questionTheme,
+            questionType: flow.questionType,
+            selectedPlayerId: null,
+            skipVoted: [],
+            specialPhase: 'making-stake',
+            type: 'text'
+        })
+        this.setQuestionPhaseTimer(state, JEOPARDY_SPECIAL_STAKE_DURATION_MS, JEOPARDY_SPECIAL_STAKE_DURATION_MS, {
+            eligiblePlayerIds: [staker.id],
+            priceOptions
+        })
+
+        await this.scheduleTask(
+            sessionId,
+            'phase.making-stake.complete',
+            {
+                phase: 'making-stake',
+                sessionId,
+                type: 'jeopardy.phase.complete'
+            },
+            JEOPARDY_SPECIAL_STAKE_DURATION_MS,
+            state
+        )
+    }
+
+    private async beginSecretQuestionSelection(state: StoredLobbyState): Promise<void> {
+        const session = this.getSession(state)
+        const sessionId = this.getActiveLobbySessionId(state)
+        const flow = session?.meta.currentQuestionFlow
+
+        if (!session || !sessionId || !flow) {
+            return
+        }
+
+        const eligibleTargets = this.getEligibleSecretTargets(state, flow.selectionMode)
+
+        if (!eligibleTargets.length) {
+            await this.beginDirectAnswering(state)
+            return
+        }
+
+        this.updateFrame(state, {
+            answerGivingTimeLeft: null,
+            answerRequestTimeLeft: null,
+            answerVerifyingTimeLeft: null,
+            answeringPlayerId: session.internal.pickerId,
+            answeringStatus: 'too-early',
+            content: 'Select the player who will receive this question',
+            id: 'question-content',
+            playersOnCooldown: [],
+            playersThatMadeBet: [],
+            playersWhoAnswered: [],
+            priceOptions: flow.priceOptions,
+            questionId: flow.questionId,
+            questionPrice: flow.questionType === 'secretPublicPrice' && flow.priceOptions.length === 1 ? flow.priceOptions[0] : flow.currentPrice,
+            questionTheme: flow.questionTheme,
+            questionType: flow.questionType,
+            selectedPlayerId: null,
+            skipVoted: [],
+            specialPhase: 'selecting-player',
+            type: 'text'
+        })
+        this.setQuestionPhaseTimer(state, JEOPARDY_SPECIAL_PLAYER_SELECTION_DURATION_MS, JEOPARDY_SPECIAL_PLAYER_SELECTION_DURATION_MS, {
+            eligiblePlayerIds: eligibleTargets.map(player => player.id),
+            priceOptions: flow.priceOptions
+        })
+
+        await this.scheduleTask(
+            sessionId,
+            'phase.selecting-player.complete',
+            {
+                phase: 'selecting-player',
+                sessionId,
+                type: 'jeopardy.phase.complete'
+            },
+            JEOPARDY_SPECIAL_PLAYER_SELECTION_DURATION_MS,
+            state
+        )
+    }
+
+    private async beginQuestionValueSelection(state: StoredLobbyState): Promise<void> {
+        const session = this.getSession(state)
+        const sessionId = this.getActiveLobbySessionId(state)
+        const flow = session?.meta.currentQuestionFlow
+        const chooserId = session?.internal.currentQuestionSelectedPlayerId || session?.internal.pickerId
+
+        if (!session || !sessionId || !flow || !chooserId) {
+            return
+        }
+
+        this.updateFrame(state, {
+            answerGivingTimeLeft: null,
+            answerRequestTimeLeft: null,
+            answerVerifyingTimeLeft: null,
+            answeringPlayerId: chooserId,
+            answeringStatus: 'too-early',
+            content: 'Choose the question value',
+            id: 'question-content',
+            playersOnCooldown: [],
+            playersThatMadeBet: [],
+            playersWhoAnswered: [],
+            priceOptions: flow.priceOptions,
+            questionId: flow.questionId,
+            questionPrice: flow.currentPrice,
+            questionTheme: flow.questionTheme,
+            questionType: flow.questionType,
+            selectedPlayerId: session.internal.currentQuestionSelectedPlayerId,
+            skipVoted: [],
+            specialPhase: 'choosing-price',
+            type: 'text'
+        })
+        this.setQuestionPhaseTimer(state, JEOPARDY_SPECIAL_STAKE_DURATION_MS, JEOPARDY_SPECIAL_STAKE_DURATION_MS, {
+            eligiblePlayerIds: [chooserId],
+            priceOptions: flow.priceOptions,
+            selectedPlayerId: session.internal.currentQuestionSelectedPlayerId
+        })
+
+        await this.scheduleTask(
+            sessionId,
+            'phase.choosing-price.complete',
+            {
+                phase: 'choosing-price',
+                sessionId,
+                type: 'jeopardy.phase.complete'
+            },
+            JEOPARDY_SPECIAL_STAKE_DURATION_MS,
+            state
+        )
+    }
+
+    private async resolveSecretNoQuestion(state: StoredLobbyState): Promise<void> {
+        const session = this.getSession(state)
+        const selectedPlayerId = session?.internal.currentQuestionSelectedPlayerId
+        const selectedPlayer = state.members.find(member => member.id === selectedPlayerId && member.role === 'player')
+
+        if (!session || !selectedPlayer) {
+            return
+        }
+
+        selectedPlayer.playerScore += this.getCurrentQuestionPrice(session)
+
+        this.updateInternal(state, {
+            pickerId: selectedPlayer.id
+        })
+
+        await this.finalizeQuestion(state)
+    }
+
+    private async beginHiddenStakeCollection(state: StoredLobbyState): Promise<void> {
+        const session = this.getSession(state)
+        const sessionId = this.getActiveLobbySessionId(state)
+        const flow = session?.meta.currentQuestionFlow
+        const eligiblePlayers = this.getContestants(state).filter(player => player.playerScore > 0)
+
+        if (!session || !sessionId || !flow) {
+            return
+        }
+
+        if (!eligiblePlayers.length) {
+            await this.showNextQuestionAtom(state)
+            return
+        }
+
+        this.updateInternal(state, {
+            currentQuestionBets: {}
+        })
+        this.updateFrame(state, {
+            answerGivingTimeLeft: null,
+            answerRequestTimeLeft: null,
+            answerVerifyingTimeLeft: null,
+            answeringPlayerId: null,
+            answeringStatus: 'too-early',
+            content: 'Make your hidden stake',
+            id: 'question-content',
+            playersOnCooldown: [],
+            playersThatMadeBet: [],
+            playersWhoAnswered: [],
+            questionId: flow.questionId,
+            questionPrice: flow.currentPrice,
+            questionTheme: flow.questionTheme,
+            questionType: flow.questionType,
+            selectedPlayerId: null,
+            skipVoted: [],
+            specialPhase: 'making-hidden-stakes',
+            type: 'text'
+        })
+        this.setQuestionPhaseTimer(state, JEOPARDY_SPECIAL_STAKE_DURATION_MS, JEOPARDY_SPECIAL_STAKE_DURATION_MS, {
+            eligiblePlayerIds: eligiblePlayers.map(player => player.id)
+        })
+
+        await this.scheduleTask(
+            sessionId,
+            'phase.making-hidden-stakes.complete',
+            {
+                phase: 'making-hidden-stakes',
+                sessionId,
+                type: 'jeopardy.phase.complete'
+            },
+            JEOPARDY_SPECIAL_STAKE_DURATION_MS,
+            state
+        )
+    }
+
+    private async beginDirectAnswering(state: StoredLobbyState): Promise<void> {
+        const session = this.getSession(state)
+        const sessionId = this.getActiveLobbySessionId(state)
+        const flow = session?.meta.currentQuestionFlow
+        const answererId = session?.internal.currentQuestionSelectedPlayerId || session?.internal.pickerId || this.getFallbackPickerId(state)
+
+        if (!session || !sessionId || !flow || !answererId || session.frame.id !== 'question-content') {
+            return
+        }
+
+        const durationMs = getQuestionAnswerDurationMs(flow.questionType, flow.answerDurationMs)
+        const timing = getPhaseTimingWindow(Date.now(), durationMs, durationMs)
+
+        this.clearQuestionPhaseTimer(state)
+        this.updateFrame(state, {
+            ...session.frame,
+            answeringPlayerId: answererId,
+            answeringStatus: 'answering',
+            answerRequestEndsAt: null,
+            answerRequestStartedAt: null,
+            answerRequestTimeLeft: null,
+            answerGivingEndsAt: timing.endsAt,
+            answerGivingStartedAt: timing.startedAt,
+            answerGivingTimeLeft: timing.timeLeft,
+            answerVerifyingEndsAt: null,
+            answerVerifyingStartedAt: null,
+            answerVerifyingTimeLeft: null,
+            eligiblePlayerIds: [answererId],
+            playersWhoAnswered: [answererId],
+            questionPrice: flow.currentPrice,
+            questionTheme: flow.questionTheme,
+            questionType: flow.questionType,
+            selectedPlayerId: session.internal.currentQuestionSelectedPlayerId,
+            specialPhase: undefined
+        })
+
+        await this.scheduleTask(
+            sessionId,
+            'answer-giving.complete',
+            {
+                sessionId,
+                type: 'jeopardy.answer-giving.complete'
+            },
+            durationMs,
+            state
+        )
+    }
+
+    private async beginMultiPlayerAnswering(state: StoredLobbyState): Promise<void> {
+        const session = this.getSession(state)
+        const sessionId = this.getActiveLobbySessionId(state)
+        const flow = session?.meta.currentQuestionFlow
+
+        if (!session || !sessionId || !flow || session.frame.id !== 'question-content') {
+            return
+        }
+
+        const eligiblePlayers =
+            flow.questionType === 'stakeAll'
+                ? this.getContestants(state).filter(player => Boolean(session.internal.currentQuestionBets?.[player.id]))
+                : this.getContestants(state)
+
+        if (!eligiblePlayers.length) {
+            await this.continueQuestionAfterAnswerResolution(state, false)
+            return
+        }
+
+        const durationMs = getQuestionAnswerDurationMs(flow.questionType, flow.answerDurationMs)
+        const timing = getPhaseTimingWindow(Date.now(), durationMs, durationMs)
+
+        this.clearQuestionPhaseTimer(state)
+        this.updateFrame(state, {
+            ...session.frame,
+            answeringPlayerId: null,
+            answeringStatus: 'answering',
+            answerRequestEndsAt: null,
+            answerRequestStartedAt: null,
+            answerRequestTimeLeft: null,
+            answerGivingEndsAt: timing.endsAt,
+            answerGivingStartedAt: timing.startedAt,
+            answerGivingTimeLeft: timing.timeLeft,
+            answerVerifyingEndsAt: null,
+            answerVerifyingStartedAt: null,
+            answerVerifyingTimeLeft: null,
+            eligiblePlayerIds: eligiblePlayers.map(player => player.id),
+            playersWhoAnswered: [],
+            questionPrice: flow.currentPrice,
+            questionTheme: flow.questionTheme,
+            questionType: flow.questionType,
+            specialPhase: undefined
+        })
+
+        await this.scheduleTask(
+            sessionId,
+            'phase.multi-answering.complete',
+            {
+                phase: 'multi-answering',
+                sessionId,
+                type: 'jeopardy.phase.complete'
+            },
+            durationMs,
             state
         )
     }
@@ -1630,7 +2434,8 @@ export class JeopardyLobbyFeature {
             answerVerifyingStartedAt: null,
             answerVerifyingEndsAt: null,
             answerVerifyingTimeLeft: null,
-            result: undefined
+            result: undefined,
+            specialPhase: undefined
         })
 
         await this.scheduleTask(
@@ -1645,7 +2450,30 @@ export class JeopardyLobbyFeature {
         )
     }
 
-    private async beginAnswerVerifying(state: StoredLobbyState): Promise<void> {
+    private applyQuestionAnswerRating(state: StoredLobbyState, playerId: string, rating: 'approved' | 'declined'): void {
+        const session = this.getSession(state)
+        const flow = session?.meta.currentQuestionFlow
+        const player = state.members.find(member => member.id === playerId && member.role === 'player')
+        const wager = session?.internal.currentQuestionAnswers?.[playerId]?.wager || session?.internal.currentQuestionBets?.[playerId]
+        const delta = wager || (session ? this.getCurrentQuestionPrice(session) : 0)
+        const isNoRisk = flow?.questionType === 'forYourself' || flow?.questionType === 'noRisk'
+
+        if (!session || !player) {
+            return
+        }
+
+        if (session.internal.currentQuestionAnswers?.[playerId]) {
+            session.internal.currentQuestionAnswers[playerId].rate = rating
+        }
+
+        player.playerScore += rating === 'approved' ? delta : isNoRisk ? 0 : -delta
+
+        if (rating === 'approved') {
+            session.internal.pickerId = playerId
+        }
+    }
+
+    private async beginAnswerVerifying(state: StoredLobbyState, playerIds?: string[]): Promise<void> {
         const game = this.getGame(state)
         const session = this.getSession(state)
         const sessionId = this.getActiveLobbySessionId(state)
@@ -1662,7 +2490,20 @@ export class JeopardyLobbyFeature {
 
         this.updateInternal(state, {
             correctAnswers: answers[0],
+            currentQuestionVerificationQueue: playerIds || session.internal.currentQuestionVerificationQueue || [],
             incorrectAnswers: answers[1]
+        })
+
+        const verificationQueue = [...(playerIds || session.internal.currentQuestionVerificationQueue || [])]
+        const currentPlayerId = verificationQueue[0] || session.internal.currentAnsweringPlayerId
+        const currentAnswerText =
+            (currentPlayerId ? session.internal.currentQuestionAnswers?.[currentPlayerId]?.value : null) ||
+            session.internal.currentAnsweringPlayerAnswerText ||
+            null
+
+        this.updateInternal(state, {
+            currentAnsweringPlayerAnswerText: currentAnswerText,
+            currentAnsweringPlayerId: currentPlayerId
         })
 
         const phaseTiming = getPhaseTimingWindow(Date.now(), JEOPARDY_ANSWER_VERIFYING_DURATION_MS, JEOPARDY_ANSWER_VERIFYING_DURATION_MS)
@@ -1679,7 +2520,8 @@ export class JeopardyLobbyFeature {
             answerRequestTimeLeft: null,
             answerVerifyingStartedAt: phaseTiming.startedAt,
             answerVerifyingEndsAt: phaseTiming.endsAt,
-            answerVerifyingTimeLeft: phaseTiming.timeLeft
+            answerVerifyingTimeLeft: phaseTiming.timeLeft,
+            specialPhase: 'question-verifying'
         })
 
         await this.scheduleTask(
@@ -1701,7 +2543,7 @@ export class JeopardyLobbyFeature {
             return
         }
 
-        if (!approved && (session.meta.answerRequestRemainingMs || 0) > 0) {
+        if (session.meta.currentQuestionFlow?.questionType === 'simple' && !approved && (session.meta.answerRequestRemainingMs || 0) > 0) {
             await this.beginAnswerRequest(state, session.meta.answerRequestRemainingMs || 0)
             return
         }
@@ -1712,6 +2554,12 @@ export class JeopardyLobbyFeature {
             session.meta.currentQuestionFlow.stage = 'after'
             session.meta.currentQuestionFlow.shownAtomIndex = -1
         }
+
+        this.updateInternal(state, {
+            currentAnsweringPlayerAnswerText: null,
+            currentAnsweringPlayerId: null,
+            currentQuestionVerificationQueue: []
+        })
 
         await this.showNextQuestionAtom(state)
     }
@@ -1735,7 +2583,16 @@ export class JeopardyLobbyFeature {
         session.meta.mediaStartedAt = null
 
         this.updateInternal(state, {
-            answeredQuestions
+            answeredQuestions,
+            correctAnswers: null,
+            currentAnsweringPlayerAnswerText: null,
+            currentAnsweringPlayerId: null,
+            currentQuestionAnswers: {},
+            currentQuestionBets: {},
+            currentQuestionPrice: null,
+            currentQuestionSelectedPlayerId: null,
+            currentQuestionVerificationQueue: [],
+            incorrectAnswers: null
         })
 
         const roundId = session.internal.currentRoundId
@@ -1774,13 +2631,17 @@ export class JeopardyLobbyFeature {
     private async showFinalRoundBoard(state: StoredLobbyState): Promise<void> {
         const game = this.getGame(state)
         const session = this.getSession(state)
+        const sessionId = this.getActiveLobbySessionId(state)
 
-        if (!game || !session) {
+        if (!game || !session || !sessionId) {
             return
         }
 
         this.updateFrame(state, {
             id: 'final-round-board',
+            phaseEndsAt: null,
+            phaseStartedAt: null,
+            phaseTimeLeft: null,
             themes: getFinalThemes(game.packDeclaration).map(name => ({
                 name,
                 skipped: false
@@ -1793,36 +2654,66 @@ export class JeopardyLobbyFeature {
             playersThatMadeBet: [],
             status: 'skipping'
         })
+        this.setFinalPhaseTimer(state, JEOPARDY_FINAL_THEME_SELECTION_DURATION_MS, JEOPARDY_FINAL_THEME_SELECTION_DURATION_MS, {})
+
+        await this.scheduleTask(
+            sessionId,
+            'final.phase.skipping.complete',
+            {
+                phase: 'skipping',
+                sessionId,
+                type: 'jeopardy.final.phase.complete'
+            },
+            JEOPARDY_FINAL_THEME_SELECTION_DURATION_MS,
+            state
+        )
     }
 
     private async beginFinalRoundBetting(state: StoredLobbyState): Promise<void> {
         const session = this.getSession(state)
+        const sessionId = this.getActiveLobbySessionId(state)
 
-        if (!session || session.frame.id !== 'final-round-board') {
+        if (!session || !sessionId || session.frame.id !== 'final-round-board') {
             return
         }
 
-        this.updateFrame(state, {
-            ...session.frame,
+        await this.cancelTask(sessionId, 'final.phase.skipping.complete', state).catch(() => null)
+
+        this.setFinalPhaseTimer(state, JEOPARDY_FINAL_BETTING_DURATION_MS, JEOPARDY_FINAL_BETTING_DURATION_MS, {
             status: 'betting'
         })
+
+        await this.scheduleTask(
+            sessionId,
+            'final.phase.betting.complete',
+            {
+                phase: 'betting',
+                sessionId,
+                type: 'jeopardy.final.phase.complete'
+            },
+            JEOPARDY_FINAL_BETTING_DURATION_MS,
+            state
+        )
     }
 
     private async beginFinalQuestionAnswering(state: StoredLobbyState): Promise<void> {
         const game = this.getGame(state)
         const session = this.getSession(state)
+        const sessionId = this.getActiveLobbySessionId(state)
 
-        if (!game || !session || session.frame.id !== 'final-round-board') {
+        if (!game || !session || !sessionId || session.frame.id !== 'final-round-board') {
             return
         }
+
+        await this.cancelTask(sessionId, 'final.phase.betting.complete', state).catch(() => null)
 
         const themeIndex = session.frame.themes.findIndex(theme => !theme.skipped)
         const finalRoundIndex = getRoundsCount(game.packDeclaration) - 1
         const questionId = `${finalRoundIndex}-${themeIndex}-0` as RealtimeJeopardyQuestionId
-        const scenario = getQuestionScenarioById(game.packDeclaration, questionId)
+        const question = getNormalizedQuestionById(game.packDeclaration, questionId)
         const answers = getJeopardyAnswers(game.packDeclaration, questionId)
 
-        if (!scenario || !answers) {
+        if (!question || !answers) {
             return
         }
 
@@ -1831,15 +2722,28 @@ export class JeopardyLobbyFeature {
             incorrectAnswers: answers[1]
         })
 
-        this.updateFrame(state, {
-            ...session.frame,
+        this.setFinalPhaseTimer(state, JEOPARDY_FINAL_ANSWERING_DURATION_MS, JEOPARDY_FINAL_ANSWERING_DURATION_MS, {
+            questionAtoms: question.questionItems.map(atom => ({
+                content: atom.content,
+                isRef: atom.isRef,
+                placement: atom.placement,
+                type: atom.type
+            })),
             skipperId: null,
-            status: 'answering',
-            questionAtoms: scenario[0].map(atom => ({
-                content: atom._text,
-                type: '_attributes' in atom ? atom._attributes.type : 'text'
-            }))
+            status: 'answering'
         })
+
+        await this.scheduleTask(
+            sessionId,
+            'final.phase.answering.complete',
+            {
+                phase: 'answering',
+                sessionId,
+                type: 'jeopardy.final.phase.complete'
+            },
+            JEOPARDY_FINAL_ANSWERING_DURATION_MS,
+            state
+        )
     }
 
     private beginFinalQuestionVerifying(state: StoredLobbyState): void {
@@ -1851,6 +2755,9 @@ export class JeopardyLobbyFeature {
 
         this.updateFrame(state, {
             ...session.frame,
+            phaseEndsAt: null,
+            phaseStartedAt: null,
+            phaseTimeLeft: null,
             status: 'answer-verifying'
         })
     }
@@ -1863,12 +2770,11 @@ export class JeopardyLobbyFeature {
         }
 
         const winner =
-            state.members
-                .filter(member => member.role === 'player')
-                .reduce(
-                    (previous, current) => (previous && previous.playerScore >= current.playerScore ? previous : current),
-                    null as StoredLobbyMember | null
-                ) ||
+            this.getContestants(state).reduce(
+                (previous, current) => (previous && previous.playerScore >= current.playerScore ? previous : current),
+                null as StoredLobbyMember | null
+            ) ||
+            this.getContestants(state)[0] ||
             state.members.find(member => member.role === 'player') ||
             state.members[0]
 
@@ -1968,12 +2874,31 @@ export class JeopardyLobbyFeature {
             )
         )
 
-        const getRemainingMs = (type: LobbyScheduledTaskPayload['type']) => pausedTasks.find(task => task.payload.type === type)?.remainingMs || null
+        const getRemainingMs = (type: LobbyScheduledTaskPayload['type'], phase?: string) =>
+            pausedTasks.find(task => task.payload.type === type && (!phase || ('phase' in task.payload && task.payload.phase === phase)))?.remainingMs || null
 
         session.meta.pausedTasks = []
         session.isPaused = false
 
         if (session.frame.id === 'question-content') {
+            if (session.frame.specialPhase) {
+                const phaseDurations: Record<string, number> = {
+                    'choosing-price': JEOPARDY_SPECIAL_STAKE_DURATION_MS,
+                    'making-hidden-stakes': JEOPARDY_SPECIAL_STAKE_DURATION_MS,
+                    'making-stake': JEOPARDY_SPECIAL_STAKE_DURATION_MS,
+                    'selecting-player': JEOPARDY_SPECIAL_PLAYER_SELECTION_DURATION_MS
+                }
+                const specialRemainingMs = getRemainingMs('jeopardy.phase.complete', session.frame.specialPhase)
+
+                if (specialRemainingMs && phaseDurations[session.frame.specialPhase]) {
+                    const timing = getPhaseTimingWindow(nowMs, phaseDurations[session.frame.specialPhase], specialRemainingMs)
+
+                    session.frame.phaseStartedAt = timing.startedAt
+                    session.frame.phaseEndsAt = timing.endsAt
+                    session.frame.phaseTimeLeft = timing.timeLeft
+                }
+            }
+
             if (session.frame.answeringStatus === 'allowed') {
                 const remainingMs = getRemainingMs('jeopardy.answer-request.complete')
 
@@ -1985,10 +2910,20 @@ export class JeopardyLobbyFeature {
                     session.frame.answerRequestTimeLeft = phaseTiming.timeLeft
                 }
             } else if (session.frame.answeringStatus === 'answering') {
-                const remainingMs = getRemainingMs('jeopardy.answer-giving.complete')
+                const remainingMs =
+                    session.meta.currentQuestionFlow?.questionType === 'forAll' || session.meta.currentQuestionFlow?.questionType === 'stakeAll'
+                        ? getRemainingMs('jeopardy.phase.complete', 'multi-answering')
+                        : getRemainingMs('jeopardy.answer-giving.complete')
+                const totalMs =
+                    session.meta.currentQuestionFlow?.questionType === 'forAll' || session.meta.currentQuestionFlow?.questionType === 'stakeAll'
+                        ? getQuestionAnswerDurationMs(
+                              session.meta.currentQuestionFlow?.questionType,
+                              session.meta.currentQuestionFlow?.answerDurationMs || null
+                          )
+                        : JEOPARDY_ANSWER_GIVING_DURATION_MS
 
                 if (remainingMs) {
-                    const phaseTiming = getPhaseTimingWindow(nowMs, JEOPARDY_ANSWER_GIVING_DURATION_MS, remainingMs)
+                    const phaseTiming = getPhaseTimingWindow(nowMs, totalMs, remainingMs)
 
                     session.frame.answerGivingStartedAt = phaseTiming.startedAt
                     session.frame.answerGivingEndsAt = phaseTiming.endsAt
@@ -2009,6 +2944,26 @@ export class JeopardyLobbyFeature {
             if ((session.frame.type === 'video' || session.frame.type === 'voice') && session.meta.mediaStartedAt === null) {
                 session.meta.mediaStartedAt = nowIso()
             }
+        } else if (session.frame.id === 'final-round-board') {
+            const phase =
+                session.frame.status === 'skipping' || session.frame.status === 'betting' || session.frame.status === 'answering' ? session.frame.status : null
+            const totalMs =
+                phase === 'skipping'
+                    ? JEOPARDY_FINAL_THEME_SELECTION_DURATION_MS
+                    : phase === 'betting'
+                      ? JEOPARDY_FINAL_BETTING_DURATION_MS
+                      : phase === 'answering'
+                        ? JEOPARDY_FINAL_ANSWERING_DURATION_MS
+                        : null
+            const remainingMs = phase ? getRemainingMs('jeopardy.final.phase.complete', phase) : null
+
+            if (phase && totalMs && remainingMs) {
+                const timing = getPhaseTimingWindow(nowMs, totalMs, remainingMs)
+
+                session.frame.phaseStartedAt = timing.startedAt
+                session.frame.phaseEndsAt = timing.endsAt
+                session.frame.phaseTimeLeft = timing.timeLeft
+            }
         }
 
         return {
@@ -2022,6 +2977,180 @@ export class JeopardyLobbyFeature {
             ),
             stateChanged: true,
             success: true
+        }
+    }
+
+    private async handlePhaseCompleteTask(state: StoredLobbyState, sessionId: string, phase: string): Promise<ScheduledTaskResult> {
+        const session = this.getSession(state)
+        const flow = session?.meta.currentQuestionFlow
+
+        if (!session || this.getActiveLobbySessionId(state) !== sessionId || session.frame.id !== 'question-content' || !flow) {
+            return {
+                stateChanged: false
+            }
+        }
+
+        switch (phase) {
+            case 'making-stake':
+                flow.currentPrice = flow.priceOptions[0] || flow.currentPrice
+                this.updateInternal(state, {
+                    currentQuestionPrice: flow.currentPrice
+                })
+                await this.showNextQuestionAtom(state)
+                return { stateChanged: true }
+            case 'selecting-player': {
+                const eligibleTargets = this.getEligibleSecretTargets(state, flow.selectionMode)
+                const selectedPlayer =
+                    eligibleTargets.reduce(
+                        (previous, current) => (previous && previous.playerScore >= current.playerScore ? previous : current),
+                        null as StoredLobbyMember | null
+                    ) || null
+
+                if (!selectedPlayer) {
+                    return { stateChanged: false }
+                }
+
+                this.updateInternal(state, {
+                    currentQuestionSelectedPlayerId: selectedPlayer.id
+                })
+
+                if (flow.priceOptions.length > 1) {
+                    await this.beginQuestionValueSelection(state)
+                } else {
+                    flow.currentPrice = flow.priceOptions[0] || flow.currentPrice
+                    this.updateInternal(state, {
+                        currentQuestionPrice: flow.currentPrice
+                    })
+
+                    if (flow.questionType === 'secretNoQuestion') {
+                        await this.resolveSecretNoQuestion(state)
+                    } else {
+                        await this.showNextQuestionAtom(state)
+                    }
+                }
+
+                return { stateChanged: true }
+            }
+            case 'choosing-price':
+                flow.currentPrice = flow.priceOptions[0] || flow.currentPrice
+                this.updateInternal(state, {
+                    currentQuestionPrice: flow.currentPrice
+                })
+
+                if (flow.questionType === 'secretNoQuestion') {
+                    await this.resolveSecretNoQuestion(state)
+                } else {
+                    await this.showNextQuestionAtom(state)
+                }
+
+                return { stateChanged: true }
+            case 'making-hidden-stakes': {
+                const eligiblePlayers = this.getContestants(state).filter(player => player.playerScore > 0)
+
+                session.internal.currentQuestionBets = {
+                    ...(session.internal.currentQuestionBets || {}),
+                    ...Object.fromEntries(
+                        eligiblePlayers
+                            .filter(player => !session.internal.currentQuestionBets?.[player.id])
+                            .map(player => [player.id, Math.min(player.playerScore, flow.currentPrice)])
+                    )
+                }
+
+                this.updateFrame(state, {
+                    ...session.frame,
+                    playersThatMadeBet: eligiblePlayers.map(player => player.id)
+                })
+
+                await this.showNextQuestionAtom(state)
+                return { stateChanged: true }
+            }
+            case 'multi-answering':
+                if (!Object.keys(session.internal.currentQuestionAnswers || {}).length) {
+                    await this.continueQuestionAfterAnswerResolution(state, false)
+                } else {
+                    await this.beginAnswerVerifying(state, Object.keys(session.internal.currentQuestionAnswers || {}))
+                }
+                return { stateChanged: true }
+            default:
+                return {
+                    stateChanged: false
+                }
+        }
+    }
+
+    private async handleFinalPhaseCompleteTask(
+        state: StoredLobbyState,
+        sessionId: string,
+        phase: 'betting' | 'skipping' | 'answering'
+    ): Promise<ScheduledTaskResult> {
+        const session = this.getSession(state)
+
+        if (!session || this.getActiveLobbySessionId(state) !== sessionId || session.frame.id !== 'final-round-board') {
+            return {
+                stateChanged: false
+            }
+        }
+
+        switch (phase) {
+            case 'skipping': {
+                const remainingThemes = session.frame.themes.filter(theme => !theme.skipped)
+
+                if (remainingThemes.length <= 1) {
+                    await this.beginFinalRoundBetting(state)
+                    return { stateChanged: true }
+                }
+
+                const theme = remainingThemes[0]
+
+                if (!theme) {
+                    return { stateChanged: false }
+                }
+
+                theme.skipped = true
+
+                if (session.frame.themes.filter(item => !item.skipped).length === 1) {
+                    await this.beginFinalRoundBetting(state)
+                } else {
+                    this.setFinalPhaseTimer(state, JEOPARDY_FINAL_THEME_SELECTION_DURATION_MS, JEOPARDY_FINAL_THEME_SELECTION_DURATION_MS, {
+                        themes: [...session.frame.themes]
+                    })
+                    await this.scheduleTask(
+                        sessionId,
+                        'final.phase.skipping.complete',
+                        {
+                            phase: 'skipping',
+                            sessionId,
+                            type: 'jeopardy.final.phase.complete'
+                        },
+                        JEOPARDY_FINAL_THEME_SELECTION_DURATION_MS,
+                        state
+                    )
+                }
+
+                return { stateChanged: true }
+            }
+            case 'betting':
+                for (const player of this.getContestants(state).filter(contestant => contestant.playerScore > 0)) {
+                    if (!session.internal.finalBets[player.id]) {
+                        session.internal.finalBets[player.id] = Math.min(player.playerScore, 1)
+                    }
+                }
+
+                this.updateFrame(state, {
+                    ...session.frame,
+                    playersThatMadeBet: this.getContestants(state)
+                        .filter(player => player.playerScore > 0)
+                        .map(player => player.id)
+                })
+                await this.beginFinalQuestionAnswering(state)
+                return { stateChanged: true }
+            case 'answering':
+                this.beginFinalQuestionVerifying(state)
+                return { stateChanged: true }
+            default:
+                return {
+                    stateChanged: false
+                }
         }
     }
 
@@ -2204,12 +3333,24 @@ export class JeopardyLobbyFeature {
             }
         }
 
+        const answeringPlayerId = state.game.session.frame.answeringPlayerId
+
         this.updateInternal(state, {
             currentAnsweringPlayerAnswerText: null,
-            currentAnsweringPlayerId: state.game.session.frame.answeringPlayerId
+            currentAnsweringPlayerId: answeringPlayerId,
+            currentQuestionAnswers: answeringPlayerId
+                ? {
+                      ...(state.game.session.internal.currentQuestionAnswers || {}),
+                      [answeringPlayerId]: {
+                          value: '',
+                          wager: state.game.session.internal.currentQuestionBets?.[answeringPlayerId]
+                      }
+                  }
+                : state.game.session.internal.currentQuestionAnswers,
+            currentQuestionVerificationQueue: answeringPlayerId ? [answeringPlayerId] : []
         })
 
-        await this.beginAnswerVerifying(state)
+        await this.beginAnswerVerifying(state, answeringPlayerId ? [answeringPlayerId] : [])
 
         return {
             stateChanged: true
@@ -2232,24 +3373,25 @@ export class JeopardyLobbyFeature {
         }
 
         const currentAnsweringPlayerId = session.internal.currentAnsweringPlayerId
-        const question = getJeopardyQuestionById(state.game.packDeclaration, session.frame.questionId)
+        const remainingQueue = (session.internal.currentQuestionVerificationQueue || []).filter(playerId => playerId !== currentAnsweringPlayerId)
 
-        if (currentAnsweringPlayerId && question) {
-            const answeringPlayer = state.members.find(member => member.id === currentAnsweringPlayerId && member.role === 'player')
-
-            if (answeringPlayer) {
-                answeringPlayer.playerScore -= parseInt(question._attributes.price, 10)
-            }
+        if (currentAnsweringPlayerId) {
+            this.applyQuestionAnswerRating(state, currentAnsweringPlayerId, 'declined')
         }
 
-        this.updateInternal(state, {
-            correctAnswers: null,
-            currentAnsweringPlayerAnswerText: null,
-            currentAnsweringPlayerId: null,
-            incorrectAnswers: null
-        })
+        if (remainingQueue.length) {
+            await this.beginAnswerVerifying(state, remainingQueue)
+        } else {
+            this.updateInternal(state, {
+                correctAnswers: null,
+                currentAnsweringPlayerAnswerText: null,
+                currentAnsweringPlayerId: null,
+                currentQuestionVerificationQueue: [],
+                incorrectAnswers: null
+            })
 
-        await this.continueQuestionAfterAnswerResolution(state, false)
+            await this.continueQuestionAfterAnswerResolution(state, false)
+        }
 
         return {
             stateChanged: true

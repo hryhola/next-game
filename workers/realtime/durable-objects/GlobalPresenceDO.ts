@@ -1,6 +1,7 @@
 import { DurableObject } from 'cloudflare:workers'
 import type { IdentityProfile, PresenceSnapshot, PresenceUser } from '../../../shared/contracts/identity'
 import type { RealtimeChatMessage, RealtimeLobbyListItem } from '../../../shared/contracts/realtime-lobby'
+import { decodeHeaderValue } from '../lib/headerEncoding'
 import { json } from '../lib/json'
 import { listLobbies } from '../lobbies/store'
 import type { RealtimeWorkerEnv } from '../types'
@@ -22,9 +23,9 @@ const GLOBAL_CHAT_STORAGE_KEY = 'global-chat'
 function readPresenceHeaders(request: Request): PresenceHeaders | null {
     const sessionId = request.headers.get('x-session-id')
     const userId = request.headers.get('x-user-id')
-    const userNickname = request.headers.get('x-user-nickname')
-    const userColor = request.headers.get('x-user-color')
-    const userAvatarUrl = request.headers.get('x-user-avatar-url')
+    const userNickname = decodeHeaderValue(request.headers.get('x-user-nickname'))
+    const userColor = decodeHeaderValue(request.headers.get('x-user-color'))
+    const userAvatarUrl = decodeHeaderValue(request.headers.get('x-user-avatar-url'))
 
     if (!sessionId || !userId || !userNickname || !userColor) {
         return null

@@ -1,4 +1,20 @@
-import { Box, Button, Grid, LinearProgress, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from 'client/ui/mui-shim'
+import {
+    Box,
+    Button,
+    Grid,
+    LinearProgress,
+    List,
+    ListItem,
+    ListItemButton,
+    Slider,
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableRow,
+    TextField,
+    Typography
+} from 'client/ui/mui-shim'
 import { useAudio, useLobby, useUser, useWS } from 'client/context/list'
 import { isCloudflareRealtimeEnabled } from 'client/network-utils/realtimeMode'
 import React, { MutableRefObject, useEffect, useRef, useState } from 'react'
@@ -16,6 +32,28 @@ type TimedProgressSource = {
     startedAt: string | null | undefined
     endsAt: string | null | undefined
     fallback: number | null | undefined
+}
+
+function resolvePackContent(
+    Resources: MutableRefObject<JeopardyMedia>,
+    type: 'html' | 'image' | 'text' | 'video' | 'voice',
+    content: string,
+    isRef: boolean | undefined
+): string {
+    if (!isRef) {
+        return content
+    }
+
+    switch (type) {
+        case 'image':
+            return Resources.current.Images[content] || content
+        case 'video':
+            return Resources.current.Video[content] || content
+        case 'voice':
+            return Resources.current.Audio[content] || content
+        default:
+            return content
+    }
 }
 
 function getTimedProgress(startedAt: string | null | undefined, endsAt: string | null | undefined, fallback: number | null, nowMs: number): number | null {
@@ -81,6 +119,49 @@ const LiveTimedProgressBar: React.FC<{
     )
 }
 
+const QuestionValueDock: React.FC<{
+    getIsPaused: () => boolean
+    initialValue: number
+    maxValue: number
+    minValue: number
+    onConfirm: (value: number) => void
+    phaseProgress: number | null
+    phaseProgressSourceRef: MutableRefObject<TimedProgressSource>
+    title: string
+}> = ({ getIsPaused, initialValue, maxValue, minValue, onConfirm, phaseProgress, phaseProgressSourceRef, title }) => {
+    const [selectedValue, setSelectedValue] = useState(initialValue)
+
+    return (
+        <>
+            <div className="text-xs font-semibold uppercase tracking-[0.28em] text-violet-200/60">{title}</div>
+            <Box minWidth="260px" display="flex" justifyContent="center" alignItems="center">
+                <Slider
+                    sx={{ mt: 4, mx: 2, mb: 2 }}
+                    value={selectedValue}
+                    valueLabelDisplay="on"
+                    onChange={(_, value) => setSelectedValue(value as number)}
+                    min={minValue}
+                    max={maxValue}
+                    step={1}
+                />
+            </Box>
+            <LiveTimedProgressBar
+                initialProgress={phaseProgress}
+                getIsPaused={getIsPaused}
+                style={{ marginTop: '16px' }}
+                getProgress={nowMs => {
+                    const { startedAt, endsAt, fallback } = phaseProgressSourceRef.current
+
+                    return getTimedProgress(startedAt, endsAt, fallback ?? null, nowMs)
+                }}
+            />
+            <div className="mt-3 flex justify-end">
+                <Button onClick={() => onConfirm(selectedValue)}>Confirm</Button>
+            </div>
+        </>
+    )
+}
+
 export const QuestionContent: React.FC<QuestionContentProps> = props => {
     const user = useUser()
     const lobby = useLobby()
@@ -107,6 +188,11 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
         endsAt: props.answerVerifyingEndsAt,
         fallback: props.answerVerifyingTimeLeft
     })
+    const phaseProgressSourceRef = useRef<TimedProgressSource>({
+        startedAt: props.phaseStartedAt,
+        endsAt: props.phaseEndsAt,
+        fallback: props.phaseTimeLeft
+    })
 
     useEffect(() => {
         answerGivingProgressSourceRef.current = {
@@ -125,20 +211,42 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
     }, [props.answerVerifyingEndsAt, props.answerVerifyingStartedAt, props.answerVerifyingTimeLeft])
 
     useEffect(() => {
+        phaseProgressSourceRef.current = {
+            startedAt: props.phaseStartedAt,
+            endsAt: props.phaseEndsAt,
+            fallback: props.phaseTimeLeft
+        }
+    }, [props.phaseEndsAt, props.phaseStartedAt, props.phaseTimeLeft])
+
+    useEffect(() => {
         isPausedRef.current = game.session?.isPaused ?? false
     }, [game.session?.isPaused])
 
     const answerRequestProgress = getTimedProgress(props.answerRequestStartedAt, props.answerRequestEndsAt, props.answerRequestTimeLeft, timerNowMs)
     const answerGivingProgress = getTimedProgress(props.answerGivingStartedAt, props.answerGivingEndsAt, props.answerGivingTimeLeft, timerNowMs)
     const answerVerifyingProgress = getTimedProgress(props.answerVerifyingStartedAt, props.answerVerifyingEndsAt, props.answerVerifyingTimeLeft, timerNowMs)
+    const phaseProgress = getTimedProgress(props.phaseStartedAt, props.phaseEndsAt, props.phaseTimeLeft ?? null, timerNowMs)
     const progressBarPositionClassName = 'fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom,0px)+148px)] md:bottom-0'
     const bottomDockPositionClassName =
         'pointer-events-none fixed inset-x-0 z-40 flex justify-center px-4 bottom-[calc(env(safe-area-inset-bottom,0px)+88px)] md:bottom-6'
     const bottomDockPanelClassName = 'glass-card pointer-events-auto w-full max-w-xl rounded-[2rem] p-3'
-    const answerDockVisible = props.answeringStatus === 'answering' && props.answeringPlayerId === user.id
+    const isMultiAnswerQuestion = props.questionType === 'forAll' || props.questionType === 'stakeAll'
+    const answerDockVisible =
+        props.answeringStatus === 'answering' &&
+        ((props.answeringPlayerId === user.id && !isMultiAnswerQuestion) ||
+            (!isMasterView && isMultiAnswerQuestion && Boolean(props.eligiblePlayerIds?.includes(user.id)) && !props.playersWhoAnswered.includes(user.id)))
+    const selectionDockVisible = props.specialPhase === 'selecting-player' && (isMasterView || props.answeringPlayerId === user.id)
+    const valueDockVisible =
+        (props.specialPhase === 'choosing-price' || props.specialPhase === 'making-stake') && (isMasterView || props.answeringPlayerId === user.id)
+    const hiddenStakeDockVisible =
+        props.specialPhase === 'making-hidden-stakes' &&
+        !isMasterView &&
+        Boolean(props.eligiblePlayerIds?.includes(user.id)) &&
+        !Boolean(props.playersThatMadeBet?.includes(user.id))
     const verifyDockVisible = props.answeringStatus === 'answer-verifying' && isMasterView && Boolean(session?.internal?.currentAnsweringPlayerId)
     const showAnswerGivingProgressBar = props.answeringStatus === 'answering' && answerGivingProgress !== null && !answerDockVisible
     const showAnswerVerifyingProgressBar = props.answeringStatus === 'answer-verifying' && answerVerifyingProgress !== null && !verifyDockVisible
+    const showPhaseProgressBar = Boolean(props.specialPhase) && phaseProgress !== null && !selectionDockVisible && !valueDockVisible && !hiddenStakeDockVisible
 
     function updatePlayerVolume() {
         if (!playerRef.current) return
@@ -164,6 +272,7 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
 
     useEffect(() => {
         const hasLiveWorkerTimer =
+            (Boolean(props.specialPhase) && props.phaseStartedAt && props.phaseEndsAt) ||
             (props.answeringStatus === 'allowed' && props.answerRequestStartedAt && props.answerRequestEndsAt) ||
             (props.answeringStatus === 'answering' && props.answerGivingStartedAt && props.answerGivingEndsAt) ||
             (props.answeringStatus === 'answer-verifying' && props.answerVerifyingStartedAt && props.answerVerifyingEndsAt)
@@ -189,6 +298,9 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
         props.answerVerifyingEndsAt,
         props.answerVerifyingStartedAt,
         props.answeringStatus,
+        props.phaseEndsAt,
+        props.phaseStartedAt,
+        props.specialPhase,
         game.session?.isPaused,
         props.questionId
     ])
@@ -234,15 +346,21 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
     }
 
     const verifyingAnswerText = session?.internal?.currentAnsweringPlayerAnswerText
+    const questionAnswers = session?.internal?.currentQuestionAnswers || {}
     const correctAnswers = session?.internal?.correctAnswers || []
     const incorrectAnswers = session?.internal?.incorrectAnswers || []
     const mostAnswersList: string[] = correctAnswers.length > incorrectAnswers.length ? correctAnswers : incorrectAnswers
+    const currentPlayer = game.players.find(player => player.id === user.id)
+    const resolvedContent = resolvePackContent(props.Resources, props.type, props.content, props.isRef)
+    const valueSelectionKey = `${props.questionId}:${props.specialPhase || 'none'}:${(props.priceOptions || []).join(',')}:${props.questionPrice || ''}:${
+        currentPlayer?.playerScore || ''
+    }`
 
     let content!: React.ReactNode
 
     switch (props.type) {
         case 'image': {
-            content = <img src={props.Resources.current.Images[props.content.slice(1)]} alt="Question Image" />
+            content = <img src={resolvedContent} alt="Question Image" />
             break
         }
         case 'video': {
@@ -252,7 +370,7 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
                     style={{ maxWidth: '100vw' }}
                     autoPlay
                     onEnded={handleMediaEnded}
-                    src={props.Resources.current.Video[props.content.slice(1)]}
+                    src={resolvedContent}
                 ></video>
             )
             break
@@ -260,15 +378,24 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
         case 'voice': {
             content = (
                 <>
-                    <audio ref={playerRef} autoPlay onEnded={handleMediaEnded} src={props.Resources.current.Audio[props.content.slice(1)]}></audio>
+                    <audio ref={playerRef} autoPlay onEnded={handleMediaEnded} src={resolvedContent}></audio>
                     <img src="/assets/jeopardy/audio.gif" alt="Audio question" />
                 </>
             )
             break
         }
+        case 'html': {
+            content = <div dangerouslySetInnerHTML={{ __html: resolvedContent }} />
+            break
+        }
         case 'text':
         default: {
-            content = <>{props.content}</>
+            content =
+                props.contentPlacement === 'replic' ? (
+                    <div className="mx-auto max-w-3xl rounded-[1.5rem] border border-white/10 bg-blue-950/70 px-6 py-4 text-lg">{props.content}</div>
+                ) : (
+                    <>{props.content}</>
+                )
         }
     }
 
@@ -306,6 +433,32 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
                                 </TableBody>
                             </Table>
                         ) : null}
+                        {Object.keys(questionAnswers).length > 1 ? (
+                            <div className="mt-4">
+                                <Table aria-label="Submitted Answers" size="small">
+                                    <TableHead>
+                                        <TableRow>
+                                            <TableCell>Player</TableCell>
+                                            <TableCell>Answer</TableCell>
+                                            <TableCell>Wager</TableCell>
+                                            <TableCell>Rate</TableCell>
+                                        </TableRow>
+                                    </TableHead>
+                                    <TableBody>
+                                        {Object.entries(questionAnswers).map(([playerId, answer]) => (
+                                            <TableRow key={playerId}>
+                                                <TableCell>{game.players.find(player => player.id === playerId)?.userNickname || playerId}</TableCell>
+                                                <TableCell>{answer.value}</TableCell>
+                                                <TableCell>{answer.wager ?? props.questionPrice ?? ''}</TableCell>
+                                                <TableCell>
+                                                    {answer.rate || (session?.internal?.currentAnsweringPlayerId === playerId ? 'current' : '')}
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                        ) : null}
                         <LiveTimedProgressBar
                             color="success"
                             initialProgress={answerVerifyingProgress}
@@ -325,6 +478,55 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
                                 Approve
                             </Button>
                         </div>
+                    </div>
+                </div>
+            ) : null}
+            {selectionDockVisible ? (
+                <div className={bottomDockPositionClassName}>
+                    <div className={bottomDockPanelClassName}>
+                        <div className="text-xs font-semibold uppercase tracking-[0.28em] text-violet-200/60">Choose Player</div>
+                        <div className="mt-2">
+                            <List>
+                                {(props.eligiblePlayerIds || []).map(playerId => (
+                                    <ListItem key={playerId} disablePadding>
+                                        <ListItemButton onClick={() => sendAction('$SelectQuestionPlayer', { playerId })}>
+                                            {game.players.find(player => player.id === playerId)?.userNickname || playerId}
+                                        </ListItemButton>
+                                    </ListItem>
+                                ))}
+                            </List>
+                        </div>
+                        <LiveTimedProgressBar
+                            initialProgress={phaseProgress}
+                            getIsPaused={() => isPausedRef.current}
+                            style={{ marginTop: '16px' }}
+                            getProgress={nowMs => {
+                                const { startedAt, endsAt, fallback } = phaseProgressSourceRef.current
+
+                                return getTimedProgress(startedAt, endsAt, fallback ?? null, nowMs)
+                            }}
+                        />
+                    </div>
+                </div>
+            ) : null}
+            {valueDockVisible || hiddenStakeDockVisible ? (
+                <div className={bottomDockPositionClassName}>
+                    <div className={bottomDockPanelClassName}>
+                        <QuestionValueDock
+                            key={valueSelectionKey}
+                            title={props.specialPhase === 'making-hidden-stakes' ? 'Hidden Stake' : 'Question Value'}
+                            initialValue={props.questionPrice || props.priceOptions?.[0] || 1}
+                            minValue={props.specialPhase === 'making-hidden-stakes' ? 1 : props.priceOptions?.[0] || 1}
+                            maxValue={
+                                props.specialPhase === 'making-hidden-stakes'
+                                    ? Math.max(currentPlayer?.playerScore || 1, 1)
+                                    : props.priceOptions?.[props.priceOptions.length - 1] || props.questionPrice || 1
+                            }
+                            phaseProgress={phaseProgress}
+                            phaseProgressSourceRef={phaseProgressSourceRef}
+                            getIsPaused={() => isPausedRef.current}
+                            onConfirm={value => sendAction('$SetQuestionValue', { value })}
+                        />
                     </div>
                 </div>
             ) : null}
@@ -368,6 +570,11 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
             {showAnswerGivingProgressBar && (
                 <Box className={progressBarPositionClassName}>
                     <LinearProgress variant="determinate" value={answerGivingProgress} color="secondary" />
+                </Box>
+            )}
+            {showPhaseProgressBar && (
+                <Box className={progressBarPositionClassName}>
+                    <LinearProgress variant="determinate" value={phaseProgress} />
                 </Box>
             )}
             {props.answeringStatus === 'allowed' && answerRequestProgress !== null && (

@@ -1,54 +1,94 @@
 export namespace JeopardyDeclaration {
-    export interface QuestionScenarioAtomVideo {
-        _attributes: {
-            type: 'video'
+    export type ContentPlacement = 'background' | 'replic' | 'screen'
+    export type ContentType = 'audio' | 'html' | 'image' | 'marker' | 'say' | 'text' | 'video' | 'voice'
+
+    export interface ContentItem {
+        _attributes?: {
+            duration?: string
+            isRef?: 'False' | 'True' | boolean
+            placement?: ContentPlacement
+            type?: ContentType
+            waitForFinish?: 'False' | 'True' | boolean
         }
-        _text: `@${string}.${string}"`
+        _cdata?: string
+        _text?: string
     }
 
-    export interface QuestionScenarioAtomVoice {
+    export interface LegacyQuestionTypeParam {
         _attributes: {
-            type: 'voice'
+            name: string
         }
-        _text: `@${string}.${string}"`
+        _text?: string
     }
 
-    export interface QuestionScenarioAtomImage {
+    export interface LegacyQuestionType {
+        _attributes?: {
+            name?: string
+        }
+        _text?: string
+        param?: LegacyQuestionTypeParam | LegacyQuestionTypeParam[]
+    }
+
+    export interface NumberSet {
         _attributes: {
-            type: 'image'
+            maximum?: `${number}` | string
+            minimum?: `${number}` | string
+            step?: `${number}` | string
         }
-        _text: `@${string}.${string}"`
     }
 
-    export interface QuestionScenarioAtomText {
-        _text: string
-    }
-
-    export interface QuestionScenarioAtomMarker {
+    export interface QuestionParameter {
         _attributes: {
-            type: 'marker'
+            name: string
+            type?: string
         }
+        _cdata?: string
+        _text?: string
+        item?: ContentItem | ContentItem[]
+        numberSet?: NumberSet
+        param?: QuestionParameter | QuestionParameter[]
     }
-
-    export type QuestionScenarioContentAtom = QuestionScenarioAtomImage | QuestionScenarioAtomVoice | QuestionScenarioAtomVideo | QuestionScenarioAtomText
-    export type QuestionScenarioAtom = QuestionScenarioContentAtom | QuestionScenarioAtomMarker
 
     export interface QuestionScenario {
-        atom: QuestionScenarioAtom | QuestionScenarioAtom[]
+        atom: ContentItem | ContentItem[]
     }
 
     export interface QuestionAnswer {
-        _text: string
+        _text?: string
+    }
+
+    export interface QuestionScriptStepParam {
+        _attributes: {
+            isRef?: 'False' | 'True' | boolean
+            name: string
+            type?: string
+        }
+        _text?: string
+    }
+
+    export interface QuestionScriptStep {
+        _attributes: {
+            type: string
+        }
+        param?: QuestionScriptStepParam | QuestionScriptStepParam[]
     }
 
     export interface Question {
         _attributes: {
             price: `${number}`
+            type?: string
         }
-        scenario: QuestionScenario
+        params?: {
+            param: QuestionParameter | QuestionParameter[]
+        }
         right: {
             answer: QuestionAnswer | QuestionAnswer[]
         }
+        scenario?: QuestionScenario
+        script?: {
+            step: QuestionScriptStep | QuestionScriptStep[]
+        }
+        type?: LegacyQuestionType
         wrong?: {
             answer: QuestionAnswer | QuestionAnswer[]
         }
@@ -66,7 +106,7 @@ export namespace JeopardyDeclaration {
     export interface Round {
         _attributes: {
             name: string
-            type?: 'final'
+            type?: 'final' | 'themeList' | string
         }
         themes: {
             theme: Theme[] | Theme
@@ -76,25 +116,29 @@ export namespace JeopardyDeclaration {
     export interface Pack {
         _declaration: {
             _attributes: {
-                version: `${number}.${number}`
                 encoding: string
+                version: `${number}.${number}`
             }
         }
         package: {
             _attributes: {
-                name: string
-                version: `${number}`
-                id: string
                 date: `${number}.${number}.${number}`
-                difficulty: `${number}.${number}`
-                logo: `@${string}.${string}`
+                difficulty: `${number}.${number}` | string
+                id: string
+                logo?: `@${string}.${string}` | string
+                name: string
+                version: `${number}` | string
                 xmlns: string
             }
-            info: {
-                authors: {
-                    author: {
-                        _text: string
-                    }
+            info?: {
+                authors?: {
+                    author:
+                        | {
+                              _text: string
+                          }[]
+                        | {
+                              _text: string
+                          }
                 }
             }
             rounds: {
@@ -106,6 +150,30 @@ export namespace JeopardyDeclaration {
 
 export type RealtimeJeopardyQuestionId = `${number}-${number}-${number}`
 export type RealtimeJeopardyThemeId = `${number}-${number}`
+
+export type RealtimeJeopardyQuestionType =
+    | 'custom'
+    | 'forAll'
+    | 'forYourself'
+    | 'noRisk'
+    | 'secret'
+    | 'secretNoQuestion'
+    | 'secretPublicPrice'
+    | 'simple'
+    | 'stake'
+    | 'stakeAll'
+
+export type RealtimeJeopardyQuestionPhase =
+    | 'choosing-price'
+    | 'making-hidden-stakes'
+    | 'making-stake'
+    | 'question-verifying'
+    | 'selecting-player'
+    | 'showing-answer'
+    | 'showing-question'
+    | 'waiting-to-start'
+
+export type RealtimeJeopardyContentPlacement = 'background' | 'replic' | 'screen'
 
 export interface RealtimeJeopardyWinner {
     id: string
@@ -159,17 +227,30 @@ export namespace RealtimeJeopardyState {
         answerVerifyingStartedAt?: string | null
         answerVerifyingTimeLeft: number | null
         answeringPlayerId: string | null
-        answeringStatus: 'too-early' | 'allowed' | 'answering' | 'answer-verifying' | 'too-late'
+        answeringStatus: 'allowed' | 'answer-verifying' | 'answering' | 'too-early' | 'too-late'
         content: string
+        contentPlacement?: RealtimeJeopardyContentPlacement
+        eligiblePlayerIds?: string[]
         elapsedMediaTimeMs?: number
         id: 'question-content'
+        isRef?: boolean
         mediaStartedAt?: string | null
+        phaseEndsAt?: string | null
+        phaseStartedAt?: string | null
+        phaseTimeLeft?: number | null
         playersOnCooldown: string[]
+        playersThatMadeBet?: string[]
         playersWhoAnswered: string[]
+        priceOptions?: number[]
         questionId: RealtimeJeopardyQuestionId
+        questionPrice?: number | null
+        questionTheme?: string | null
+        questionType?: RealtimeJeopardyQuestionType
         result?: 'approved' | 'declined'
+        selectedPlayerId?: string | null
         skipVoted: string[]
-        type: 'text' | 'voice' | 'video' | 'image'
+        specialPhase?: RealtimeJeopardyQuestionPhase | null
+        type: 'html' | 'image' | 'text' | 'video' | 'voice'
     }
 
     export interface FinalScoreFrame {
@@ -179,14 +260,19 @@ export namespace RealtimeJeopardyState {
 
     export interface FinalRoundBoardFrame {
         id: 'final-round-board'
+        phaseEndsAt?: string | null
+        phaseStartedAt?: string | null
+        phaseTimeLeft?: number | null
         playersThatAnswered: string[]
         playersThatMadeBet: string[]
         questionAtoms?: {
             content: string
-            type?: 'text' | 'voice' | 'video' | 'image'
+            isRef?: boolean
+            placement?: RealtimeJeopardyContentPlacement
+            type?: 'html' | 'image' | 'text' | 'video' | 'voice'
         }[]
         skipperId: string | null
-        status: 'skipping' | 'betting' | 'answering' | 'answer-verifying'
+        status: 'answer-verifying' | 'answering' | 'betting' | 'skipping'
         themes: {
             name: string
             skipped: boolean
@@ -195,12 +281,12 @@ export namespace RealtimeJeopardyState {
 
     export type Frame =
         | { id: 'none' }
-        | PackPreviewFrame
-        | RoundPreviewFrame
-        | QuestionBoardFrame
-        | QuestionContentFrame
         | FinalRoundBoardFrame
         | FinalScoreFrame
+        | PackPreviewFrame
+        | QuestionBoardFrame
+        | QuestionContentFrame
+        | RoundPreviewFrame
 }
 
 export interface RealtimeJeopardySessionInternal {
@@ -209,6 +295,19 @@ export interface RealtimeJeopardySessionInternal {
     correctAnswers?: string[] | null
     currentAnsweringPlayerAnswerText?: string | null
     currentAnsweringPlayerId: string | null
+    currentQuestionAnswers?: {
+        [userId: string]: {
+            rate?: 'approved' | 'declined'
+            value: string
+            wager?: number
+        }
+    }
+    currentQuestionBets?: {
+        [userId: string]: number
+    }
+    currentQuestionPrice?: number | null
+    currentQuestionSelectedPlayerId?: string | null
+    currentQuestionVerificationQueue?: string[]
     currentRoundId: number
     finalAnswers: {
         [userId: string]: {

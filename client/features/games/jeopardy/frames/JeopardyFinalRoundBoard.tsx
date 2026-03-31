@@ -1,35 +1,81 @@
 import React, { MutableRefObject, useEffect, useRef, useState } from 'react'
-import { Box, Button, Grid, List, ListItem, ListItemButton, Slider, Table, TableBody, TableCell, TableHead, TableRow, TextField } from 'client/ui/mui-shim'
+import {
+    Box,
+    Button,
+    Grid,
+    LinearProgress,
+    List,
+    ListItem,
+    ListItemButton,
+    Slider,
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableRow,
+    TextField
+} from 'client/ui/mui-shim'
 import { useUser } from 'client/context/list'
 import { useActionSender, useJeopardy } from '../JeopardyView'
 import { useGlobalModal } from 'client/features/global-modal/GlobalModal'
 import { JeopardyMedia } from '../utils/jeopardyPackLoading'
 import type { RealtimeJeopardySessionState, RealtimeJeopardyState } from 'shared/contracts/jeopardy'
 
-const FinalQuestion: React.FC<{ type: string; content: string; Resources: MutableRefObject<JeopardyMedia> }> = props => {
+function resolveFinalContent(Resources: MutableRefObject<JeopardyMedia>, type: string, content: string, isRef: boolean | undefined) {
+    if (!isRef) {
+        return content
+    }
+
+    switch (type) {
+        case 'image':
+            return Resources.current.Images[content] || content
+        case 'video':
+            return Resources.current.Video[content] || content
+        case 'voice':
+            return Resources.current.Audio[content] || content
+        default:
+            return content
+    }
+}
+
+function getTimedProgress(startedAt: string | null | undefined, endsAt: string | null | undefined, fallback: number | null | undefined, nowMs: number) {
+    if (!startedAt || !endsAt) {
+        return fallback ?? null
+    }
+
+    const startedAtMs = new Date(startedAt).getTime()
+    const endsAtMs = new Date(endsAt).getTime()
+
+    if (!Number.isFinite(startedAtMs) || !Number.isFinite(endsAtMs) || endsAtMs <= startedAtMs) {
+        return fallback ?? null
+    }
+
+    return Math.max(0, Math.min(100, ((endsAtMs - nowMs) / (endsAtMs - startedAtMs)) * 100))
+}
+
+const FinalQuestion: React.FC<{ type: string; content: string; isRef?: boolean; Resources: MutableRefObject<JeopardyMedia> }> = props => {
     const playerRef = useRef<HTMLAudioElement | HTMLVideoElement | null>(null)
+    const resolvedContent = resolveFinalContent(props.Resources, props.type, props.content, props.isRef)
 
     switch (props.type) {
         case 'image': {
-            return <img src={props.Resources.current.Images[props.content.slice(1)]} alt="Question Image" />
+            return <img src={resolvedContent} alt="Question Image" />
         }
         case 'video': {
             return (
-                <video
-                    ref={playerRef as React.MutableRefObject<HTMLVideoElement | null>}
-                    style={{ maxWidth: '100vw' }}
-                    controls
-                    src={props.Resources.current.Video[props.content.slice(1)]}
-                ></video>
+                <video ref={playerRef as React.MutableRefObject<HTMLVideoElement | null>} style={{ maxWidth: '100vw' }} controls src={resolvedContent}></video>
             )
         }
         case 'voice': {
             return (
                 <>
-                    <audio ref={playerRef} controls src={props.Resources.current.Audio[props.content.slice(1)]}></audio>
+                    <audio ref={playerRef} controls src={resolvedContent}></audio>
                     <img src="/assets/jeopardy/audio.gif" alt="Audio question" />
                 </>
             )
+        }
+        case 'html': {
+            return <div dangerouslySetInnerHTML={{ __html: resolvedContent }} />
         }
         case 'text':
         default: {
@@ -51,8 +97,10 @@ export const FinalRoundBoard: React.FC<
     const [betValue, setBetValue] = useState(1)
     const betValueRef = useRef(1)
     const [answer, setAnswer] = useState('')
+    const [timerNowMs, setTimerNowMs] = useState(() => Date.now())
 
     const isMasterView = game.players.some(p => p.id === user.id && p.playerIsMaster)
+    const phaseProgress = getTimedProgress(props.phaseStartedAt, props.phaseEndsAt, props.phaseTimeLeft, timerNowMs)
 
     const handleSkip = (id: number) => () => {
         sendAction('$SkipFinalTheme', {
@@ -102,6 +150,18 @@ export const FinalRoundBoard: React.FC<
     useEffect(() => {
         if (props.status === 'betting') showBettingModal()
     }, [props.status])
+
+    useEffect(() => {
+        if (!props.phaseStartedAt || !props.phaseEndsAt) {
+            return
+        }
+
+        const intervalId = window.setInterval(() => setTimerNowMs(Date.now()), 100)
+
+        return () => {
+            window.clearInterval(intervalId)
+        }
+    }, [props.phaseEndsAt, props.phaseStartedAt, props.status])
 
     const internal = (game.session as RealtimeJeopardySessionState).internal
 
@@ -180,7 +240,7 @@ export const FinalRoundBoard: React.FC<
                     )}
                     {props.questionAtoms?.map((q, i) => (
                         <Grid item key={i}>
-                            <FinalQuestion Resources={props.Resources} content={q.content || ''} type={q.type || 'text'} />
+                            <FinalQuestion Resources={props.Resources} content={q.content || ''} isRef={q.isRef} type={q.type || 'text'} />
                         </Grid>
                     ))}
                     {!isMasterView && !props.playersThatAnswered.includes(user.id) && (
@@ -201,6 +261,11 @@ export const FinalRoundBoard: React.FC<
         <Grid display="grid" justifyContent="center" alignContent="center" width="100vw" minHeight="var(--fullHeight)">
             <Grid sx={{ textAlign: 'center' }} item>
                 {content}
+                {phaseProgress !== null && ['answering', 'betting', 'skipping'].includes(props.status) ? (
+                    <Box sx={{ mt: 3 }}>
+                        <LinearProgress variant="determinate" value={phaseProgress} />
+                    </Box>
+                ) : null}
             </Grid>
         </Grid>
     )

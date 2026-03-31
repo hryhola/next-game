@@ -6,6 +6,7 @@ import { GlobalPresenceDO } from './durable-objects/GlobalPresenceDO'
 import { LobbyDO } from './durable-objects/LobbyDO'
 import { parseJeopardyPackArchive } from './jeopardy/pack'
 import { clearSessionCookie, createSessionCookie, readSessionToken } from './lib/cookies'
+import { encodeHeaderValue } from './lib/headerEncoding'
 import { json } from './lib/json'
 import { listLobbies } from './lobbies/store'
 import { playgroundHtml } from './playground'
@@ -110,11 +111,11 @@ function withCors(request: Request, response: Response): Response {
 function appendSessionHeaders(headers: Headers, session: ResolvedSession): Headers {
     headers.set('x-session-id', session.sessionId)
     headers.set('x-user-id', session.user.id)
-    headers.set('x-user-nickname', session.user.userNickname)
-    headers.set('x-user-color', session.user.userColor)
+    headers.set('x-user-nickname', encodeHeaderValue(session.user.userNickname))
+    headers.set('x-user-color', encodeHeaderValue(session.user.userColor))
 
     if (session.user.userAvatarUrl) {
-        headers.set('x-user-avatar-url', session.user.userAvatarUrl)
+        headers.set('x-user-avatar-url', encodeHeaderValue(session.user.userAvatarUrl))
     } else {
         headers.delete('x-user-avatar-url')
     }
@@ -127,7 +128,7 @@ function toLobbyRequest(request: Request, lobbyId: string, targetPath: string, s
     url.pathname = targetPath
 
     const headers = new Headers(request.headers)
-    headers.set('x-lobby-id', lobbyId)
+    headers.set('x-lobby-id', encodeHeaderValue(lobbyId))
     headers.delete('authorization')
 
     if (session) {

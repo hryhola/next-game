@@ -16,15 +16,18 @@ const JeopardyControls = (props: Props) => {
 
     if (lobby.myRole !== 'spectator') {
         const isMasterView = game.players.some(p => p.id === user.id && p.playerIsMaster)
+        const questionFrame = game.session?.frame.id === 'question-content' ? game.session.frame : null
 
         if (!isMasterView) {
+            const isStandardBuzzerQuestion = questionFrame && (questionFrame.questionType === 'simple' || questionFrame.questionType === 'custom')
+            const isEarlyBuzzWindow =
+                isStandardBuzzerQuestion && questionFrame.specialPhase === 'showing-question' && questionFrame.answeringStatus === 'too-early'
+            const isRegularBuzzWindow = questionFrame?.answeringStatus === 'allowed'
             const theButtonEnabled =
-                game.session?.frame.id === 'question-content' &&
-                game.session.frame.answeringStatus !== 'answering' &&
-                game.session.frame.answeringStatus !== 'answer-verifying' &&
-                !game.session.frame.playersOnCooldown.includes(user.id) &&
-                !game.session.frame.playersWhoAnswered.includes(user.id) &&
-                game.session.frame.answeringPlayerId !== user.id
+                (isEarlyBuzzWindow || isRegularBuzzWindow) &&
+                !questionFrame.playersOnCooldown.includes(user.id) &&
+                !questionFrame.playersWhoAnswered.includes(user.id) &&
+                questionFrame.answeringPlayerId !== user.id
 
             gameControls.push(
                 <Button className="w-full" onClick={() => actionSender('$AnswerRequest', null)} disabled={!theButtonEnabled} key="2">

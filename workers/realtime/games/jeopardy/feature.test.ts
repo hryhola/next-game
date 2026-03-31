@@ -146,7 +146,144 @@ function createPack(): JeopardyDeclaration.Pack {
     }
 }
 
-function createState(pack: JeopardyDeclaration.Pack = createPack()): StoredLobbyState {
+function createScenarioQuestion({
+    answerText = 'Answer',
+    correctAnswer = 'Correct',
+    price,
+    type,
+    wrongAnswer
+}: {
+    answerText?: string
+    correctAnswer?: string
+    price: string
+    type?: string
+    wrongAnswer?: string
+}): JeopardyDeclaration.Question {
+    return {
+        _attributes: {
+            ...(type ? { type } : {}),
+            price
+        },
+        right: {
+            answer: {
+                _text: correctAnswer
+            }
+        },
+        ...(wrongAnswer
+            ? {
+                  wrong: {
+                      answer: {
+                          _text: wrongAnswer
+                      }
+                  }
+              }
+            : {}),
+        scenario: {
+            atom: [
+                {
+                    _text: `Question ${price}`
+                },
+                {
+                    _attributes: {
+                        type: 'marker'
+                    }
+                },
+                {
+                    _text: answerText
+                }
+            ]
+        }
+    }
+}
+
+function createParamQuestion({
+    answerText = 'Answer',
+    correctAnswer = 'Correct',
+    params,
+    price,
+    type,
+    wrongAnswer
+}: {
+    answerText?: string
+    correctAnswer?: string
+    params?: JeopardyDeclaration.QuestionParameter[]
+    price: string
+    type: string
+    wrongAnswer?: string
+}): JeopardyDeclaration.Question {
+    return {
+        _attributes: {
+            price,
+            type
+        },
+        params: {
+            param: params || [
+                {
+                    _attributes: {
+                        name: 'question',
+                        type: 'content'
+                    },
+                    item: {
+                        _text: `Question ${price}`
+                    }
+                }
+            ]
+        },
+        right: {
+            answer: {
+                _text: correctAnswer
+            }
+        },
+        ...(wrongAnswer
+            ? {
+                  wrong: {
+                      answer: {
+                          _text: wrongAnswer
+                      }
+                  }
+              }
+            : {}),
+        ...(answerText
+            ? {
+                  scenario: {
+                      atom: [
+                          {
+                              _text: answerText
+                          }
+                      ]
+                  }
+              }
+            : {})
+    }
+}
+
+function createPackWithQuestions(questions: JeopardyDeclaration.Question[]): JeopardyDeclaration.Pack {
+    const pack = createPack()
+
+    ;(pack.package.rounds.round as JeopardyDeclaration.Round).themes.theme = {
+        _attributes: {
+            name: 'Theme 1'
+        },
+        questions: {
+            question: questions
+        }
+    }
+
+    return pack
+}
+
+function createState(pack: JeopardyDeclaration.Pack = createPack(), contestantCount = 1): StoredLobbyState {
+    const contestants = Array.from({ length: contestantCount }, (_, index) => ({
+        id: `contestant-${index + 1}`,
+        isCreator: false,
+        joinedAt: `2026-03-31T12:00:0${index + 1}.000Z`,
+        playerScore: 0,
+        ready: true,
+        role: 'player' as const,
+        userColor: '#00ff00',
+        userNickname: `Contestant ${index + 1}`
+    }))
+
     return {
         chat: [],
         createdAt: '2026-03-31T12:00:00.000Z',
@@ -179,25 +316,16 @@ function createState(pack: JeopardyDeclaration.Pack = createPack()): StoredLobby
                 userColor: '#ffffff',
                 userNickname: 'Master'
             },
-            {
-                id: 'contestant-1',
-                isCreator: false,
-                joinedAt: '2026-03-31T12:00:01.000Z',
-                playerScore: 0,
-                ready: true,
-                role: 'player',
-                userColor: '#00ff00',
-                userNickname: 'Contestant 1'
-            }
+            ...contestants
         ],
         name: 'Jeopardy Lobby',
         readyCheck: {
-            participants: ['master', 'contestant-1'],
+            participants: ['master', ...contestants.map(contestant => contestant.id)],
             status: 'success',
             updatedAt: '2026-03-31T12:00:00.000Z',
             votes: {
-                'contestant-1': true,
-                master: true
+                master: true,
+                ...Object.fromEntries(contestants.map(contestant => [contestant.id, true]))
             }
         },
         updatedAt: '2026-03-31T12:00:00.000Z'
@@ -245,7 +373,7 @@ async function startGame(feature: JeopardyLobbyFeature, state: StoredLobbyState)
     expect(feature.getActiveLobbySessionId(state)).toBeTruthy()
 }
 
-async function advanceToAnswerRequest(feature: JeopardyLobbyFeature, state: StoredLobbyState, scheduler: MockScheduler) {
+async function advanceToQuestion(feature: JeopardyLobbyFeature, state: StoredLobbyState, scheduler: MockScheduler, questionId: string) {
     await startGame(feature, state)
     await runScheduledTask(feature, state, scheduler, 'pack-preview.complete')
 
@@ -255,12 +383,15 @@ async function advanceToAnswerRequest(feature: JeopardyLobbyFeature, state: Stor
     expect(state.game.session?.frame.id).toBe('question-board')
 
     const pickQuestionResult = await feature.handleAction(state, 'master', '$PickQuestion', {
-        questionId: '0-0-0'
+        questionId
     })
 
     expect(pickQuestionResult.success).toBe(true)
-
     await runScheduledTask(feature, state, scheduler, 'pick-question.complete')
+}
+
+async function advanceToAnswerRequest(feature: JeopardyLobbyFeature, state: StoredLobbyState, scheduler: MockScheduler) {
+    await advanceToQuestion(feature, state, scheduler, '0-0-0')
     await runScheduledTask(feature, state, scheduler, 'question.atom.complete')
 
     const frame = getQuestionFrame(state)
@@ -368,6 +499,35 @@ describe('jeopardy flow', () => {
         expect(scheduler.tasks.find(task => task.key.endsWith('answer-giving.complete'))?.scheduledAt).toBe(new Date('2026-03-31T12:00:17.000Z').getTime())
     })
 
+    it('puts contestants on cooldown when they buzz during question presentation', async () => {
+        const state = createState()
+        const { feature, scheduler } = createFeatureHarness()
+
+        await advanceToQuestion(feature, state, scheduler, '0-0-0')
+
+        let frame = getQuestionFrame(state)
+
+        expect(frame.specialPhase).toBe('showing-question')
+        expect(frame.answeringStatus).toBe('too-early')
+
+        const earlyBuzzResult = await feature.handleAction(state, 'contestant-1', '$AnswerRequest', null)
+
+        expect(earlyBuzzResult.success).toBe(true)
+        frame = getQuestionFrame(state)
+        expect(frame.playersOnCooldown).toContain('contestant-1')
+        expect(scheduler.listSuffixes()).toContain('cooldown.contestant-1')
+
+        const repeatedBuzzResult = await feature.handleAction(state, 'contestant-1', '$AnswerRequest', null)
+
+        expect(repeatedBuzzResult.success).toBe(false)
+        expect(repeatedBuzzResult.code).toBe('player_unavailable')
+
+        await runScheduledTask(feature, state, scheduler, 'cooldown.contestant-1')
+
+        frame = getQuestionFrame(state)
+        expect(frame.playersOnCooldown).not.toContain('contestant-1')
+    })
+
     it('skips through answer phases without reopening the same timer from the start', async () => {
         const state = createState()
         const { feature, scheduler } = createFeatureHarness()
@@ -431,10 +591,177 @@ describe('jeopardy flow', () => {
         expect(feature.getActiveLobbySessionId(state)).toBeTruthy()
         expect(frame.answeringPlayerId).toBeNull()
         expect(frame.answeringStatus).toBe('allowed')
+        expect(frame.specialPhase).toBeUndefined()
         expect(frame.answerRequestStartedAt).toBe('2026-03-31T12:00:00.000Z')
         expect(frame.answerRequestEndsAt).toBe('2026-03-31T12:00:05.000Z')
         expect(frame.answerRequestTimeLeft).toBe(60)
         expect(scheduler.listSuffixes()).toContain('answer-request.complete')
         expect(scheduler.listSuffixes()).not.toContain('answer-giving.complete')
+    })
+
+    it('supports stake questions with a timed stake selection that survives pause and resume', async () => {
+        const pack = createPackWithQuestions([createScenarioQuestion({ price: '300', type: 'stake' })])
+        const state = createState(pack)
+        const { feature, scheduler } = createFeatureHarness()
+
+        await advanceToQuestion(feature, state, scheduler, '0-0-0')
+
+        const frame = getQuestionFrame(state)
+
+        expect(frame.questionType).toBe('stake')
+        expect(frame.specialPhase).toBe('making-stake')
+        expect(frame.answeringPlayerId).toBe('contestant-1')
+        expect(frame.phaseStartedAt).toBe('2026-03-31T12:00:00.000Z')
+        expect(frame.phaseEndsAt).toBe('2026-03-31T12:00:30.000Z')
+
+        jest.setSystemTime(new Date('2026-03-31T12:00:10.000Z'))
+        await feature.handleAction(state, 'master', '$Pause', null)
+        jest.setSystemTime(new Date('2026-03-31T12:00:15.000Z'))
+        await feature.handleAction(state, 'master', '$Resume', null)
+
+        const resumedFrame = getQuestionFrame(state)
+
+        expect(resumedFrame.phaseStartedAt).toBe('2026-03-31T12:00:05.000Z')
+        expect(resumedFrame.phaseEndsAt).toBe('2026-03-31T12:00:35.000Z')
+        expect(resumedFrame.phaseTimeLeft).toBeCloseTo(66.666, 1)
+
+        const setStakeResult = await feature.handleAction(state, 'contestant-1', '$SetQuestionValue', { value: 500 })
+
+        expect(setStakeResult.success).toBe(true)
+        await runScheduledTask(feature, state, scheduler, 'question.atom.complete')
+
+        const answeringFrame = getQuestionFrame(state)
+
+        expect(answeringFrame.answeringStatus).toBe('answering')
+        expect(answeringFrame.answeringPlayerId).toBe('contestant-1')
+        expect(answeringFrame.questionPrice).toBe(500)
+        expect(answeringFrame.specialPhase).toBeUndefined()
+    })
+
+    it('lets the chooser transfer a secret question to another contestant', async () => {
+        const pack = createPackWithQuestions([
+            createParamQuestion({
+                price: '400',
+                type: 'secret',
+                params: [
+                    {
+                        _attributes: {
+                            name: 'theme'
+                        },
+                        _text: 'Secret Theme'
+                    },
+                    {
+                        _attributes: {
+                            name: 'price',
+                            type: 'numberSet'
+                        },
+                        numberSet: {
+                            _attributes: {
+                                maximum: '700',
+                                minimum: '700',
+                                step: '0'
+                            }
+                        }
+                    },
+                    {
+                        _attributes: {
+                            name: 'selectionMode'
+                        },
+                        _text: 'exceptCurrent'
+                    },
+                    {
+                        _attributes: {
+                            name: 'question',
+                            type: 'content'
+                        },
+                        item: {
+                            _text: 'Secret question'
+                        }
+                    }
+                ]
+            })
+        ])
+        const state = createState(pack, 2)
+        const { feature, scheduler } = createFeatureHarness()
+
+        await advanceToQuestion(feature, state, scheduler, '0-0-0')
+
+        let frame = getQuestionFrame(state)
+
+        expect(frame.specialPhase).toBe('selecting-player')
+        expect(frame.answeringPlayerId).toBe('contestant-1')
+        expect(frame.eligiblePlayerIds).toEqual(['contestant-2'])
+
+        const selectionResult = await feature.handleAction(state, 'contestant-1', '$SelectQuestionPlayer', {
+            playerId: 'contestant-2'
+        })
+
+        expect(selectionResult.success).toBe(true)
+        await runScheduledTask(feature, state, scheduler, 'question.atom.complete')
+
+        frame = getQuestionFrame(state)
+        expect(frame.selectedPlayerId).toBe('contestant-2')
+        expect(frame.answeringStatus).toBe('answering')
+        expect(frame.answeringPlayerId).toBe('contestant-2')
+        expect(frame.questionPrice).toBe(700)
+        expect(frame.questionTheme).toBe('Secret Theme')
+        expect(frame.specialPhase).toBeUndefined()
+    })
+
+    it('collects for-all answers from multiple contestants and verifies them sequentially', async () => {
+        const pack = createPackWithQuestions([
+            createParamQuestion({
+                price: '500',
+                type: 'forAll',
+                wrongAnswer: 'Wrong',
+                params: [
+                    {
+                        _attributes: {
+                            name: 'question',
+                            type: 'content'
+                        },
+                        item: {
+                            _text: 'For all question'
+                        }
+                    }
+                ]
+            }),
+            createScenarioQuestion({
+                price: '600'
+            })
+        ])
+        const state = createState(pack, 2)
+        const { feature, scheduler } = createFeatureHarness()
+
+        await advanceToQuestion(feature, state, scheduler, '0-0-0')
+        await runScheduledTask(feature, state, scheduler, 'question.atom.complete')
+
+        let frame = getQuestionFrame(state)
+
+        expect(frame.answeringStatus).toBe('answering')
+        expect(frame.eligiblePlayerIds).toEqual(['contestant-1', 'contestant-2'])
+        expect(frame.specialPhase).toBeUndefined()
+
+        expect((await feature.handleAction(state, 'contestant-1', '$GiveAnswer', { text: 'A1' })).success).toBe(true)
+        expect((await feature.handleAction(state, 'contestant-2', '$GiveAnswer', { text: 'A2' })).success).toBe(true)
+
+        frame = getQuestionFrame(state)
+        expect(frame.answeringStatus).toBe('answer-verifying')
+        expect(state.game.session?.internal.currentAnsweringPlayerId).toBe('contestant-1')
+
+        expect((await feature.handleAction(state, 'master', '$RateAnswer', { rating: 'approved' })).success).toBe(true)
+        expect(state.members.find(member => member.id === 'contestant-1')?.playerScore).toBe(500)
+        expect(state.game.session?.internal.currentAnsweringPlayerId).toBe('contestant-2')
+
+        expect((await feature.handleAction(state, 'master', '$RateAnswer', { rating: 'declined' })).success).toBe(true)
+        expect(state.members.find(member => member.id === 'contestant-2')?.playerScore).toBe(-500)
+        frame = getQuestionFrame(state)
+        expect(frame.specialPhase).toBe('showing-answer')
+        expect(frame.content).toBe('Correct')
+
+        await runScheduledTask(feature, state, scheduler, 'question.atom.complete')
+
+        expect(state.game.session?.frame.id).toBe('question-board')
+        expect((state.game.session?.frame as RealtimeJeopardyState.QuestionBoardFrame).pickerId).toBe('contestant-1')
     })
 })

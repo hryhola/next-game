@@ -109,6 +109,12 @@ export type JeopardyGameActionMap = {
         }
         result: SuccessResult
     }
+    $SelectQuestionPlayer: {
+        payload: {
+            playerId: string
+        }
+        result: SuccessResult
+    }
     $RateAnswer: {
         payload: {
             rating: 'approved' | 'declined'
@@ -136,6 +142,12 @@ export type JeopardyGameActionMap = {
         payload: {
             playerID: string
             score: number
+        }
+        result: SuccessResult
+    }
+    $SetQuestionValue: {
+        payload: {
+            value: number
         }
         result: SuccessResult
     }

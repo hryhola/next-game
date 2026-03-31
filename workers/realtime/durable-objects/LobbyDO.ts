@@ -7,6 +7,7 @@ import type {
     RealtimeLobbyMemberRole
 } from '../../../shared/contracts/realtime-lobby'
 import type { IdentityProfile } from '../../../shared/contracts/identity'
+import { decodeHeaderValue } from '../lib/headerEncoding'
 import { json } from '../lib/json'
 import { markLobbyDeleted, upsertLobbyMetadata } from '../lobbies/store'
 import { LobbyScheduler } from '../scheduler/LobbyScheduler'
@@ -21,9 +22,9 @@ import type { LobbyMutationSuccess } from '../lobby/operations'
 function readIdentityHeaders(request: Request): LobbySocketAttachment | null {
     const sessionId = request.headers.get('x-session-id')
     const userId = request.headers.get('x-user-id')
-    const userNickname = request.headers.get('x-user-nickname')
-    const userColor = request.headers.get('x-user-color')
-    const userAvatarUrl = request.headers.get('x-user-avatar-url')
+    const userNickname = decodeHeaderValue(request.headers.get('x-user-nickname'))
+    const userColor = decodeHeaderValue(request.headers.get('x-user-color'))
+    const userAvatarUrl = decodeHeaderValue(request.headers.get('x-user-avatar-url'))
 
     if (!sessionId || !userId || !userNickname || !userColor) {
         return null
@@ -91,7 +92,7 @@ export class LobbyDO extends DurableObject<RealtimeWorkerEnv> {
 
     async fetch(request: Request): Promise<Response> {
         const url = new URL(request.url)
-        const lobbyId = request.headers.get('x-lobby-id') || this.ctx.id.toString()
+        const lobbyId = decodeHeaderValue(request.headers.get('x-lobby-id')) || this.ctx.id.toString()
 
         if (url.pathname === '/create') {
             return this.handleCreate(request, lobbyId)

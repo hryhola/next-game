@@ -5,7 +5,13 @@ import type {
     RealtimeLobbyMemberRole,
     RealtimeReadyCheckState
 } from '../../../../shared/contracts/realtime-lobby'
-import type { JeopardyDeclaration, RealtimeJeopardyQuestionId, RealtimeJeopardySessionState } from '../../../../shared/contracts/jeopardy'
+import type {
+    JeopardyDeclaration,
+    RealtimeJeopardyQuestionId,
+    RealtimeJeopardyQuestionType,
+    RealtimeJeopardySessionState
+} from '../../../../shared/contracts/jeopardy'
+import type { NormalizedJeopardyContentItem } from '../../jeopardy/pack'
 
 export interface StoredLobbyMember extends IdentityProfile {
     isCreator: boolean
@@ -22,9 +28,16 @@ export interface StoredJeopardyPausedTask {
 }
 
 export interface StoredJeopardyQuestionFlow {
-    afterAtoms: JeopardyDeclaration.QuestionScenarioContentAtom[]
-    beforeAtoms: JeopardyDeclaration.QuestionScenarioContentAtom[]
+    afterAtoms: NormalizedJeopardyContentItem[]
+    answerDurationMs: number | null
+    beforeAtoms: NormalizedJeopardyContentItem[]
+    currentPrice: number
+    priceMultiplier: number
+    priceOptions: number[]
+    questionTheme: string | null
     questionId: RealtimeJeopardyQuestionId
+    questionType: RealtimeJeopardyQuestionType
+    selectionMode: 'any' | 'exceptCurrent'
     shownAtomIndex: number
     stage: 'before' | 'after'
 }
@@ -90,8 +103,18 @@ export type LobbyScheduledTaskPayload =
           type: 'jeopardy.pick-question.complete'
       }
     | {
+          phase: string
+          sessionId: string
+          type: 'jeopardy.phase.complete'
+      }
+    | {
           sessionId: string
           type: 'jeopardy.pack-preview.complete'
+      }
+    | {
+          phase: 'answering' | 'betting' | 'skipping'
+          sessionId: string
+          type: 'jeopardy.final.phase.complete'
       }
     | {
           sessionId: string
