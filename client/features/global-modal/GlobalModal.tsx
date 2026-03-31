@@ -7,6 +7,7 @@ export interface GlobalModalOpenOptions {
     inContainer?: boolean
     content?: React.ReactNode
     actionRequired?: boolean
+    hideClose?: boolean
     zIndex?: number
     actions?: React.ReactNode
 }
@@ -17,6 +18,9 @@ export interface ConfirmModalOpenOptions {
     inContainer?: boolean
     actionRequired?: boolean | 'confirm'
     content?: React.ReactNode
+    closeOnCancel?: boolean
+    closeOnConfirm?: boolean
+    hideClose?: boolean
     zIndex?: number
     onConfirm: () => void
     onCancel?: () => void
@@ -41,6 +45,7 @@ export const GlobalModalProvider: React.FC<Props> = props => {
     const [inContainer, setInContainer] = useState(true)
     const [zIndex, setZIndex] = useState<undefined | number>(undefined)
     const [actionRequired, setActionRequired] = useState<boolean | 'confirm'>(false)
+    const [hideClose, setHideClose] = useState(false)
 
     const open = (options?: GlobalModalOpenOptions) => {
         setTitle(options?.title || null)
@@ -50,6 +55,7 @@ export const GlobalModalProvider: React.FC<Props> = props => {
         setActions(options?.actions || null)
         setIsModalOpen(true)
         setActionRequired(options?.actionRequired || false)
+        setHideClose(options?.hideClose ?? false)
         setZIndex(options?.zIndex)
 
         return () => setIsModalOpen(false)
@@ -65,6 +71,7 @@ export const GlobalModalProvider: React.FC<Props> = props => {
         setInContainer(options?.inContainer ?? true)
         setContent(options?.content || null)
         setActionRequired(options?.actionRequired || false)
+        setHideClose(options?.hideClose ?? false)
         setActions(
             <>
                 {options?.actionRequired !== 'confirm' ? (
@@ -73,7 +80,9 @@ export const GlobalModalProvider: React.FC<Props> = props => {
                             if (options.onCancel) {
                                 options.onCancel()
                             }
-                            close()
+                            if (options.closeOnCancel !== false) {
+                                close()
+                            }
                         }}
                     >
                         Cancel
@@ -84,7 +93,9 @@ export const GlobalModalProvider: React.FC<Props> = props => {
                 <Button
                     onClick={() => {
                         options.onConfirm()
-                        close()
+                        if (options.closeOnConfirm !== false) {
+                            close()
+                        }
                     }}
                 >
                     Confirm
@@ -108,7 +119,7 @@ export const GlobalModalProvider: React.FC<Props> = props => {
             {props.children}
             <Dialog open={isModalOpen} onOpenChange={value => (!actionRequired ? setIsModalOpen(value) : undefined)}>
                 {isModalOpen ? (
-                    <DialogContent style={zIndex ? { zIndex } : undefined} title={title} titleVisuallyHidden>
+                    <DialogContent hideClose={hideClose} style={zIndex ? { zIndex } : undefined} title={title} titleVisuallyHidden>
                         {header || calculatedContent ? (
                             <DialogHeader>
                                 {header ? <div className="text-2xl font-semibold text-white">{header}</div> : null}

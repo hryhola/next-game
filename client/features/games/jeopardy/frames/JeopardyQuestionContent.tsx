@@ -13,6 +13,12 @@ type QuestionContentProps = RealtimeJeopardyState.QuestionContentFrame & {
     useMediaTimestamp: boolean
 }
 
+type TimedProgressSource = {
+    startedAt: string | null | undefined
+    endsAt: string | null | undefined
+    fallback: number | null | undefined
+}
+
 function getTimedProgress(startedAt: string | null | undefined, endsAt: string | null | undefined, fallback: number | null, nowMs: number): number | null {
     if (!startedAt || !endsAt) {
         return fallback
@@ -31,6 +37,51 @@ function getTimedProgress(startedAt: string | null | undefined, endsAt: string |
     return Math.max(0, Math.min(100, (remainingMs / totalDurationMs) * 100))
 }
 
+const LiveTimedProgressBar: React.FC<{
+    color?: 'success' | 'secondary' | 'primary'
+    getProgress: (nowMs: number) => number | null
+    getIsPaused?: () => boolean
+    initialProgress?: number | null
+    style?: React.CSSProperties
+}> = ({ color, getProgress, getIsPaused, initialProgress = null, style }) => {
+    const [progress, setProgress] = useState<number | null>(initialProgress)
+
+    useEffect(() => {
+        let pausedAtMs: number | null = null
+
+        const updateProgress = () => {
+            const isPaused = getIsPaused?.() ?? false
+
+            if (isPaused) {
+                pausedAtMs ??= Date.now()
+                setProgress(getProgress(pausedAtMs))
+                return
+            }
+
+            pausedAtMs = null
+            setProgress(getProgress(Date.now()))
+        }
+
+        updateProgress()
+
+        const intervalId = window.setInterval(updateProgress, 100)
+
+        return () => {
+            window.clearInterval(intervalId)
+        }
+    }, [getIsPaused, getProgress])
+
+    if (progress === null) {
+        return null
+    }
+
+    return (
+        <Box style={style}>
+            <LinearProgress variant="determinate" value={progress} color={color} />
+        </Box>
+    )
+}
+
 export const QuestionContent: React.FC<QuestionContentProps> = props => {
     const user = useUser()
     const lobby = useLobby()
@@ -47,6 +98,42 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
     const answerInputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null)
     const closeAnswerModal = useRef<{ close: (() => void) | null }>({ close: null })
     const closeVerifyModal = useRef<{ close: (() => void) | null }>({ close: null })
+    const isPausedRef = useRef(game.session?.isPaused ?? false)
+    const answerGivingProgressSourceRef = useRef<TimedProgressSource>({
+        startedAt: props.answerGivingStartedAt,
+        endsAt: props.answerGivingEndsAt,
+        fallback: props.answerGivingTimeLeft
+    })
+    const answerVerifyingProgressSourceRef = useRef<TimedProgressSource>({
+        startedAt: props.answerVerifyingStartedAt,
+        endsAt: props.answerVerifyingEndsAt,
+        fallback: props.answerVerifyingTimeLeft
+    })
+
+    useEffect(() => {
+        answerGivingProgressSourceRef.current = {
+            startedAt: props.answerGivingStartedAt,
+            endsAt: props.answerGivingEndsAt,
+            fallback: props.answerGivingTimeLeft
+        }
+    }, [props.answerGivingEndsAt, props.answerGivingStartedAt, props.answerGivingTimeLeft])
+
+    useEffect(() => {
+        answerVerifyingProgressSourceRef.current = {
+            startedAt: props.answerVerifyingStartedAt,
+            endsAt: props.answerVerifyingEndsAt,
+            fallback: props.answerVerifyingTimeLeft
+        }
+    }, [props.answerVerifyingEndsAt, props.answerVerifyingStartedAt, props.answerVerifyingTimeLeft])
+
+    useEffect(() => {
+        isPausedRef.current = game.session?.isPaused ?? false
+    }, [game.session?.isPaused])
+
+    const answerRequestProgress = getTimedProgress(props.answerRequestStartedAt, props.answerRequestEndsAt, props.answerRequestTimeLeft, timerNowMs)
+    const answerGivingProgress = getTimedProgress(props.answerGivingStartedAt, props.answerGivingEndsAt, props.answerGivingTimeLeft, timerNowMs)
+    const answerVerifyingProgress = getTimedProgress(props.answerVerifyingStartedAt, props.answerVerifyingEndsAt, props.answerVerifyingTimeLeft, timerNowMs)
+    const progressBarPositionClassName = 'fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom,0px)+148px)] md:bottom-0'
 
     function updatePlayerVolume() {
         if (!playerRef.current) return
@@ -80,6 +167,10 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
             return
         }
 
+        if (game.session?.isPaused) {
+            return
+        }
+
         const intervalId = window.setInterval(() => setTimerNowMs(Date.now()), 100)
 
         return () => {
@@ -93,6 +184,7 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
         props.answerVerifyingEndsAt,
         props.answerVerifyingStartedAt,
         props.answeringStatus,
+        game.session?.isPaused,
         props.questionId
     ])
 
@@ -101,8 +193,25 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
             closeAnswerModal.current.close = globalModal.confirm({
                 title: 'Your answer',
                 header: 'Your answer',
-                actionRequired: true,
-                content: <TextField multiline inputRef={answerInputRef} />,
+                actionRequired: 'confirm',
+                closeOnConfirm: false,
+                content: (
+                    <Box>
+                        <TextField multiline inputRef={answerInputRef} />
+                        <LiveTimedProgressBar
+                            color="secondary"
+                            initialProgress={answerGivingProgress}
+                            getIsPaused={() => isPausedRef.current}
+                            style={{ marginTop: '16px' }}
+                            getProgress={nowMs => {
+                                const { startedAt, endsAt, fallback } = answerGivingProgressSourceRef.current
+
+                                return getTimedProgress(startedAt, endsAt, fallback ?? null, nowMs)
+                            }}
+                        />
+                    </Box>
+                ),
+                hideClose: true,
                 onConfirm: () =>
                     actionSender('$GiveAnswer', {
                         text: answerInputRef.current?.value
@@ -128,6 +237,9 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
             title: 'Verify answer',
             header: 'Verify answer',
             actionRequired: true,
+            closeOnCancel: false,
+            closeOnConfirm: false,
+            hideClose: true,
             inContainer: false,
             content: (
                 <Box>
@@ -156,6 +268,17 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
                     ) : (
                         <></>
                     )}
+                    <LiveTimedProgressBar
+                        color="success"
+                        initialProgress={answerVerifyingProgress}
+                        getIsPaused={() => isPausedRef.current}
+                        style={{ marginTop: '16px' }}
+                        getProgress={nowMs => {
+                            const { startedAt, endsAt, fallback } = answerVerifyingProgressSourceRef.current
+
+                            return getTimedProgress(startedAt, endsAt, fallback ?? null, nowMs)
+                        }}
+                    />
                 </Box>
             ),
             onConfirm: () => sendAction('$RateAnswer', { rating: 'approved' }),
@@ -197,11 +320,6 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
             lobbyId: lobby.lobbyId
         })
     }
-
-    const answerRequestProgress = getTimedProgress(props.answerRequestStartedAt, props.answerRequestEndsAt, props.answerRequestTimeLeft, timerNowMs)
-    const answerGivingProgress = getTimedProgress(props.answerGivingStartedAt, props.answerGivingEndsAt, props.answerGivingTimeLeft, timerNowMs)
-    const answerVerifyingProgress = getTimedProgress(props.answerVerifyingStartedAt, props.answerVerifyingEndsAt, props.answerVerifyingTimeLeft, timerNowMs)
-    const progressBarPositionClassName = 'fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom,0px)+148px)] md:bottom-0'
 
     let content!: React.ReactNode
 
