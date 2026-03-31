@@ -12,7 +12,7 @@ The old `uWebSockets.js` dependency is gone, so the web app no longer needs the 
 
 ## Ports
 
-- Next.js app: `3000`
+- Next.js app: `3010`
 - local Wrangler worker: `8787`
 
 ## Environment Variables

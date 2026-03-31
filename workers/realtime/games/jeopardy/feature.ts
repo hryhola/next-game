@@ -37,6 +37,17 @@ const JEOPARDY_ANSWER_GIVING_DURATION_MS = 10_000
 const JEOPARDY_ANSWER_VERIFYING_DURATION_MS = 10_000
 const JEOPARDY_ANSWER_COOLDOWN_MS = 2_000
 
+function getPhaseTimingWindow(nowMs: number, totalMs: number, remainingMs: number) {
+    const boundedRemainingMs = Math.max(0, Math.min(remainingMs, totalMs))
+    const startedAtMs = nowMs - (totalMs - boundedRemainingMs)
+
+    return {
+        endsAt: new Date(startedAtMs + totalMs).toISOString(),
+        startedAt: new Date(startedAtMs).toISOString(),
+        timeLeft: totalMs > 0 ? (boundedRemainingMs / totalMs) * 100 : 0
+    }
+}
+
 type JeopardyDeps = {
     createGameActionMessage: (payload: LobbyGameActionMessage['payload']) => LobbyGameActionMessage
     getConnectedSocketsCount: (userId: string) => number
@@ -404,6 +415,8 @@ export class JeopardyLobbyFeature {
                     )
                 }
 
+                const phaseTiming = getPhaseTimingWindow(Date.now(), JEOPARDY_ANSWER_GIVING_DURATION_MS, JEOPARDY_ANSWER_GIVING_DURATION_MS)
+
                 this.updateFrame(state, {
                     ...session.frame,
                     answeringPlayerId: userId,
@@ -411,9 +424,9 @@ export class JeopardyLobbyFeature {
                     answerRequestStartedAt: null,
                     answerRequestEndsAt: null,
                     answerRequestTimeLeft: null,
-                    answerGivingStartedAt: nowIso(),
-                    answerGivingEndsAt: new Date(Date.now() + JEOPARDY_ANSWER_GIVING_DURATION_MS).toISOString(),
-                    answerGivingTimeLeft: 100,
+                    answerGivingStartedAt: phaseTiming.startedAt,
+                    answerGivingEndsAt: phaseTiming.endsAt,
+                    answerGivingTimeLeft: phaseTiming.timeLeft,
                     playersWhoAnswered: [...session.frame.playersWhoAnswered, userId]
                 })
 
@@ -635,7 +648,7 @@ export class JeopardyLobbyFeature {
                     case 'question-content':
                         if (session.frame.answeringStatus === 'allowed') {
                             await this.cancelTask(sessionId, 'answer-request.complete')
-                            await this.continueQuestionAfterAnswerResolution(state, false)
+                            await this.handleAnswerRequestCompleteTask(state, sessionId)
                             return { stateChanged: true, success: true }
                         }
 
@@ -1215,31 +1228,30 @@ export class JeopardyLobbyFeature {
         await this.deps.scheduler.cancelByPrefix(this.getTaskKey(sessionId, 'round-preview.theme.'))
         await this.cancelTask(sessionId, 'round-preview.complete').catch(() => null)
 
-        await Promise.all(
-            round.themeNames.map((_, themeIndex) =>
-                this.scheduleTask(
+        if (!round.themeNames.length) {
+            await this.scheduleTask(
+                sessionId,
+                'round-preview.complete',
+                {
+                    roundId,
                     sessionId,
-                    `round-preview.theme.${themeIndex}`,
-                    {
-                        roundId,
-                        sessionId,
-                        themeIndex,
-                        type: 'jeopardy.round-preview.theme'
-                    },
-                    JEOPARDY_ROUND_NAME_PREVIEW_DURATION_MS + JEOPARDY_ROUND_THEME_PREVIEW_DURATION_MS * themeIndex
-                )
+                    type: 'jeopardy.round-preview.complete'
+                },
+                JEOPARDY_ROUND_NAME_PREVIEW_DURATION_MS
             )
-        )
+            return
+        }
 
         await this.scheduleTask(
             sessionId,
-            'round-preview.complete',
+            'round-preview.theme.0',
             {
                 roundId,
                 sessionId,
-                type: 'jeopardy.round-preview.complete'
+                themeIndex: 0,
+                type: 'jeopardy.round-preview.theme'
             },
-            JEOPARDY_ROUND_NAME_PREVIEW_DURATION_MS + JEOPARDY_ROUND_THEME_PREVIEW_DURATION_MS * round.themeNames.length
+            JEOPARDY_ROUND_NAME_PREVIEW_DURATION_MS
         )
     }
 
@@ -1394,15 +1406,18 @@ export class JeopardyLobbyFeature {
             return
         }
 
-        session.meta.answerRequestRemainingMs = durationMs
+        const remainingMs = Math.max(0, Math.min(durationMs, JEOPARDY_ANSWER_REQUEST_DURATION_MS))
+        const phaseTiming = getPhaseTimingWindow(Date.now(), JEOPARDY_ANSWER_REQUEST_DURATION_MS, remainingMs)
+
+        session.meta.answerRequestRemainingMs = remainingMs
 
         this.updateFrame(state, {
             ...session.frame,
             answeringPlayerId: null,
             answeringStatus: 'allowed',
-            answerRequestStartedAt: nowIso(),
-            answerRequestEndsAt: new Date(Date.now() + durationMs).toISOString(),
-            answerRequestTimeLeft: 100,
+            answerRequestStartedAt: phaseTiming.startedAt,
+            answerRequestEndsAt: phaseTiming.endsAt,
+            answerRequestTimeLeft: phaseTiming.timeLeft,
             answerGivingStartedAt: null,
             answerGivingEndsAt: null,
             answerGivingTimeLeft: null,
@@ -1419,7 +1434,7 @@ export class JeopardyLobbyFeature {
                 sessionId,
                 type: 'jeopardy.answer-request.complete'
             },
-            durationMs
+            remainingMs
         )
     }
 
@@ -1443,6 +1458,8 @@ export class JeopardyLobbyFeature {
             incorrectAnswers: answers[1]
         })
 
+        const phaseTiming = getPhaseTimingWindow(Date.now(), JEOPARDY_ANSWER_VERIFYING_DURATION_MS, JEOPARDY_ANSWER_VERIFYING_DURATION_MS)
+
         this.updateFrame(state, {
             ...session.frame,
             answeringPlayerId: null,
@@ -1453,9 +1470,9 @@ export class JeopardyLobbyFeature {
             answerRequestStartedAt: null,
             answerRequestEndsAt: null,
             answerRequestTimeLeft: null,
-            answerVerifyingStartedAt: nowIso(),
-            answerVerifyingEndsAt: new Date(Date.now() + JEOPARDY_ANSWER_VERIFYING_DURATION_MS).toISOString(),
-            answerVerifyingTimeLeft: 100
+            answerVerifyingStartedAt: phaseTiming.startedAt,
+            answerVerifyingEndsAt: phaseTiming.endsAt,
+            answerVerifyingTimeLeft: phaseTiming.timeLeft
         })
 
         await this.scheduleTask(
@@ -1728,9 +1745,10 @@ export class JeopardyLobbyFeature {
         }
 
         const nowMs = Date.now()
+        const pausedTasks = [...session.meta.pausedTasks]
 
         await Promise.all(
-            session.meta.pausedTasks.map(task =>
+            pausedTasks.map(task =>
                 this.deps.scheduler.schedule({
                     key: task.key,
                     payload: task.payload,
@@ -1739,8 +1757,7 @@ export class JeopardyLobbyFeature {
             )
         )
 
-        const getRemainingMs = (type: LobbyScheduledTaskPayload['type']) =>
-            session.meta.pausedTasks.find(task => task.payload.type === type)?.remainingMs || null
+        const getRemainingMs = (type: LobbyScheduledTaskPayload['type']) => pausedTasks.find(task => task.payload.type === type)?.remainingMs || null
 
         session.meta.pausedTasks = []
         session.isPaused = false
@@ -1750,22 +1767,31 @@ export class JeopardyLobbyFeature {
                 const remainingMs = getRemainingMs('jeopardy.answer-request.complete')
 
                 if (remainingMs) {
-                    session.frame.answerRequestStartedAt = nowIso()
-                    session.frame.answerRequestEndsAt = new Date(nowMs + remainingMs).toISOString()
+                    const phaseTiming = getPhaseTimingWindow(nowMs, JEOPARDY_ANSWER_REQUEST_DURATION_MS, remainingMs)
+
+                    session.frame.answerRequestStartedAt = phaseTiming.startedAt
+                    session.frame.answerRequestEndsAt = phaseTiming.endsAt
+                    session.frame.answerRequestTimeLeft = phaseTiming.timeLeft
                 }
             } else if (session.frame.answeringStatus === 'answering') {
                 const remainingMs = getRemainingMs('jeopardy.answer-giving.complete')
 
                 if (remainingMs) {
-                    session.frame.answerGivingStartedAt = nowIso()
-                    session.frame.answerGivingEndsAt = new Date(nowMs + remainingMs).toISOString()
+                    const phaseTiming = getPhaseTimingWindow(nowMs, JEOPARDY_ANSWER_GIVING_DURATION_MS, remainingMs)
+
+                    session.frame.answerGivingStartedAt = phaseTiming.startedAt
+                    session.frame.answerGivingEndsAt = phaseTiming.endsAt
+                    session.frame.answerGivingTimeLeft = phaseTiming.timeLeft
                 }
             } else if (session.frame.answeringStatus === 'answer-verifying') {
                 const remainingMs = getRemainingMs('jeopardy.answer-verifying.complete')
 
                 if (remainingMs) {
-                    session.frame.answerVerifyingStartedAt = nowIso()
-                    session.frame.answerVerifyingEndsAt = new Date(nowMs + remainingMs).toISOString()
+                    const phaseTiming = getPhaseTimingWindow(nowMs, JEOPARDY_ANSWER_VERIFYING_DURATION_MS, remainingMs)
+
+                    session.frame.answerVerifyingStartedAt = phaseTiming.startedAt
+                    session.frame.answerVerifyingEndsAt = phaseTiming.endsAt
+                    session.frame.answerVerifyingTimeLeft = phaseTiming.timeLeft
                 }
             }
 
@@ -1830,6 +1856,33 @@ export class JeopardyLobbyFeature {
             isRoundName: false,
             text: themeName
         })
+
+        const nextThemeIndex = themeIndex + 1
+
+        if (round.themeNames[nextThemeIndex]) {
+            await this.scheduleTask(
+                sessionId,
+                `round-preview.theme.${nextThemeIndex}`,
+                {
+                    roundId,
+                    sessionId,
+                    themeIndex: nextThemeIndex,
+                    type: 'jeopardy.round-preview.theme'
+                },
+                JEOPARDY_ROUND_THEME_PREVIEW_DURATION_MS
+            )
+        } else {
+            await this.scheduleTask(
+                sessionId,
+                'round-preview.complete',
+                {
+                    roundId,
+                    sessionId,
+                    type: 'jeopardy.round-preview.complete'
+                },
+                JEOPARDY_ROUND_THEME_PREVIEW_DURATION_MS
+            )
+        }
 
         return {
             stateChanged: true
