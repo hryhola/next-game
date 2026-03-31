@@ -28,21 +28,8 @@ const messageLogger = (message: MessageEvent<any>) => {
     }
 }
 
-// In theory should contain only one timer
-const pingIntervals: Array<ReturnType<typeof setInterval>> = []
-
-let isHandlingConnectRequest = false
-
-export const connectToWebSocket = async (callbacks?: WebSocketCallbacks) => {
+export const connectToWebSocket = (callbacks?: WebSocketCallbacks): WebSocket => {
     console.log(process.env.NODE_ENV)
-
-    if (isHandlingConnectRequest) {
-        console.log('Already handling connecting request. Exiting.')
-
-        return
-    }
-
-    isHandlingConnectRequest = true
 
     const socketUrl = callbacks?.url
 
@@ -53,32 +40,34 @@ export const connectToWebSocket = async (callbacks?: WebSocketCallbacks) => {
     console.log('WS url is', socketUrl)
 
     const ws = new WebSocket(socketUrl)
+    let pingInterval: ReturnType<typeof setInterval> | null = null
 
     ws.onopen = () => {
         ws.addEventListener('message', messageLogger)
 
-        callbacks?.onOpen(ws!)
+        callbacks?.onOpen(ws)
 
-        pingIntervals.push(setInterval(() => ws.send(callbacks?.pingMessage || 'ping'), 2000))
+        pingInterval = setInterval(() => {
+            if (ws.readyState === WebSocket.OPEN) {
+                ws.send(callbacks?.pingMessage || 'ping')
+            }
+        }, 2000)
     }
 
-    ws.onclose = () => {
-        let i: ReturnType<typeof setInterval>
-
-        while (pingIntervals.length) {
-            i = pingIntervals.pop()!
-
-            clearInterval(i)
+    ws.onclose = event => {
+        if (pingInterval) {
+            clearInterval(pingInterval)
+            pingInterval = null
         }
 
         console.log('websocket closed')
-        callbacks?.onClose()
+        callbacks?.onClose(ws, event)
     }
 
     ws.onerror = e => {
         console.error('WS Error', e)
-        callbacks?.onError()
+        callbacks?.onError(ws, e)
     }
 
-    isHandlingConnectRequest = false
+    return ws
 }

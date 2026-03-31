@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { startTransition, useEffect, useRef, useState } from 'react'
 import { LoadingOverlay } from 'client/ui/loading-overlay/LoadingOverlay'
 import { connectToWebSocket } from 'client/network-utils/socket'
 import { useLobby, useUser, useWS } from 'client/context/list'
@@ -13,14 +13,14 @@ type Props = {
 }
 
 export const WsApp: React.FC<Props> = props => {
-    const ws = useWS()
+    const { wsRef: roomSocketRef, setIsConnected: setConnected, isConnected } = useWS()
     const lobby = useLobby()
     const user = useUser()
     const router = useClientRouter()
-    const roomSocketRef = ws.wsRef
-    const setConnected = ws.setIsConnected
 
     const isFirstConnection = useRef(true)
+    const pendingSocketRef = useRef<WebSocket | null>(null)
+    const connectionAttemptRef = useRef(0)
     const currentTargetUrl = useRef<string | null>(null)
     const currentIdentityKeyRef = useRef<string | null>(null)
     const isHandlingConnectionRef = useRef(false)
@@ -42,28 +42,25 @@ export const WsApp: React.FC<Props> = props => {
     }
 
     const closeSocket = (resetTarget: boolean = true) => {
+        connectionAttemptRef.current += 1
         clearReconnectTimeout()
 
-        if (!ws.wsRef.current) {
-            if (resetTarget) {
-                currentTargetUrl.current = null
-                currentIdentityKeyRef.current = null
-            }
+        const socketsToClose = [pendingSocketRef.current, roomSocketRef.current].filter((socket): socket is WebSocket => Boolean(socket))
 
-            return
+        pendingSocketRef.current = null
+        roomSocketRef.current = null
+
+        for (const socket of socketsToClose) {
+            try {
+                socket.close()
+            } catch (_error) {
+                continue
+            }
         }
 
-        try {
-            ws.wsRef.current.close()
-        } catch (_error) {
-            return
-        } finally {
-            ws.wsRef.current = null
-
-            if (resetTarget) {
-                currentTargetUrl.current = null
-                currentIdentityKeyRef.current = null
-            }
+        if (resetTarget) {
+            currentTargetUrl.current = null
+            currentIdentityKeyRef.current = null
         }
     }
 
@@ -93,39 +90,93 @@ export const WsApp: React.FC<Props> = props => {
             return
         }
 
+        if (pendingSocketRef.current || roomSocketRef.current) {
+            closeSocket(false)
+        }
+
         updateHandlingConnection(true)
         clearReconnectTimeout()
 
         isFirstConnection.current = false
+        const attemptId = ++connectionAttemptRef.current
 
-        connectToWebSocket({
+        const socket = connectToWebSocket({
             pingMessage: JSON.stringify({ type: 'ping' }),
-            onClose: () => {
-                ws.wsRef.current = null
-                currentIdentityKeyRef.current = null
-                ws.setIsConnected(false)
+            onClose: (closedSocket: WebSocket) => {
+                if (pendingSocketRef.current === closedSocket) {
+                    pendingSocketRef.current = null
+                }
+
+                const isCurrentAttempt = attemptId === connectionAttemptRef.current
+                const isCurrentSocket = roomSocketRef.current === closedSocket
+
+                if (!isCurrentAttempt && !isCurrentSocket) {
+                    return
+                }
+
+                if (isCurrentSocket) {
+                    roomSocketRef.current = null
+                }
+
+                setConnected(false)
                 updateHandlingConnection(false)
 
-                if (shouldReconnectRef.current && currentTargetUrl.current === targetUrl) {
+                if (!isCurrentAttempt) {
+                    return
+                }
+
+                currentIdentityKeyRef.current = null
+
+                if (shouldReconnectRef.current && currentTargetUrl.current === targetUrl && pendingSocketRef.current === null) {
                     scheduleReconnect()
                 }
             },
-            onError: () => {
-                ws.wsRef.current = null
-                currentIdentityKeyRef.current = null
-                ws.setIsConnected(false)
+            onError: (erroredSocket: WebSocket) => {
+                if (pendingSocketRef.current === erroredSocket) {
+                    pendingSocketRef.current = null
+                }
+
+                const isCurrentAttempt = attemptId === connectionAttemptRef.current
+                const isCurrentSocket = roomSocketRef.current === erroredSocket
+
+                if (!isCurrentAttempt && !isCurrentSocket) {
+                    return
+                }
+
+                if (isCurrentSocket) {
+                    roomSocketRef.current = null
+                }
+
+                setConnected(false)
                 updateHandlingConnection(false)
 
-                if (shouldReconnectRef.current && currentTargetUrl.current === targetUrl) {
+                if (!isCurrentAttempt) {
+                    return
+                }
+
+                currentIdentityKeyRef.current = null
+
+                if (shouldReconnectRef.current && currentTargetUrl.current === targetUrl && pendingSocketRef.current === null) {
                     scheduleReconnect()
                 }
             },
             onOpen: (webSocket: WebSocket) => {
+                if (attemptId !== connectionAttemptRef.current) {
+                    try {
+                        webSocket.close()
+                    } catch (_error) {
+                        return
+                    }
+
+                    return
+                }
+
                 console.log('Connection is set.')
-                ws.wsRef.current = webSocket
+                pendingSocketRef.current = null
+                roomSocketRef.current = webSocket
                 currentTargetUrl.current = targetUrl
                 currentIdentityKeyRef.current = identityKey
-                ws.setIsConnected(true)
+                setConnected(true)
                 clearReconnectTimeout()
 
                 if (!isFirstConnection.current) {
@@ -136,6 +187,8 @@ export const WsApp: React.FC<Props> = props => {
             },
             url: targetUrl
         })
+
+        pendingSocketRef.current = socket
     }
 
     useEffect(() => {
@@ -144,8 +197,10 @@ export const WsApp: React.FC<Props> = props => {
 
         if (!requiresLobbySocket) {
             closeSocket()
-            ws.setIsConnected(true)
-            updateHandlingConnection(false)
+            startTransition(() => {
+                setConnected(true)
+                updateHandlingConnection(false)
+            })
             isFirstConnection.current = false
             return
         }
@@ -155,17 +210,19 @@ export const WsApp: React.FC<Props> = props => {
         if (typeof token !== 'string' || !token.length) {
             shouldReconnectRef.current = false
             closeSocket()
-            ws.setIsConnected(false)
+            startTransition(() => {
+                setConnected(false)
+            })
             return
         }
 
         const targetUrl = getCloudflareLobbyWebSocketUrl(lobby.lobbyId, token)
-        const currentSocket = ws.wsRef.current
+        const currentSocket = roomSocketRef.current
         const sameIdentity = currentIdentityKeyRef.current === identityKey
 
         if (currentSocket && currentTargetUrl.current === targetUrl && currentSocket.readyState === WebSocket.OPEN && sameIdentity) {
             clearReconnectTimeout()
-            ws.setIsConnected(true)
+            setConnected(true)
             return
         }
 
@@ -174,7 +231,9 @@ export const WsApp: React.FC<Props> = props => {
         }
 
         currentTargetUrl.current = targetUrl
-        ws.setIsConnected(false)
+        startTransition(() => {
+            setConnected(false)
+        })
 
         if (!isHandlingConnectionRef.current) {
             startConnecting(targetUrl)
@@ -185,25 +244,12 @@ export const WsApp: React.FC<Props> = props => {
         return () => {
             shouldReconnectRef.current = false
             clearReconnectTimeout()
-
-            if (!roomSocketRef.current) {
-                return
-            }
-
-            try {
-                roomSocketRef.current.close()
-            } catch (_error) {
-                return
-            } finally {
-                roomSocketRef.current = null
-                currentTargetUrl.current = null
-                currentIdentityKeyRef.current = null
-                setConnected(false)
-            }
+            closeSocket()
+            setConnected(false)
         }
-    }, [roomSocketRef, setConnected])
+    }, [])
 
-    const shouldShowBackdrop = router.frame === 'Lobby' && !isHandlingConnection && !ws.isConnected
+    const shouldShowBackdrop = router.frame === 'Lobby' && !isHandlingConnection && !isConnected
 
     return (
         <>

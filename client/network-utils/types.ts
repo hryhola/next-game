@@ -1,7 +1,7 @@
 export type WebSocketCallbacks = {
-    onClose: () => void
+    onClose: (ws: WebSocket, event: CloseEvent) => void
     onOpen: (ws: WebSocket) => void
-    onError: () => void
+    onError: (ws: WebSocket, event: Event) => void
     pingMessage?: string
     url?: string
 }
