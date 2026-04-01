@@ -393,20 +393,7 @@ export class JeopardyLobbyFeature {
                     currentQuestionSelectedPlayerId: playerId
                 })
 
-                if (flow.priceOptions.length > 1) {
-                    await this.beginQuestionValueSelection(state)
-                } else {
-                    flow.currentPrice = flow.priceOptions[0] || flow.currentPrice
-                    this.updateInternal(state, {
-                        currentQuestionPrice: flow.currentPrice
-                    })
-
-                    if (flow.questionType === 'secretNoQuestion') {
-                        await this.resolveSecretNoQuestion(state)
-                    } else {
-                        await this.showNextQuestionAtom(state)
-                    }
-                }
+                await this.continueSecretQuestionAfterSelection(state)
 
                 return {
                     stateChanged: true,
@@ -2158,6 +2145,31 @@ export class JeopardyLobbyFeature {
         )
     }
 
+    private async continueSecretQuestionAfterSelection(state: StoredLobbyState): Promise<void> {
+        const session = this.getSession(state)
+        const flow = session?.meta.currentQuestionFlow
+
+        if (!session || !flow) {
+            return
+        }
+
+        if (flow.priceOptions.length > 1) {
+            await this.beginQuestionValueSelection(state)
+            return
+        }
+
+        flow.currentPrice = flow.priceOptions[0] || flow.currentPrice
+        this.updateInternal(state, {
+            currentQuestionPrice: flow.currentPrice
+        })
+
+        if (flow.questionType === 'secretNoQuestion') {
+            await this.resolveSecretNoQuestion(state)
+        } else {
+            await this.showNextQuestionAtom(state)
+        }
+    }
+
     private async beginSecretQuestionSelection(state: StoredLobbyState): Promise<void> {
         const session = this.getSession(state)
         const sessionId = this.getActiveLobbySessionId(state)
@@ -2170,7 +2182,17 @@ export class JeopardyLobbyFeature {
         const eligibleTargets = this.getEligibleSecretTargets(state, flow.selectionMode)
 
         if (!eligibleTargets.length) {
-            await this.beginDirectAnswering(state)
+            const fallbackPlayerId = session.internal.pickerId || this.getFallbackPickerId(state)
+
+            if (!fallbackPlayerId) {
+                return
+            }
+
+            this.updateInternal(state, {
+                currentQuestionSelectedPlayerId: fallbackPlayerId
+            })
+
+            await this.continueSecretQuestionAfterSelection(state)
             return
         }
 
@@ -3061,20 +3083,7 @@ export class JeopardyLobbyFeature {
                     currentQuestionSelectedPlayerId: selectedPlayer.id
                 })
 
-                if (flow.priceOptions.length > 1) {
-                    await this.beginQuestionValueSelection(state)
-                } else {
-                    flow.currentPrice = flow.priceOptions[0] || flow.currentPrice
-                    this.updateInternal(state, {
-                        currentQuestionPrice: flow.currentPrice
-                    })
-
-                    if (flow.questionType === 'secretNoQuestion') {
-                        await this.resolveSecretNoQuestion(state)
-                    } else {
-                        await this.showNextQuestionAtom(state)
-                    }
-                }
+                await this.continueSecretQuestionAfterSelection(state)
 
                 return { stateChanged: true }
             }

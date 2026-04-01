@@ -70,7 +70,7 @@ export const QuestionBoard: React.FC<RealtimeJeopardyState.QuestionBoardFrame> =
                 {props.themes.map(t => (
                     <Box key={t.themeId}>
                         <Divider>{t.name}</Divider>
-                        <Box display="flex" justifyContent="space-evenly">
+                        <Box display="flex" justifyContent="space-evenly" className="gap-2">
                             {t.question.map(q => {
                                 const isActiveQuestion = activePickedQuestionId === q.questionId
                                 const isDisabled = !canPickQuestions || q.isAnswered || isBoardLocked

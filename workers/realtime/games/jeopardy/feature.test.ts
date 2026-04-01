@@ -830,6 +830,72 @@ describe('jeopardy flow', () => {
         expect(frame.specialPhase).toBeUndefined()
     })
 
+    it('falls back to the chooser when a secret question has no eligible transfer targets', async () => {
+        const pack = createPackWithQuestions([
+            createParamQuestion({
+                price: '500',
+                type: 'secret',
+                params: [
+                    {
+                        _attributes: {
+                            name: 'theme'
+                        },
+                        _text: 'Solo Theme'
+                    },
+                    {
+                        _attributes: {
+                            name: 'price',
+                            type: 'numberSet'
+                        },
+                        numberSet: {
+                            _attributes: {
+                                maximum: '500',
+                                minimum: '500',
+                                step: '0'
+                            }
+                        }
+                    },
+                    {
+                        _attributes: {
+                            name: 'selectionMode'
+                        },
+                        _text: 'exceptCurrent'
+                    },
+                    {
+                        _attributes: {
+                            name: 'question',
+                            type: 'content'
+                        },
+                        item: {
+                            _text: 'Solo secret question'
+                        }
+                    }
+                ]
+            })
+        ])
+        const state = createState(pack)
+        const { feature, scheduler } = createFeatureHarness()
+
+        await advanceToQuestion(feature, state, scheduler, '0-0-0')
+
+        let frame = getQuestionFrame(state)
+
+        expect(frame.content).toBe('Solo secret question')
+        expect(frame.specialPhase).toBe('showing-question')
+        expect(frame.selectedPlayerId).toBe('contestant-1')
+        expect(frame.questionPrice).toBe(500)
+        expect(frame.questionTheme).toBe('Solo Theme')
+
+        await runScheduledTask(feature, state, scheduler, 'question.atom.complete')
+
+        frame = getQuestionFrame(state)
+
+        expect(frame.answeringStatus).toBe('answering')
+        expect(frame.answeringPlayerId).toBe('contestant-1')
+        expect(frame.selectedPlayerId).toBe('contestant-1')
+        expect(frame.specialPhase).toBeUndefined()
+    })
+
     it('collects for-all answers from multiple contestants and verifies them sequentially', async () => {
         const pack = createPackWithQuestions([
             createParamQuestion({
