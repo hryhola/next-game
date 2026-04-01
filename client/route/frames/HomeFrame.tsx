@@ -9,6 +9,7 @@ import { ProfilePreview } from 'client/features/header/ProfilePreview'
 import { LobbyBrowser } from 'client/features/lobby-browser/LobbyBrowser'
 import { GlobalUsersList } from 'client/features/global-users-list/GlobalUsersList'
 import { GlobalUsersListTitle } from 'client/features/global-users-list/GlobalUsersListTitle'
+import { useGlobalOnlineUsers } from 'client/features/global-users-list/useGlobalOnlineUsers'
 import { Chat } from 'client/features/chat/Chat'
 import { Button, Card, CardContent, CardHeader } from 'client/ui/primitives'
 import { AnimatedBackground, type AnimationType } from 'client/ui'
@@ -38,6 +39,7 @@ const DesktopWidget: React.FC<{
 export const HomeFrame: React.FC = () => {
     const home = useContext(HomeContext)
     const [backgroundType, setBackgroundType] = useState<AnimationType>('stars')
+    const { count: onlineCount, users: onlineUsers } = useGlobalOnlineUsers()
 
     useEffect(() => {
         const frame = window.requestAnimationFrame(() => {
@@ -50,10 +52,10 @@ export const HomeFrame: React.FC = () => {
     return (
         <>
             <AnimatedBackground type={backgroundType} />
-            <div className="relative z-10 flex h-[var(--fullHeight)] flex-col overflow-hidden lg:hidden">
+            <div className="relative z-10 flex h-[var(--fullHeight)] flex-col lg:hidden">
                 <Header className="shrink-0" />
-                <div className="min-h-0 flex-1 overflow-hidden">
-                    <HomeTabs className="flex-1" />
+                <div className="min-h-0 flex-1">
+                    <HomeTabs className="flex-1" onlineCount={onlineCount} onlineUsers={onlineUsers} />
                 </div>
             </div>
             <div className="relative z-10 hidden h-[var(--fullHeight)] grid-cols-[minmax(0,1.2fr)_minmax(22rem,0.8fr)] gap-6 overflow-hidden p-6 lg:grid">
@@ -80,12 +82,12 @@ export const HomeFrame: React.FC = () => {
                         <ProfilePreview className="glass-panel border border-white/10 px-4 py-3" onClick={() => home.setIsProfileEditOpen(true)} />
                     </div>
                     <DesktopWidget
-                        title={<GlobalUsersListTitle />}
+                        title={<GlobalUsersListTitle count={onlineCount} />}
                         className="flex min-h-0 h-[min(34vh,22rem)] flex-col overflow-hidden shadow-none"
                         style={{ boxShadow: 'none' }}
                     >
                         <div className="h-full min-h-0">
-                            <GlobalUsersList />
+                            <GlobalUsersList users={onlineUsers} />
                         </div>
                     </DesktopWidget>
                     <DesktopWidget title="Global Chat" className="flex min-h-0 flex-1 flex-col overflow-hidden shadow-none" style={{ boxShadow: 'none' }}>

@@ -619,7 +619,7 @@ export const WSProvider: React.FC<Props> = props => {
                     return
                 }
                 case 'Users-Get': {
-                    const snapshot = await readWorkerPresenceSnapshot()
+                    const snapshot = await readWorkerPresenceSnapshot(false)
 
                     emit('Users-Get', {
                         success: true,
@@ -636,7 +636,7 @@ export const WSProvider: React.FC<Props> = props => {
                     return
                 }
                 case 'Users-GetCount': {
-                    const snapshot = await readWorkerPresenceSnapshot()
+                    const snapshot = await readWorkerPresenceSnapshot(false)
 
                     emit('Users-GetCount', {
                         success: true,

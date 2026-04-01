@@ -1,50 +1,11 @@
-import { useEventHandler, useRequestHandler, useWS } from 'client/context/list'
 import { UsersListBox } from 'client/ui'
-import React, { useEffect, useState } from 'react'
+import React from 'react'
+import { GlobalOnlineUser } from './useGlobalOnlineUsers'
 
-export const GlobalUsersList: React.FC = () => {
-    const ws = useWS()
+type Props = {
+    users: GlobalOnlineUser[]
+}
 
-    const [users, setUsers] = useState<{ userNickname: string; id: string }[]>([])
-
-    useRequestHandler('Users-Get', data => {
-        if ('data' in data) {
-            setUsers(data.data)
-        } else {
-            console.error(data)
-        }
-    })
-
-    useEventHandler('UserRegistry-OnlineUpdate', data => {
-        setUsers(data.list)
-    })
-
-    const onIsConnected = () => {
-        ws.send('Universal-Subscription', {
-            mode: 'subscribe',
-            topic: 'UserRegistry-OnlineUpdate',
-            scope: 'global'
-        })
-        ws.send('Users-Get', {
-            scope: 'global'
-        })
-    }
-
-    useEffect(() => {
-        return () => {
-            ws.send('Universal-Subscription', {
-                mode: 'unsubscribe',
-                scope: 'global',
-                topic: 'UserRegistry-OnlineUpdate'
-            })
-        }
-    }, [])
-
-    useEffect(() => {
-        if (ws.isConnected) {
-            onIsConnected()
-        }
-    }, [ws.isConnected])
-
-    return <UsersListBox users={users} />
+export const GlobalUsersList: React.FC<Props> = props => {
+    return <UsersListBox users={props.users} />
 }
