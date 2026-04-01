@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react'
 import { Box, Grid } from 'client/ui/mui-shim'
-import { useEventHandler, useUser } from 'client/context/list'
+import { useEventHandler, useI18n, useUser } from 'client/context/list'
 import { useToast } from 'client/ui/toast/ToastProvider'
 import styles from './TicTacToe.module.css'
 import { useActionSender, useTicTacToe, useTicTacToeAction } from './TicTacToeView'
@@ -15,6 +15,7 @@ type Props = {
 export const TicTacToeCanvas: React.FC<Props> = ({ isLoading }) => {
     const { push } = useToast()
     const sendAction = useActionSender()
+    const { t } = useI18n()
 
     const user = useUser()
     const game = useTicTacToe()
@@ -121,13 +122,13 @@ export const TicTacToeCanvas: React.FC<Props> = ({ isLoading }) => {
             }
 
             push({
-                content: `${winner?.userNickname} won!`
+                content: t('tictactoe.winnerToast', { name: winner?.userNickname || '' })
             })
         }
 
         if (action.result.isDraw) {
             push({
-                content: 'Draw!'
+                content: t('tictactoe.drawToast')
             })
         }
     })

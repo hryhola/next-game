@@ -1,5 +1,5 @@
 import { FormEventHandler, useContext, useState, useRef, useEffect } from 'react'
-import { useLobby } from 'client/context/list'
+import { useI18n, useLobby } from 'client/context/list'
 import { useClientRouter } from 'client/route/ClientRouter'
 import { LoadingOverlay } from 'client/ui'
 import { api } from 'client/network-utils/api'
@@ -18,6 +18,7 @@ export const LobbyCreator: React.FC = () => {
     const home = useContext(HomeContext)
     const router = useClientRouter()
     const lobby = useLobby()
+    const { t, tFieldLabel, tGameName, translateErrorMessage } = useI18n()
 
     const formRef = useRef<HTMLFormElement | null>(null)
 
@@ -53,11 +54,11 @@ export const LobbyCreator: React.FC = () => {
         const [response, postError] = await api.post('lobby-create', data).finally(() => setIsLoading(false))
 
         if (!response) {
-            return setError(String(postError))
+            return setError(translateErrorMessage(String(postError)))
         }
 
         if (!response.success) {
-            setError(response.message)
+            setError(translateErrorMessage(response.message))
 
             return
         }
@@ -85,12 +86,12 @@ export const LobbyCreator: React.FC = () => {
         const [response, postError] = await api.post('jeopardy-validate-pack', data).finally(() => setIsValidatingPack(false))
 
         if (!response) {
-            setError(String(postError))
+            setError(translateErrorMessage(String(postError)))
             return
         }
 
         if (!response.success) {
-            setError(response.message)
+            setError(translateErrorMessage(response.message))
             return
         }
 
@@ -111,12 +112,12 @@ export const LobbyCreator: React.FC = () => {
             }
 
             if (!response) {
-                setError(String(postError))
+                setError(translateErrorMessage(String(postError)))
                 return
             }
 
             if (!response.success) {
-                setError(response.message)
+                setError(translateErrorMessage(response.message))
                 return
             }
 
@@ -134,20 +135,22 @@ export const LobbyCreator: React.FC = () => {
     return (
         <>
             <form className="flex h-full flex-col gap-4" onSubmit={handleSubmit} ref={formRef}>
-                {error ? <div className="rounded-2xl border border-rose-300/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">{error}</div> : null}
-                <Input required placeholder="Lobby name" name="lobbyId" value={lobbyId} onChange={e => setLobbyId(e.target.value)} />
+                {error ? (
+                    <div className="rounded-2xl border border-rose-300/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">{translateErrorMessage(error)}</div>
+                ) : null}
+                <Input required placeholder={t('lobbyCreator.lobbyName')} name="lobbyId" value={lobbyId} onChange={e => setLobbyId(e.target.value)} />
                 <div>
                     <VisuallyHidden asChild>
-                        <Label htmlFor="game-type-selector">Game</Label>
+                        <Label htmlFor="game-type-selector">{t('common.game')}</Label>
                     </VisuallyHidden>
                     <Select value={gameName} onValueChange={value => handleGameNameChange(value as GameName)}>
                         <SelectTrigger id="game-type-selector">
-                            <SelectValue placeholder="Select a game" />
+                            <SelectValue placeholder={t('lobbyCreator.selectGame')} />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="TicTacToe">Tic Tac Toe</SelectItem>
-                            <SelectItem value="Clicker">Clicker</SelectItem>
-                            <SelectItem value="Jeopardy">Jeopardy</SelectItem>
+                            <SelectItem value="TicTacToe">{tGameName('TicTacToe')}</SelectItem>
+                            <SelectItem value="Clicker">{tGameName('Clicker')}</SelectItem>
+                            <SelectItem value="Jeopardy">{tGameName('Jeopardy')}</SelectItem>
                         </SelectContent>
                     </Select>
                     <input type="hidden" name="gameName" value={gameName} />
@@ -155,10 +158,12 @@ export const LobbyCreator: React.FC = () => {
 
                 {initialDataScheme.map(field => (
                     <div key={field.name} className="space-y-2">
-                        {field.type === 'field' && <Input placeholder={field.label} name={'initialData-' + field.name} required={field.required} />}
+                        {field.type === 'field' && (
+                            <Input placeholder={tFieldLabel(field.name, field.label)} name={'initialData-' + field.name} required={field.required} />
+                        )}
                         {field.type === 'file' && (
                             <div className="space-y-2">
-                                <Label>{field.label}</Label>
+                                <Label>{tFieldLabel(field.name, field.label)}</Label>
                                 <input
                                     className="glass-input block w-full rounded-2xl px-4 py-3 text-sm"
                                     required={field.required}
@@ -185,7 +190,7 @@ export const LobbyCreator: React.FC = () => {
                                                 disabled={isLoading || isValidatingPack}
                                                 onClick={handleValidateJeopardyPack}
                                             >
-                                                {isValidatingPack ? 'Validating...' : 'Validate'}
+                                                {isValidatingPack ? t('lobbyCreator.validating') : t('lobbyCreator.validate')}
                                             </Button>
                                         </div>
                                         {packValidation ? (
@@ -211,18 +216,18 @@ export const LobbyCreator: React.FC = () => {
                                                         )}
                                                     </div>
                                                     <div className="min-w-0 flex-1">
-                                                        <div className="text-[11px] font-semibold leading-4 text-white">
-                                                            {packValidation.compatible ? 'Compatible' : 'Not compatible'}
+                                                        <div className="text-[0.6875em] font-semibold leading-[1.45em] text-white">
+                                                            {packValidation.compatible ? t('lobbyCreator.compatible') : t('lobbyCreator.notCompatible')}
                                                         </div>
                                                         <p
                                                             className={cn(
-                                                                'mt-1 text-[11px] leading-4',
+                                                                'mt-1 text-[0.6875em] leading-[1.45em]',
                                                                 packValidation.compatible ? 'text-emerald-100/90' : 'text-slate-300'
                                                             )}
                                                         >
                                                             {packValidation.compatible
-                                                                ? 'This SIQ pack is supported by the current Jeopardy implementation.'
-                                                                : 'This SIQ pack uses features that the current Jeopardy implementation cannot run yet.'}
+                                                                ? t('lobbyCreator.compatibleDescription')
+                                                                : t('lobbyCreator.notCompatibleDescription')}
                                                         </p>
                                                     </div>
                                                 </div>
@@ -230,10 +235,14 @@ export const LobbyCreator: React.FC = () => {
                                                     <div className="mt-2">
                                                         <button
                                                             type="button"
-                                                            className="glass-focus flex w-full items-center justify-between rounded-xl px-2 py-1 text-[9px]! font-medium text-slate-300 transition hover:bg-white/6 hover:text-white"
+                                                            className="glass-focus flex w-full items-center justify-between rounded-xl px-2 py-1 text-[0.5625em]! font-medium text-slate-300 transition hover:bg-white/6 hover:text-white"
                                                             onClick={() => setIsPackValidationDetailsOpen(current => !current)}
                                                         >
-                                                            <span>{isPackValidationDetailsOpen ? 'Hide technical reason' : 'Show technical reason'}</span>
+                                                            <span>
+                                                                {isPackValidationDetailsOpen
+                                                                    ? t('lobbyCreator.hideTechnicalReason')
+                                                                    : t('lobbyCreator.showTechnicalReason')}
+                                                            </span>
                                                             {isPackValidationDetailsOpen ? (
                                                                 <ChevronUp className="size-3.5" />
                                                             ) : (
@@ -244,7 +253,7 @@ export const LobbyCreator: React.FC = () => {
                                                             <pre
                                                                 className={cn(
                                                                     'mt-2 max-h-40 overflow-auto rounded-xl border border-white/10 bg-slate-950/65 p-2',
-                                                                    'text-[10px] leading-4 whitespace-pre-wrap break-words text-slate-400'
+                                                                    'text-[0.625em] leading-[1.6em] whitespace-pre-wrap break-words text-slate-400'
                                                                 )}
                                                             >
                                                                 {packValidation.reason}
@@ -261,10 +270,10 @@ export const LobbyCreator: React.FC = () => {
                     </div>
                 ))}
 
-                <Input placeholder="Password" name="password" value={password} onChange={e => setPassword(e.target.value.split('\\').pop()!)} />
+                <Input placeholder={t('common.password')} name="password" value={password} onChange={e => setPassword(e.target.value.split('\\').pop()!)} />
                 <div className="mt-auto pb-2">
                     <Button className="w-full" type="submit" size="lg" disabled={isLoading || isValidatingPack}>
-                        Create
+                        {t('common.create')}
                     </Button>
                 </div>
             </form>

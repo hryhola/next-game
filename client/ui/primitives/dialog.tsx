@@ -5,6 +5,7 @@ import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { X } from 'lucide-react'
 import { cn } from '../lib/cn'
 import { VisuallyHidden } from './visually-hidden'
+import { useI18n } from 'client/context/list'
 
 export const Dialog = DialogPrimitive.Root
 export const DialogTrigger = DialogPrimitive.Trigger
@@ -64,6 +65,7 @@ export const DialogContent = React.forwardRef<
         titleVisuallyHidden?: boolean
     }
 >(({ className, children, hideClose, title, titleVisuallyHidden, ...props }, ref) => {
+    const { t } = useI18n()
     const hasAccessibleTitle =
         title !== undefined && title !== null && (typeof title !== 'string' || title.trim().length > 0) ? true : hasExplicitDialogTitle(children)
 
@@ -93,7 +95,7 @@ export const DialogContent = React.forwardRef<
                 {!hideClose ? (
                     <DialogPrimitive.Close className="glass-focus absolute right-4 top-4 rounded-full p-2 text-slate-300 transition hover:bg-white/8 hover:text-white">
                         <X className="size-4" />
-                        <span className="sr-only">Close</span>
+                        <span className="sr-only">{t('common.close')}</span>
                     </DialogPrimitive.Close>
                 ) : null}
                 {resolvedTitle}

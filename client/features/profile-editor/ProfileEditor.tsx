@@ -1,4 +1,4 @@
-import { useWS, useUser } from 'client/context/list'
+import { useI18n, useWS, useUser } from 'client/context/list'
 import React, { useState, useRef } from 'react'
 import { LoadingOverlay } from 'client/ui'
 import { api } from 'client/network-utils/api'
@@ -8,6 +8,7 @@ import { deleteCookie } from 'cookies-next'
 import { useGlobalModal } from '../global-modal/GlobalModal'
 import { Button, Input } from 'client/ui/primitives'
 import { Sparkles } from 'lucide-react'
+import { SettingsControls } from '../settings/SettingsControls'
 
 interface Props {
     onUpdated?: () => void
@@ -15,6 +16,7 @@ interface Props {
 
 export const ProfileEditor: React.FC<Props> = props => {
     const globalModel = useGlobalModal()
+    const { t, translateErrorMessage } = useI18n()
 
     const formRef = useRef<HTMLFormElement | null>(null)
 
@@ -54,11 +56,11 @@ export const ProfileEditor: React.FC<Props> = props => {
         const [response, postError] = await api.post('profile', data).finally(() => setIsLoading(false))
 
         if (!response) {
-            return setError(String(postError))
+            return setError(translateErrorMessage(String(postError)))
         }
 
         if (!response.success) {
-            setError(response.message)
+            setError(translateErrorMessage(response.message))
 
             return
         }
@@ -85,7 +87,9 @@ export const ProfileEditor: React.FC<Props> = props => {
     return (
         <>
             <form className="flex min-h-full flex-col gap-5" onSubmit={handleSubmit} ref={formRef}>
-                {error ? <div className="rounded-2xl border border-rose-300/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">{error}</div> : null}
+                {error ? (
+                    <div className="rounded-2xl border border-rose-300/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">{translateErrorMessage(error)}</div>
+                ) : null}
                 <div className="self-center">
                     <ProfilePicture editable {...displayedImage} color={userColor} onChange={file => setImageFile(file)} />
                 </div>
@@ -96,30 +100,33 @@ export const ProfileEditor: React.FC<Props> = props => {
                         size="icon"
                         className="relative overflow-hidden"
                         onClick={() => setNicknameColor(randomColor())}
-                        aria-label="Change nickname color"
+                        aria-label={t('profile.changeNicknameColor')}
                     >
                         <span className="absolute inset-[6px] rounded-full border border-white/10" style={{ backgroundColor: userColor }} />
                         <Sparkles className="relative z-10 size-4 text-white" />
                     </Button>
-                    <Input placeholder="Nickname" name="userNickname" value={nickname} onChange={e => setNickname(e.target.value)} />
+                    <Input placeholder={t('profile.nickname')} name="userNickname" value={nickname} onChange={e => setNickname(e.target.value)} />
+                </div>
+                <div className="lg:hidden">
+                    <SettingsControls />
                 </div>
                 <div className="mt-auto flex flex-col gap-3">
                     <Button className="w-full" size="lg" type="submit">
-                        Update
+                        {t('common.update')}
                     </Button>
                     <Button
                         className="w-full"
                         variant="outlineDanger"
                         onClick={() =>
                             globalModel.confirm({
-                                title: 'Log out',
-                                content: "You won't be able to login into this profile again",
-                                header: 'Are you sure want to logout?',
+                                title: t('profile.logoutTitle'),
+                                content: t('profile.logoutContent'),
+                                header: t('profile.logoutHeader'),
                                 onConfirm: handleLogout
                             })
                         }
                     >
-                        Log out
+                        {t('profile.logout')}
                     </Button>
                 </div>
             </form>

@@ -1,16 +1,17 @@
-import { useUser } from 'client/context/list'
+import { useI18n, useUser } from 'client/context/list'
 import { Button } from 'client/ui/primitives'
 import { UserRound } from 'lucide-react'
 import { cn } from 'client/ui/lib/cn'
 
 function ProfilePicture() {
     const user = useUser()
+    const { t } = useI18n()
 
     if (user.userAvatarUrl) {
         return (
             <>
                 <div className="flex size-10 items-center justify-center bg-white/5">
-                    <img className="size-full object-contain" src={user.userAvatarUrl} alt="profile avatar" />
+                    <img className="size-full object-contain" src={user.userAvatarUrl} alt={t('image.alt.profileAvatar')} />
                 </div>
             </>
         )

@@ -1,4 +1,5 @@
 import React, { useState, createContext } from 'react'
+import { useI18n } from 'client/context/list'
 import { Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader } from 'client/ui/primitives'
 
 export interface GlobalModalOpenOptions {
@@ -37,6 +38,7 @@ interface Props {
 }
 
 export const GlobalModalProvider: React.FC<Props> = props => {
+    const { t } = useI18n()
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [title, setTitle] = useState<string | null>(null)
     const [header, setHeader] = useState<React.ReactNode>(null)
@@ -85,7 +87,7 @@ export const GlobalModalProvider: React.FC<Props> = props => {
                             }
                         }}
                     >
-                        Cancel
+                        {t('common.cancel')}
                     </Button>
                 ) : (
                     <></>
@@ -98,7 +100,7 @@ export const GlobalModalProvider: React.FC<Props> = props => {
                         }
                     }}
                 >
-                    Confirm
+                    {t('common.confirm')}
                 </Button>
             </>
         )

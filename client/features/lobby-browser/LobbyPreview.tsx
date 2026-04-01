@@ -1,4 +1,4 @@
-import { useLobby } from 'client/context/list'
+import { useI18n, useLobby } from 'client/context/list'
 import { useClientRouter } from 'client/route/ClientRouter'
 import { FormEventHandler, useState } from 'react'
 import { LoadingOverlay } from 'client/ui'
@@ -15,6 +15,7 @@ interface Props {
 export const LobbyPreview: React.FC<Props> = props => {
     const router = useClientRouter()
     const lobby = useLobby()
+    const { t, tGameName, tMemberCount, translateErrorMessage } = useI18n()
 
     const [password, setPassword] = useState('')
     const [error, setError] = useState('')
@@ -26,7 +27,7 @@ export const LobbyPreview: React.FC<Props> = props => {
         const role = (event.nativeEvent as SubmitEvent).submitter?.getAttribute('data-role')
 
         if (role !== 'player' && role !== 'spectator') {
-            return setError('Invalid role')
+            return setError(t('lobby.invalidRole'))
         }
 
         setIsLoading(true)
@@ -40,11 +41,11 @@ export const LobbyPreview: React.FC<Props> = props => {
             .finally(() => setIsLoading(false))
 
         if (!response) {
-            return setError(String(postError))
+            return setError(translateErrorMessage(String(postError)))
         }
 
         if (!response.success) {
-            return setError(response.message)
+            return setError(translateErrorMessage(response.message))
         }
 
         lobby.setGameName(props.lobby.gameName)
@@ -55,26 +56,32 @@ export const LobbyPreview: React.FC<Props> = props => {
     return (
         <>
             <form className={cn('flex h-full flex-col gap-4', props.className)} onSubmit={handleSubmit}>
-                {error ? <div className="rounded-2xl border border-rose-300/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">{error}</div> : null}
+                {error ? (
+                    <div className="rounded-2xl border border-rose-300/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">{translateErrorMessage(error)}</div>
+                ) : null}
                 <div className="flex items-center justify-between gap-4 text-sm">
                     <span className="font-semibold text-white">{props.lobby.id}</span>
-                    <span className="text-violet-200">
-                        {props.lobby.members.length} {props.lobby.members.length === 1 ? 'member' : 'members'}
-                    </span>
+                    <span className="text-violet-200">{tMemberCount(props.lobby.members.length)}</span>
                 </div>
                 <div className="flex items-center justify-between gap-4 text-xs uppercase tracking-[0.3em] text-slate-400">
-                    <span>{props.lobby.gameName}</span>
-                    <span>by {props.lobby.creator.userNickname}</span>
+                    <span>{tGameName(props.lobby.gameName)}</span>
+                    <span>{t('lobby.byCreator', { name: props.lobby.creator.userNickname })}</span>
                 </div>
                 {props.lobby.private && (
-                    <Input placeholder="Password" name="password" required value={password} onChange={e => setPassword(e.target.value.split('\\').pop()!)} />
+                    <Input
+                        placeholder={t('lobbyPreview.password')}
+                        name="password"
+                        required
+                        value={password}
+                        onChange={e => setPassword(e.target.value.split('\\').pop()!)}
+                    />
                 )}
                 <div className="mt-auto grid grid-cols-2 gap-3">
                     <Button variant="secondary" type="submit" data-role="player">
-                        Play
+                        {t('common.play')}
                     </Button>
                     <Button variant="outline" type="submit" data-role="spectator">
-                        Watch
+                        {t('common.watch')}
                     </Button>
                 </div>
             </form>

@@ -2,6 +2,7 @@ import React from 'react'
 import { X } from 'lucide-react'
 import { Button, Dialog, DialogContent } from 'client/ui/primitives'
 import { cn } from 'client/ui/lib/cn'
+import { useI18n } from 'client/context/list'
 
 export const FullScreenModal: React.FC<{
     isOpen: boolean
@@ -11,6 +12,8 @@ export const FullScreenModal: React.FC<{
     transition?: 'left' | 'right' | 'up' | 'down'
     padding?: boolean
 }> = props => {
+    const { t } = useI18n()
+
     return (
         <Dialog open={props.isOpen} onOpenChange={props.setIsOpen}>
             <DialogContent
@@ -27,7 +30,7 @@ export const FullScreenModal: React.FC<{
             >
                 <div className={cn('flex items-center justify-between px-6', props.padding ? 'py-6' : 'pt-6 pb-4')}>
                     <h2 className="text-xl font-semibold text-white">{props.label}</h2>
-                    <Button variant="ghost" className="size-12 rounded-full p-0" onClick={() => props.setIsOpen(false)}>
+                    <Button variant="ghost" className="size-12 rounded-full p-0" onClick={() => props.setIsOpen(false)} aria-label={t('common.close')}>
                         <X className="size-6 text-slate-200" strokeWidth={2.5} />
                     </Button>
                 </div>

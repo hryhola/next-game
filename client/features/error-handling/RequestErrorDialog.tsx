@@ -4,6 +4,7 @@ import React from 'react'
 import { useClientRequestErrorHandler, type ClientRequestErrorEvent } from 'client/context/list/wsCtx'
 import { cn } from 'client/ui/lib/cn'
 import { AlertTriangle, ChevronDown, ChevronUp, X } from 'lucide-react'
+import { useI18n } from 'client/context/list'
 
 function safeStringify(value: unknown): string {
     if (typeof value === 'string') {
@@ -17,14 +18,25 @@ function safeStringify(value: unknown): string {
     }
 }
 
-function toDetailsText(error: ClientRequestErrorEvent): string {
+function toDetailsText(
+    error: ClientRequestErrorEvent,
+    t: (
+        key:
+            | 'error.details.context'
+            | 'error.details.code'
+            | 'error.details.message'
+            | 'error.details.requestPayload'
+            | 'error.details.details'
+            | 'error.details.stack'
+    ) => string
+): string {
     const blocks = [
-        `Context:\n${error.context}`,
-        error.code ? `Code:\n${error.code}` : null,
-        `Message:\n${error.message}`,
-        error.requestData !== undefined ? `Request payload:\n${safeStringify(error.requestData)}` : null,
-        error.details !== undefined ? `Details:\n${safeStringify(error.details)}` : null,
-        error.stack ? `Stack:\n${error.stack}` : null
+        `${t('error.details.context')}:\n${error.context}`,
+        error.code ? `${t('error.details.code')}:\n${error.code}` : null,
+        `${t('error.details.message')}:\n${error.message}`,
+        error.requestData !== undefined ? `${t('error.details.requestPayload')}:\n${safeStringify(error.requestData)}` : null,
+        error.details !== undefined ? `${t('error.details.details')}:\n${safeStringify(error.details)}` : null,
+        error.stack ? `${t('error.details.stack')}:\n${error.stack}` : null
     ].filter(Boolean)
 
     return blocks.join('\n\n')
@@ -32,6 +44,7 @@ function toDetailsText(error: ClientRequestErrorEvent): string {
 
 export const RequestErrorDialog: React.FC = () => {
     const [errors, setErrors] = React.useState<(ClientRequestErrorEvent & { id: string; showDetails: boolean })[]>([])
+    const { t } = useI18n()
 
     useClientRequestErrorHandler(error => {
         setErrors(current =>
@@ -61,7 +74,7 @@ export const RequestErrorDialog: React.FC = () => {
     return (
         <div className="pointer-events-none fixed right-4 top-4 z-[95] flex w-[min(24rem,calc(100vw-1rem))] max-w-sm flex-col gap-2">
             {errors.map(error => {
-                const detailsText = toDetailsText(error)
+                const detailsText = toDetailsText(error, t)
 
                 return (
                     <div
@@ -73,14 +86,14 @@ export const RequestErrorDialog: React.FC = () => {
                                 <AlertTriangle className="size-3.5" />
                             </div>
                             <div className="min-w-0 flex-1">
-                                <div className="text-[11px] font-semibold leading-4 text-white">{error.title}</div>
-                                <p className="mt-1 text-[11px] leading-4 text-slate-300">{error.friendlyMessage}</p>
+                                <div className="text-[0.6875em] font-semibold leading-[1.45em] text-white">{error.title}</div>
+                                <p className="mt-1 text-[0.6875em] leading-[1.45em] text-slate-300">{error.friendlyMessage}</p>
                             </div>
                             <button
                                 type="button"
                                 className="glass-focus rounded-full p-1 text-slate-400 transition hover:bg-white/8 hover:text-white"
                                 onClick={() => closeError(error.id)}
-                                aria-label="Close error notification"
+                                aria-label={t('error.notification.close')}
                             >
                                 <X className="size-3.5" />
                             </button>
@@ -89,17 +102,17 @@ export const RequestErrorDialog: React.FC = () => {
                             <div className="mt-2">
                                 <button
                                     type="button"
-                                    className="glass-focus flex w-full items-center justify-between rounded-xl px-2 py-1 text-[9px]! font-medium text-slate-300 transition hover:bg-white/6 hover:text-white"
+                                    className="glass-focus flex w-full items-center justify-between rounded-xl px-2 py-1 text-[0.5625em]! font-medium text-slate-300 transition hover:bg-white/6 hover:text-white"
                                     onClick={() => toggleDetails(error.id)}
                                 >
-                                    <span>{error.showDetails ? 'Hide details' : 'Show details'}</span>
+                                    <span>{error.showDetails ? t('error.details.hide') : t('error.details.show')}</span>
                                     {error.showDetails ? <ChevronUp className="size-3.5" /> : <ChevronDown className="size-3.5" />}
                                 </button>
                                 {error.showDetails ? (
                                     <pre
                                         className={cn(
                                             'mt-2 max-h-40 overflow-auto rounded-xl border border-white/10 bg-slate-950/65 p-2',
-                                            'text-[10px] leading-4 whitespace-pre-wrap break-words text-slate-400'
+                                            'text-[0.625em] leading-[1.6em] whitespace-pre-wrap break-words text-slate-400'
                                         )}
                                     >
                                         {detailsText}

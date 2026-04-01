@@ -1,5 +1,5 @@
 import React from 'react'
-import { useLobby, useUser, useWS, useAudio } from 'client/context/list'
+import { useAudio, useI18n, useLobby, useUser, useWS } from 'client/context/list'
 import { useClientRouter } from 'client/route/ClientRouter'
 import { useGlobalModal } from 'client/features/global-modal/GlobalModal'
 import { useGame } from '../games/common/GameFactory'
@@ -39,6 +39,7 @@ export const LobbyControls: React.FC<LobbyControlsProps> = props => {
     const audio = useAudio()
     const router = useClientRouter()
     const game = useGame()
+    const { t } = useI18n()
 
     const [isDesktopMenuOpen, setIsDesktopMenuOpen] = React.useState(false)
     const [isDesktopVolumeOpen, setIsDesktopVolumeOpen] = React.useState(false)
@@ -57,8 +58,8 @@ export const LobbyControls: React.FC<LobbyControlsProps> = props => {
 
     const confirmDestroyLobby = () => {
         globalModal.confirm({
-            title: 'Destroy lobby',
-            content: 'Destroy this lobby?',
+            title: t('lobbyControls.destroyTitle'),
+            content: t('lobbyControls.destroyContent'),
             onConfirm: () => {
                 lobby.destroy()
                 router.setFrame('Home')
@@ -68,8 +69,8 @@ export const LobbyControls: React.FC<LobbyControlsProps> = props => {
 
     const confirmLeaveLobby = () => {
         globalModal.confirm({
-            title: 'Leave lobby',
-            content: 'Want to leave?',
+            title: t('lobbyControls.leaveTitle'),
+            content: t('lobbyControls.leaveContent'),
             onConfirm: () => {
                 lobby.exit()
                 router.setFrame('Home')
@@ -83,7 +84,7 @@ export const LobbyControls: React.FC<LobbyControlsProps> = props => {
                   {
                       icon: <OctagonX className={controlIconClassName} strokeWidth={2.25} />,
                       id: 'destroy',
-                      label: 'Destroy lobby',
+                      label: t('lobbyControls.destroyLobby'),
                       onClick: confirmDestroyLobby,
                       variant: 'outlineDanger' as const
                   }
@@ -94,7 +95,7 @@ export const LobbyControls: React.FC<LobbyControlsProps> = props => {
                   {
                       icon: <Check className={controlIconClassName} strokeWidth={2.25} />,
                       id: 'ready-check',
-                      label: 'Ready check',
+                      label: t('lobbyControls.readyCheck'),
                       onClick: () => ws.send('Lobby-StartReadyCheck', { lobbyId: lobby.lobbyId }),
                       variant: 'secondary' as const
                   }
@@ -103,7 +104,7 @@ export const LobbyControls: React.FC<LobbyControlsProps> = props => {
         {
             icon: <LogOut className={controlIconClassName} strokeWidth={2.25} />,
             id: 'leave',
-            label: 'Leave lobby',
+            label: t('lobbyControls.leaveLobby'),
             onClick: confirmLeaveLobby,
             variant: 'secondary'
         }
@@ -259,7 +260,7 @@ export const LobbyControls: React.FC<LobbyControlsProps> = props => {
                         size="icon"
                         className="pointer-events-auto size-12 rounded-full"
                         onClick={toggleDesktopVolume}
-                        aria-label={isDesktopVolumeOpen ? 'Hide volume controls' : 'Show volume controls'}
+                        aria-label={isDesktopVolumeOpen ? t('lobbyControls.hideVolumeControls') : t('lobbyControls.showVolumeControls')}
                     >
                         {audio.volume === 0 ? (
                             <VolumeX className={controlIconClassName} strokeWidth={2.25} />
@@ -277,11 +278,11 @@ export const LobbyControls: React.FC<LobbyControlsProps> = props => {
                                 <Button
                                     variant="ghost"
                                     size="sm"
-                                    className="pointer-events-auto h-8 rounded-full px-3 text-[9px]! font-semibold tracking-[0.16em] text-slate-200"
+                                    className="pointer-events-auto h-8 rounded-full px-3 text-[0.5625em]! font-semibold tracking-[0.16em] text-slate-200"
                                     onClick={() => audio.toggleMute()}
-                                    aria-label={audio.volume === 0 ? 'Unmute' : 'Mute'}
+                                    aria-label={audio.volume === 0 ? t('lobbyControls.unmuteLabel') : t('lobbyControls.muteLabel')}
                                 >
-                                    {audio.volume === 0 ? 'UNMUTE' : 'MUTE'}
+                                    {audio.volume === 0 ? t('lobbyControls.unmute') : t('lobbyControls.mute')}
                                 </Button>
                             </div>
                             <Slider
@@ -291,7 +292,7 @@ export const LobbyControls: React.FC<LobbyControlsProps> = props => {
                                 step={1}
                                 value={[audio.volume]}
                                 onValueChange={value => audio.setVolume(value[0] || 0)}
-                                aria-label="Volume"
+                                aria-label={t('lobbyControls.volume')}
                             />
                         </div>
                     ) : null}
@@ -302,7 +303,7 @@ export const LobbyControls: React.FC<LobbyControlsProps> = props => {
                             size="icon"
                             className="pointer-events-auto size-12 rounded-full"
                             onClick={() => setIsDesktopMenuOpen(current => !current)}
-                            aria-label="Lobby menu"
+                            aria-label={t('lobbyControls.menu')}
                         >
                             <MoreHorizontal className={controlIconClassName} strokeWidth={2.25} />
                         </Button>
@@ -340,7 +341,7 @@ export const LobbyControls: React.FC<LobbyControlsProps> = props => {
                         disabled={isBottomDockOccupied}
                     >
                         <MessageCircle className={controlIconClassName} strokeWidth={2.25} />
-                        Chat
+                        {t('common.chat')}
                         <ChevronDown className={controlIconClassName} strokeWidth={2.25} />
                     </Button>
 
@@ -366,11 +367,11 @@ export const LobbyControls: React.FC<LobbyControlsProps> = props => {
                             <Button
                                 variant="ghost"
                                 size="sm"
-                                className="pointer-events-auto h-8 rounded-full px-3 text-[9px]! font-semibold tracking-[0.16em] text-slate-200"
+                                className="pointer-events-auto h-8 rounded-full px-3 text-[0.5625em]! font-semibold tracking-[0.16em] text-slate-200"
                                 onClick={() => audio.toggleMute()}
-                                aria-label={audio.volume === 0 ? 'Unmute' : 'Mute'}
+                                aria-label={audio.volume === 0 ? t('lobbyControls.unmuteLabel') : t('lobbyControls.muteLabel')}
                             >
-                                {audio.volume === 0 ? 'UNMUTE' : 'MUTE'}
+                                {audio.volume === 0 ? t('lobbyControls.unmute') : t('lobbyControls.mute')}
                             </Button>
                         </div>
                         <Slider
@@ -380,7 +381,7 @@ export const LobbyControls: React.FC<LobbyControlsProps> = props => {
                             step={1}
                             value={[audio.volume]}
                             onValueChange={value => audio.setVolume(value[0] || 0)}
-                            aria-label="Volume"
+                            aria-label={t('lobbyControls.volume')}
                         />
                     </div>
                 ) : null}
@@ -402,11 +403,17 @@ export const LobbyControls: React.FC<LobbyControlsProps> = props => {
                         className="pointer-events-auto"
                         onClick={toggleLobbyChat}
                         disabled={isBottomDockOccupied}
-                        aria-label={isLobbyChatOpen ? 'Hide chat' : 'Show chat'}
+                        aria-label={isLobbyChatOpen ? t('lobbyControls.hideChat') : t('lobbyControls.showChat')}
                     >
                         <MessageCircle className={controlIconClassName} strokeWidth={2.25} />
                     </Button>
-                    <Button variant="secondary" size="icon" className="pointer-events-auto" onClick={toggleMobileVolume} aria-label="Adjust volume">
+                    <Button
+                        variant="secondary"
+                        size="icon"
+                        className="pointer-events-auto"
+                        onClick={toggleMobileVolume}
+                        aria-label={t('lobbyControls.adjustVolume')}
+                    >
                         {audio.volume === 0 ? (
                             <VolumeX className={controlIconClassName} strokeWidth={2.25} />
                         ) : (
@@ -419,17 +426,29 @@ export const LobbyControls: React.FC<LobbyControlsProps> = props => {
                             size="icon"
                             className="pointer-events-auto"
                             onClick={() => ws.send('Lobby-StartReadyCheck', { lobbyId: lobby.lobbyId })}
-                            aria-label="Start ready check"
+                            aria-label={t('lobbyControls.startReadyCheck')}
                         >
                             <Check className={controlIconClassName} strokeWidth={2.25} />
                         </Button>
                     ) : null}
                     {isCreatorView ? (
-                        <Button variant="outlineDanger" size="icon" className="pointer-events-auto" onClick={confirmDestroyLobby} aria-label="Destroy lobby">
+                        <Button
+                            variant="outlineDanger"
+                            size="icon"
+                            className="pointer-events-auto"
+                            onClick={confirmDestroyLobby}
+                            aria-label={t('lobbyControls.destroyLobby')}
+                        >
                             <OctagonX className={controlIconClassName} strokeWidth={2.25} />
                         </Button>
                     ) : null}
-                    <Button variant="secondary" size="icon" className="pointer-events-auto" onClick={confirmLeaveLobby} aria-label="Leave lobby">
+                    <Button
+                        variant="secondary"
+                        size="icon"
+                        className="pointer-events-auto"
+                        onClick={confirmLeaveLobby}
+                        aria-label={t('lobbyControls.leaveLobby')}
+                    >
                         <LogOut className={controlIconClassName} strokeWidth={2.25} />
                     </Button>
                 </div>
@@ -440,7 +459,7 @@ export const LobbyControls: React.FC<LobbyControlsProps> = props => {
                     <div className="glass-card pointer-events-auto w-full max-w-xl rounded-[2rem] p-3">
                         <div className="flex items-center justify-between gap-3">
                             <div className="min-w-0">
-                                <div className="text-xs font-semibold uppercase tracking-[0.28em] text-violet-200/60">Lobby Chat</div>
+                                <div className="text-xs font-semibold uppercase tracking-[0.28em] text-violet-200/60">{t('lobbyControls.lobbyChat')}</div>
                                 <div className="truncate text-sm text-slate-300">{lobby.lobbyId}</div>
                             </div>
                             <Button variant="ghost" size="icon" className={cn(iconButtonClassName, 'text-slate-200')} onClick={() => setIsLobbyChatOpen(false)}>

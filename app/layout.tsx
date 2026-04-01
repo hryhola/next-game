@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import 'client/global'
 import './globals.css'
+import { appFontVariables } from './fonts'
 
 export const metadata: Metadata = {
     title: 'Game Club',
@@ -10,7 +11,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
     return (
         <html lang="en">
-            <body>{children}</body>
+            <body className={appFontVariables} data-app-font="normal">
+                {children}
+            </body>
         </html>
     )
 }

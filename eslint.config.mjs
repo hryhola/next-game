@@ -10,5 +10,14 @@ export default defineConfig([
             '@next/next/no-img-element': 'off'
         }
     },
-    globalIgnores(['.next/**', 'node_modules/**', 'out/**', 'storybook-static/**', 'coverage/**', 'workers/realtime/worker-configuration.d.ts'])
+    globalIgnores([
+        '.next/**',
+        'node_modules/**',
+        'out/**',
+        'storybook-static/**',
+        'coverage/**',
+        'SI/**',
+        'trickster/**',
+        'workers/realtime/worker-configuration.d.ts'
+    ])
 ])

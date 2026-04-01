@@ -7,6 +7,7 @@ import { useClientRouter } from 'client/route/ClientRouter'
 import { getCloudflareLobbyWebSocketUrl } from 'client/network-utils/realtimeMode'
 import { getCookie } from 'cookies-next'
 import { Button } from 'client/ui/primitives'
+import { useI18n } from 'client/context/list'
 
 type Props = {
     children: React.ReactNode
@@ -17,6 +18,7 @@ export const WsApp: React.FC<Props> = props => {
     const lobby = useLobby()
     const user = useUser()
     const router = useClientRouter()
+    const { t } = useI18n()
 
     const isFirstConnection = useRef(true)
     const pendingSocketRef = useRef<WebSocket | null>(null)
@@ -255,13 +257,13 @@ export const WsApp: React.FC<Props> = props => {
         <>
             {props.children}
             <DevToolsOverlay />
-            <LoadingOverlay transitionDuration={0} text="connecting..." isLoading={isHandlingConnection} />
+            <LoadingOverlay transitionDuration={0} text={t('common.connecting')} isLoading={isHandlingConnection} />
             {shouldShowBackdrop ? (
                 <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/80 backdrop-blur-sm">
                     <div className="glass-card flex flex-col gap-4 px-6 py-5 text-center text-slate-100">
-                        <p>Connect to the room server to continue.</p>
+                        <p>{t('ws.connectPrompt')}</p>
                         <Button variant="secondary" onClick={() => startConnecting(currentTargetUrl.current || undefined)}>
-                            Reconnect
+                            {t('common.reconnect')}
                         </Button>
                     </div>
                 </div>

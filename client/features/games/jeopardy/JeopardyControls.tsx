@@ -1,4 +1,4 @@
-import { useLobby, useUser } from 'client/context/list'
+import { useI18n, useLobby, useUser } from 'client/context/list'
 import { LobbyControls } from 'client/features/lobby-controls/LobbyControls'
 import React from 'react'
 import { useActionSender, useJeopardy } from './JeopardyView'
@@ -11,6 +11,7 @@ const JeopardyControls = (props: Props) => {
     const game = useJeopardy()
     const user = useUser()
     const actionSender = useActionSender()
+    const { t } = useI18n()
 
     const gameControls: React.ReactNode[] = []
 
@@ -31,7 +32,7 @@ const JeopardyControls = (props: Props) => {
 
             gameControls.push(
                 <Button className="w-full" onClick={() => actionSender('$AnswerRequest', null)} disabled={!theButtonEnabled} key="2">
-                    THE BUTTON
+                    {t('jeopardy.theButton')}
                 </Button>
             )
         } else {
@@ -42,12 +43,12 @@ const JeopardyControls = (props: Props) => {
                     onClick={() => actionSender('$SkipVote', null)}
                     key="1"
                 >
-                    Skip
+                    {t('common.skip')}
                 </Button>
             )
             gameControls.push(
                 <Button variant="secondary" onClick={() => actionSender(game.session?.isPaused ? '$Resume' : '$Pause', null)} key="3">
-                    {game.session?.isPaused ? 'Resume' : 'Pause'}
+                    {game.session?.isPaused ? t('common.resume') : t('common.pause')}
                 </Button>
             )
         }

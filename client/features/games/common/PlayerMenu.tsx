@@ -1,4 +1,4 @@
-import { useUser, useLobby, useWS } from 'client/context/list'
+import { useI18n, useUser, useLobby, useWS } from 'client/context/list'
 import { useGlobalModal } from 'client/features/global-modal/GlobalModal'
 import { useRef } from 'react'
 import type { PlayerData } from 'shared/contracts/app'
@@ -17,6 +17,7 @@ export const PlayerMenu: React.FC<Props> = props => {
     const lobby = useLobby()
     const ws = useWS()
     const game = useGame()
+    const { t } = useI18n()
 
     const scoreInputRef = useRef<HTMLInputElement | null>(null)
 
@@ -34,8 +35,8 @@ export const PlayerMenu: React.FC<Props> = props => {
 
         if (option === 'kick') {
             globalModal.confirm({
-                title: 'Kick player',
-                content: `Want to kick ${props.player.userNickname}?`,
+                title: t('playerMenu.kickTitle'),
+                content: t('playerMenu.kickContent', { name: props.player.userNickname }),
                 onConfirm: () => {
                     ws.send('Lobby-Kick', {
                         lobbyId: lobby.lobbyId,
@@ -47,16 +48,16 @@ export const PlayerMenu: React.FC<Props> = props => {
 
         if (option === 'set-score') {
             globalModal.confirm({
-                title: 'Set score',
+                title: t('playerMenu.setScoreTitle'),
                 content: (
                     <>
                         <div className="space-y-3">
-                            <p className="text-sm text-slate-300">Set score for {props.player.userNickname}</p>
+                            <p className="text-sm text-slate-300">{t('playerMenu.setScorePrompt', { name: props.player.userNickname })}</p>
                             <input
                                 ref={scoreInputRef}
                                 inputMode="numeric"
                                 type="number"
-                                placeholder="Score value"
+                                placeholder={t('playerMenu.scoreValue')}
                                 className="glass-input glass-focus h-12 w-full rounded-2xl px-4 text-sm text-slate-100 placeholder:text-slate-400"
                             />
                         </div>
@@ -64,7 +65,7 @@ export const PlayerMenu: React.FC<Props> = props => {
                 ),
                 onConfirm: () => {
                     if (!scoreInputRef.current) {
-                        alert('Cannot find score input element!')
+                        alert(t('playerMenu.scoreInputMissing'))
                         return
                     }
 
@@ -86,18 +87,18 @@ export const PlayerMenu: React.FC<Props> = props => {
     let options: string[][] = []
 
     if (props.player.userNickname !== user.userNickname && lobby.myRole !== 'spectator') {
-        options = [...options, ['tip', 'Tip']]
+        options = [...options, ['tip', t('playerMenu.tip')]]
     }
 
     const isMasterView = game.players.some(p => p.id === user.id && p.playerIsMaster)
 
     if (isMasterView) {
         if (props.player.userNickname !== user.userNickname) {
-            options = [...options, ['kick', 'Kick']]
+            options = [...options, ['kick', t('playerMenu.kick')]]
         }
 
         if (game.isSessionStarted) {
-            options = [...options, ['set-score', 'Set score']]
+            options = [...options, ['set-score', t('playerMenu.setScore')]]
         }
     }
 

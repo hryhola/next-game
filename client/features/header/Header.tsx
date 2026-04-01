@@ -1,9 +1,10 @@
 import { ProfilePreview } from './ProfilePreview'
-import { useHome } from 'client/context/list'
+import { useHome, useI18n } from 'client/context/list'
 import { cn } from 'client/ui/lib/cn'
 
 export const Header: React.FC<React.HTMLAttributes<HTMLElement>> = ({ className, ...props }) => {
     const home = useHome()
+    const { t } = useI18n()
 
     return (
         <header
@@ -13,7 +14,7 @@ export const Header: React.FC<React.HTMLAttributes<HTMLElement>> = ({ className,
             )}
             {...props}
         >
-            <p className="min-w-0 truncate text-xs uppercase tracking-[0.35em] text-violet-200/55">Game Club</p>
+            <p className="min-w-0 truncate text-xs uppercase tracking-[0.35em] text-violet-200/55 pl-2">{t('app.title')}</p>
             <ProfilePreview className="shrink-0" onClick={() => home.setIsProfileEditOpen(true)} />
         </header>
     )

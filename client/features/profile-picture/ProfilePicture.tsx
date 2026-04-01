@@ -1,6 +1,7 @@
 import { Upload, UserRound } from 'lucide-react'
 import { cn } from 'client/ui/lib/cn'
 import { Button } from 'client/ui/primitives'
+import { useI18n } from 'client/context/list'
 
 interface Props {
     url?: string
@@ -20,6 +21,7 @@ interface Props {
 }
 
 export const ProfilePicture: React.FC<Props> = props => {
+    const { t } = useI18n()
     const size = props.size || 300
     const frameClassName = props.plain ? 'rounded-none border-none bg-transparent' : 'rounded-3xl border border-white/10 bg-white/5'
     const emptyFrameClassName = props.plain ? 'rounded-none border-none bg-transparent' : 'rounded-3xl border border-white/10 bg-violet-500/10'
@@ -48,7 +50,7 @@ export const ProfilePicture: React.FC<Props> = props => {
 
         return (
             <div className={cn('flex items-center justify-center overflow-hidden', frameClassName)} style={{ ...sizeProps, filter: props.filter }}>
-                <img alt="user avatar" src={props.url} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                <img alt={t('image.alt.userAvatar')} src={props.url} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
             </div>
         )
     }
@@ -65,7 +67,7 @@ export const ProfilePicture: React.FC<Props> = props => {
                 />
             )}
             {props.url ? (
-                <img alt="user avatar" src={props.url} style={{ filter: props.filter, width: '100%', height: '100%', objectFit: 'contain' }} />
+                <img alt={t('image.alt.userAvatar')} src={props.url} style={{ filter: props.filter, width: '100%', height: '100%', objectFit: 'contain' }} />
             ) : (
                 <>
                     <div className={cn('flex size-full items-center justify-center', editableFrameClassName)}>

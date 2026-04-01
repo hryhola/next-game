@@ -4,6 +4,7 @@ import type { TChatMessage } from 'shared/contracts/app'
 import { Button, Input } from 'client/ui/primitives'
 import { cn } from 'client/ui/lib/cn'
 import { SendHorizontal } from 'lucide-react'
+import { useI18n } from 'client/context/list'
 
 export type ChatSXProps = {
     className?: string
@@ -23,6 +24,7 @@ export const ChatBox: React.FunctionComponent<Props> = props => {
     const { className, inputClassName, inputRef, messages, messagesClassName, onSendMessage } = props
     const [text, setText] = useState('')
     const messagesRef = useRef<HTMLDivElement | null>(null)
+    const { t } = useI18n()
 
     const handleMessageSent = () => {
         if (text.trim().length) {
@@ -52,7 +54,7 @@ export const ChatBox: React.FunctionComponent<Props> = props => {
                 ))}
             </div>
             <div className={cn('mt-3 flex h-[56px] items-center gap-3', inputClassName)}>
-                <Input ref={inputRef} value={text} onChange={e => setText(e.target.value)} placeholder="Write a message..." className="h-full flex-1" />
+                <Input ref={inputRef} value={text} onChange={e => setText(e.target.value)} placeholder={t('chat.writeMessage')} className="h-full flex-1" />
                 <Button
                     type="button"
                     variant="ghost"

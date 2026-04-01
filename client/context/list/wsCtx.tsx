@@ -26,6 +26,7 @@ import {
     toAppLobbyMember
 } from 'client/network-utils/realtimeAdapter'
 import { useUser } from './userCtx'
+import { useI18n } from './settingsCtx'
 
 const CLIENT_REQUEST_ERROR_EVENT = 'Client-RequestError'
 
@@ -43,42 +44,42 @@ type UserFacingRequestContext = (typeof userFacingRequestContexts)[number]
 type ClientRequestErrorContext = UserFacingRequestContext | 'Unknown'
 
 type ClientRequestErrorMeta = {
-    fallbackMessage: string
-    title: string
+    fallbackMessageKey: string
+    titleKey: string
 }
 
 const clientRequestErrorMeta: Record<ClientRequestErrorContext, ClientRequestErrorMeta> = {
     'Chat-Send': {
-        fallbackMessage: 'We could not send that message. Please try again.',
-        title: 'Message not sent'
+        fallbackMessageKey: 'ws.error.fallback.chatSend',
+        titleKey: 'ws.error.messageNotSent'
     },
     'Game-SendAction': {
-        fallbackMessage: 'We could not complete that game action. Please try again.',
-        title: 'Action failed'
+        fallbackMessageKey: 'ws.error.fallback.gameSendAction',
+        titleKey: 'ws.error.actionFailed'
     },
     'Game-Start': {
-        fallbackMessage: 'We could not start the game. Please try again.',
-        title: 'Game not started'
+        fallbackMessageKey: 'ws.error.fallback.gameStart',
+        titleKey: 'ws.error.gameNotStarted'
     },
     'Lobby-Kick': {
-        fallbackMessage: 'We could not remove that player from the lobby. Please try again.',
-        title: 'Kick failed'
+        fallbackMessageKey: 'ws.error.fallback.lobbyKick',
+        titleKey: 'ws.error.kickFailed'
     },
     'Lobby-StartReadyCheck': {
-        fallbackMessage: 'We could not start the ready check. Please try again.',
-        title: 'Ready check failed'
+        fallbackMessageKey: 'ws.error.fallback.readyStart',
+        titleKey: 'ws.error.readyCheckFailed'
     },
     'Lobby-Tip': {
-        fallbackMessage: 'We could not send that tip. Please try again.',
-        title: 'Tip failed'
+        fallbackMessageKey: 'ws.error.fallback.tip',
+        titleKey: 'ws.error.tipFailed'
     },
     'ReadyCheck-Response': {
-        fallbackMessage: 'We could not submit your ready check response. Please try again.',
-        title: 'Ready check response failed'
+        fallbackMessageKey: 'ws.error.fallback.readyResponse',
+        titleKey: 'ws.error.readyCheckResponseFailed'
     },
     Unknown: {
-        fallbackMessage: 'We could not complete that request. Please try again.',
-        title: 'Request failed'
+        fallbackMessageKey: 'ws.error.fallback.unknown',
+        titleKey: 'ws.error.requestFailed'
     }
 }
 
@@ -153,6 +154,7 @@ function getUserFacingRequestContext(message: LobbyClientMessage): UserFacingReq
 
 export const WSProvider: React.FC<Props> = props => {
     const user = useUser()
+    const { t, translateErrorMessage } = useI18n()
     const wsRef = useRef<WebSocket | null>(null)
     const workerGlobalSocketRef = useRef<WebSocket | null>(null)
     const workerGlobalPingRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -251,17 +253,18 @@ export const WSProvider: React.FC<Props> = props => {
         stack?: string
     }) => {
         const meta = clientRequestErrorMeta[context]
-        const friendlyMessage = message || meta.fallbackMessage
+        const fallbackMessage = t(meta.fallbackMessageKey as never)
+        const friendlyMessage = translateErrorMessage(message || fallbackMessage)
 
         emit(CLIENT_REQUEST_ERROR_EVENT, {
             code,
             context,
             details,
             friendlyMessage,
-            message: message || meta.fallbackMessage,
+            message: translateErrorMessage(message || fallbackMessage),
             requestData,
             stack,
-            title: meta.title
+            title: t(meta.titleKey as never)
         } satisfies ClientRequestErrorEvent)
     }
 
@@ -398,7 +401,7 @@ export const WSProvider: React.FC<Props> = props => {
                     details: {
                         readyState: wsRef.current?.readyState ?? WebSocket.CLOSED
                     },
-                    message: 'The live lobby connection is not ready yet. Please try again in a moment.',
+                    message: t('ws.error.socketNotReady'),
                     requestData: message
                 })
             }
@@ -432,7 +435,7 @@ export const WSProvider: React.FC<Props> = props => {
                     if (!response.ok) {
                         emit('Auth-Register', {
                             success: false,
-                            message: await getWorkerErrorMessage(response, 'Registration failed')
+                            message: translateErrorMessage(await getWorkerErrorMessage(response, t('errors.registrationFailed')))
                         })
                         return
                     }
@@ -666,14 +669,14 @@ export const WSProvider: React.FC<Props> = props => {
             if (context === 'Lobby-GetPublicInfo') {
                 emit('Lobby-GetPublicInfo', {
                     success: false,
-                    message: error instanceof Error ? error.message : 'Failed to load lobby'
+                    message: translateErrorMessage(error instanceof Error ? error.message : t('ws.error.failedToLoadLobby'))
                 })
             }
 
             if (context === 'Chat-Get') {
                 emit('Chat-Get', {
                     success: false,
-                    message: error instanceof Error ? error.message : 'Failed to load chat'
+                    message: translateErrorMessage(error instanceof Error ? error.message : t('ws.error.failedToLoadChat'))
                 })
             }
 
@@ -686,14 +689,14 @@ export const WSProvider: React.FC<Props> = props => {
             if (context === 'Users-Get') {
                 emit('Users-Get', {
                     success: false,
-                    message: error instanceof Error ? error.message : 'Failed to load users'
+                    message: translateErrorMessage(error instanceof Error ? error.message : t('ws.error.failedToLoadUsers'))
                 })
             }
 
             if (context === 'Users-GetCount') {
                 emit('Users-GetCount', {
                     success: false,
-                    message: error instanceof Error ? error.message : 'Failed to load users count'
+                    message: translateErrorMessage(error instanceof Error ? error.message : t('ws.error.failedToLoadUsersCount'))
                 })
             }
         }
@@ -967,36 +970,57 @@ export const useWS = () => {
 
 export const useRequestHandler: RequestHandlerRegistrar = (context, handler) => {
     const { on, unsubscribe } = useWS()
+    const handlerRef = useRef(handler)
 
     useEffect(() => {
-        on(context, handler)
+        handlerRef.current = handler
+    }, [handler])
+
+    useEffect(() => {
+        const stableHandler = (data: unknown) => handlerRef.current(data as never)
+
+        on(context, stableHandler)
 
         return () => {
-            unsubscribe(context, handler)
+            unsubscribe(context, stableHandler)
         }
-    }, [])
+    }, [context, on, unsubscribe])
 }
 
 export const useEventHandler: EventHandlerRegistrar = (context, handler) => {
     const { on, unsubscribe } = useWS()
+    const handlerRef = useRef(handler)
 
     useEffect(() => {
-        on(context, handler)
+        handlerRef.current = handler
+    }, [handler])
+
+    useEffect(() => {
+        const stableHandler = (data: unknown) => handlerRef.current(data as never)
+
+        on(context, stableHandler)
 
         return () => {
-            unsubscribe(context, handler)
+            unsubscribe(context, stableHandler)
         }
-    }, [])
+    }, [context, on, unsubscribe])
 }
 
 export const useClientRequestErrorHandler = (handler: (data: ClientRequestErrorEvent) => void) => {
     const { on, unsubscribe } = useWS()
+    const handlerRef = useRef(handler)
 
     useEffect(() => {
-        on(CLIENT_REQUEST_ERROR_EVENT, handler)
+        handlerRef.current = handler
+    }, [handler])
+
+    useEffect(() => {
+        const stableHandler = (data: ClientRequestErrorEvent) => handlerRef.current(data)
+
+        on(CLIENT_REQUEST_ERROR_EVENT, stableHandler)
 
         return () => {
-            unsubscribe(CLIENT_REQUEST_ERROR_EVENT, handler)
+            unsubscribe(CLIENT_REQUEST_ERROR_EVENT, stableHandler)
         }
-    }, [])
+    }, [on, unsubscribe])
 }

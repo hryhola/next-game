@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { useLobby, useUser } from 'client/context/list'
+import { useI18n, useLobby, useUser } from 'client/context/list'
 import type { PlayerData } from 'shared/contracts/app'
 import { ProfilePicture } from '../../profile-picture/ProfilePicture'
 import { PlayerMenu } from './PlayerMenu'
@@ -25,6 +25,7 @@ type LoadingData = {
 export const Player: React.FC<Props> = props => {
     const user = useUser()
     const lobby = useLobby()
+    const { t } = useI18n()
     const size = props.size || 'small'
 
     const sizes = {
@@ -84,7 +85,7 @@ export const Player: React.FC<Props> = props => {
                 {props.player.userNickname}
             </div>
             <div className="truncate text-sm text-slate-300">
-                {props.subtitle === 'role' ? (props.player.playerIsMaster ? 'Master' : 'Player') : props.player.playerScore}
+                {props.subtitle === 'role' ? (props.player.playerIsMaster ? t('player.role.master') : t('player.role.player')) : props.player.playerScore}
             </div>
         </>
     )

@@ -1,6 +1,6 @@
 import { useState, FormEventHandler } from 'react'
 import { setCookie } from 'cookies-next'
-import { useWS, useUser, useRequestHandler } from 'client/context/list'
+import { useWS, useUser, useRequestHandler, useI18n } from 'client/context/list'
 import { useClientRouter } from 'client/route/ClientRouter'
 import { Button, Card, CardContent, CardHeader, Input } from 'client/ui/primitives'
 
@@ -10,6 +10,7 @@ export const Login: React.FC = () => {
     const ws = useWS()
     const user = useUser()
     const router = useClientRouter()
+    const { t, translateErrorMessage } = useI18n()
 
     const [nickname, setNickname] = useState('')
     const [error, setError] = useState('')
@@ -24,7 +25,7 @@ export const Login: React.FC = () => {
 
             router.setFrame('Home')
         } else {
-            setError(data.message)
+            setError(translateErrorMessage(data.message))
         }
     })
 
@@ -38,7 +39,7 @@ export const Login: React.FC = () => {
 
             ws.send('Auth-Register', { userNickname: nicknameTrimmed })
         } else {
-            setError('nickname cannot be empty')
+            setError(t('login.nicknameEmpty'))
         }
     }
 
@@ -47,18 +48,23 @@ export const Login: React.FC = () => {
             <div className="m-auto w-full max-w-md">
                 <Card className="w-full">
                     <CardHeader>
-                        <p className="text-xs uppercase tracking-[0.35em] text-violet-200/55">Welcome</p>
-                        <h2 className="text-3xl font-semibold text-white">Enter Game Club</h2>
-                        <p className="text-sm text-slate-300">Choose a nickname to hop into lobbies, chat, and game sessions.</p>
+                        <p className="text-xs uppercase tracking-[0.35em] text-violet-200/55">{t('login.welcome')}</p>
+                        <h2 className="text-3xl font-semibold text-white">{t('login.title')}</h2>
+                        <p className="text-sm text-slate-300">{t('login.subtitle')}</p>
                     </CardHeader>
                     <CardContent>
                         <form className="space-y-4" onSubmit={handleSubmit}>
                             <div className="space-y-2">
-                                <Input name="nickname" placeholder="Nickname" value={nickname} onChange={e => setNickname(e.target.value)} />
-                                {error ? <p className="text-sm text-rose-300">{error}</p> : null}
+                                <Input
+                                    name="nickname"
+                                    placeholder={t('login.nicknamePlaceholder')}
+                                    value={nickname}
+                                    onChange={e => setNickname(e.target.value)}
+                                />
+                                {error ? <p className="text-sm text-rose-300">{translateErrorMessage(error)}</p> : null}
                             </div>
                             <Button className="w-full" size="lg" variant="primary" type="submit">
-                                Enter
+                                {t('login.enter')}
                             </Button>
                         </form>
                     </CardContent>

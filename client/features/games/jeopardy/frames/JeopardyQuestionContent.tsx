@@ -15,7 +15,7 @@ import {
     TextField,
     Typography
 } from 'client/ui/mui-shim'
-import { useAudio, useLobby, useUser, useWS } from 'client/context/list'
+import { useAudio, useI18n, useLobby, useUser, useWS } from 'client/context/list'
 import { isCloudflareRealtimeEnabled } from 'client/network-utils/realtimeMode'
 import React, { MutableRefObject, useEffect, useRef, useState } from 'react'
 import { useActionSender, useJeopardy, useJeopardyAction } from '../JeopardyView'
@@ -76,6 +76,7 @@ const QuestionValueDock: React.FC<{
     title: string
 }> = ({ initialValue, maxValue, minValue, onConfirm, title }) => {
     const [selectedValue, setSelectedValue] = useState(initialValue)
+    const { t } = useI18n()
 
     return (
         <>
@@ -92,7 +93,7 @@ const QuestionValueDock: React.FC<{
                 />
             </Box>
             <div className="mt-3 flex justify-end">
-                <Button onClick={() => onConfirm(selectedValue)}>Confirm</Button>
+                <Button onClick={() => onConfirm(selectedValue)}>{t('common.confirmShort')}</Button>
             </div>
         </>
     )
@@ -106,6 +107,7 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
     const sendAction = useActionSender()
     const playerRef = useRef<HTMLAudioElement | HTMLVideoElement | null>(null)
     const audio = useAudio()
+    const { t } = useI18n()
     const isWorkerMode = isCloudflareRealtimeEnabled()
     const [timerNowMs, setTimerNowMs] = useState(() => Date.now())
     const session = game.session as RealtimeJeopardySessionState | null
@@ -256,7 +258,7 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
 
     switch (props.type) {
         case 'image': {
-            content = <img src={resolvedContent} alt="Question Image" />
+            content = <img src={resolvedContent} alt={t('image.alt.questionImage')} />
             break
         }
         case 'video': {
@@ -275,7 +277,7 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
             content = (
                 <>
                     <audio ref={playerRef} autoPlay onEnded={handleMediaEnded} src={resolvedContent}></audio>
-                    <img src="/assets/jeopardy/audio.gif" alt="Audio question" />
+                    <img src="/assets/jeopardy/audio.gif" alt={t('image.alt.audioQuestion')} />
                 </>
             )
             break
@@ -305,14 +307,14 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
             {verifyDockVisible ? (
                 <div className={bottomDockPositionClassName}>
                     <div className={bottomDockPanelClassName}>
-                        <div className="text-xs font-semibold uppercase tracking-[0.28em] text-violet-200/60">Verify Answer</div>
-                        <Typography sx={{ pt: 2, pb: 3 }}>Answer: {verifyingAnswerText ? verifyingAnswerText : <i>no answer</i>}</Typography>
+                        <div className="text-xs font-semibold uppercase tracking-[0.28em] text-violet-200/60">{t('jeopardy.verifyAnswer')}</div>
+                        <Typography sx={{ pt: 2, pb: 3 }}>{t('jeopardy.answerLabel', { answer: verifyingAnswerText || t('jeopardy.noAnswer') })}</Typography>
                         {mostAnswersList.length ? (
-                            <Table aria-label="Answers" size="small">
+                            <Table aria-label={t('common.answer')} size="small">
                                 <TableHead>
                                     <TableRow>
-                                        <TableCell>Correct</TableCell>
-                                        <TableCell>Wrong</TableCell>
+                                        <TableCell>{t('common.correct')}</TableCell>
+                                        <TableCell>{t('common.incorrect')}</TableCell>
                                     </TableRow>
                                 </TableHead>
                                 <TableBody>
@@ -331,13 +333,13 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
                         ) : null}
                         {Object.keys(questionAnswers).length > 1 ? (
                             <div className="mt-4">
-                                <Table aria-label="Submitted Answers" size="small">
+                                <Table aria-label={t('jeopardy.submittedAnswers')} size="small">
                                     <TableHead>
                                         <TableRow>
-                                            <TableCell>Player</TableCell>
-                                            <TableCell>Answer</TableCell>
-                                            <TableCell>Wager</TableCell>
-                                            <TableCell>Rate</TableCell>
+                                            <TableCell>{t('common.player')}</TableCell>
+                                            <TableCell>{t('common.answer')}</TableCell>
+                                            <TableCell>{t('common.wager')}</TableCell>
+                                            <TableCell>{t('common.rate')}</TableCell>
                                         </TableRow>
                                     </TableHead>
                                     <TableBody>
@@ -347,7 +349,13 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
                                                 <TableCell>{answer.value}</TableCell>
                                                 <TableCell>{answer.wager ?? props.questionPrice ?? ''}</TableCell>
                                                 <TableCell>
-                                                    {answer.rate || (session?.internal?.currentAnsweringPlayerId === playerId ? 'current' : '')}
+                                                    {answer.rate === 'approved'
+                                                        ? t('jeopardy.answerStatus.approved')
+                                                        : answer.rate === 'declined'
+                                                          ? t('jeopardy.answerStatus.declined')
+                                                          : session?.internal?.currentAnsweringPlayerId === playerId
+                                                            ? t('jeopardy.answerStatus.current')
+                                                            : ''}
                                                 </TableCell>
                                             </TableRow>
                                         ))}
@@ -357,10 +365,10 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
                         ) : null}
                         <div className="mt-3 flex flex-wrap justify-end gap-3">
                             <Button color="error" onClick={() => sendAction('$RateAnswer', { rating: 'declined' })}>
-                                Decline
+                                {t('common.decline')}
                             </Button>
                             <Button color="success" onClick={() => sendAction('$RateAnswer', { rating: 'approved' })}>
-                                Approve
+                                {t('common.approve')}
                             </Button>
                         </div>
                     </div>
@@ -369,7 +377,7 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
             {selectionDockVisible ? (
                 <div className={bottomDockPositionClassName}>
                     <div className={bottomDockPanelClassName}>
-                        <div className="text-xs font-semibold uppercase tracking-[0.28em] text-violet-200/60">Choose Player</div>
+                        <div className="text-xs font-semibold uppercase tracking-[0.28em] text-violet-200/60">{t('jeopardy.choosePlayer')}</div>
                         <div className="mt-2">
                             <List>
                                 {(props.eligiblePlayerIds || []).map(playerId => (
@@ -389,7 +397,7 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
                     <div className={bottomDockPanelClassName}>
                         <QuestionValueDock
                             key={valueSelectionKey}
-                            title={props.specialPhase === 'making-hidden-stakes' ? 'Hidden Stake' : 'Question Value'}
+                            title={props.specialPhase === 'making-hidden-stakes' ? t('jeopardy.hiddenStake') : t('jeopardy.questionValue')}
                             initialValue={props.questionPrice || props.priceOptions?.[0] || 1}
                             minValue={props.specialPhase === 'making-hidden-stakes' ? 1 : props.priceOptions?.[0] || 1}
                             maxValue={
@@ -405,7 +413,7 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
             {answerDockVisible ? (
                 <div className={bottomDockPositionClassName}>
                     <div className={bottomDockPanelClassName}>
-                        <div className="text-xs font-semibold uppercase tracking-[0.28em] text-violet-200/60">Your Answer</div>
+                        <div className="text-xs font-semibold uppercase tracking-[0.28em] text-violet-200/60">{t('jeopardy.yourAnswer')}</div>
                         <div className="mt-3">
                             <TextField
                                 inputRef={answerInputRef}
@@ -418,7 +426,7 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
                             />
                         </div>
                         <div className="mt-3 flex justify-end">
-                            <Button onClick={submitAnswer}>Confirm</Button>
+                            <Button onClick={submitAnswer}>{t('common.confirmShort')}</Button>
                         </div>
                     </div>
                 </div>

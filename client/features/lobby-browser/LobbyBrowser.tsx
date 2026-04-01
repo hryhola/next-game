@@ -1,4 +1,4 @@
-import { useEventHandler, useHome, useRequestHandler, useWS } from 'client/context/list'
+import { useEventHandler, useHome, useI18n, useRequestHandler, useWS } from 'client/context/list'
 import { useEffect, useState } from 'react'
 import type { LobbyBaseInfo } from 'shared/contracts/lobby'
 import { Plus, Search } from 'lucide-react'
@@ -8,6 +8,7 @@ import { Button, Input } from 'client/ui/primitives'
 export const LobbyBrowser: React.FC = () => {
     const ws = useWS()
     const home = useHome()
+    const { t } = useI18n()
 
     const [lobbiesList, setLobbiesList] = useState<LobbyBaseInfo[]>([])
 
@@ -50,14 +51,14 @@ export const LobbyBrowser: React.FC = () => {
                 <Button
                     variant="ghost"
                     className="size-12 rounded-full border-0 bg-transparent p-0 text-violet-200 shadow-none hover:bg-white/6 lg:hidden"
-                    aria-label="Create lobby"
+                    aria-label={t('home.createLobby')}
                     onClick={() => home.setIsCreateLobbyOpen(true)}
                 >
                     <Plus className="size-6 text-violet-200" strokeWidth={2.25} />
                 </Button>
                 <div className="relative flex-1">
                     <Search className="pointer-events-none absolute right-4 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
-                    <Input placeholder="Search..." value={searchString} onChange={e => setSearchString(e.target.value)} className="pr-10" />
+                    <Input placeholder={t('common.search')} value={searchString} onChange={e => setSearchString(e.target.value)} className="pr-10" />
                 </div>
             </div>
             <div className="flex flex-1 flex-col gap-3 overflow-y-auto">

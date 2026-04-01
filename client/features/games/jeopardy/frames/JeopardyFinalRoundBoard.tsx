@@ -15,7 +15,7 @@ import {
     TableRow,
     TextField
 } from 'client/ui/mui-shim'
-import { useUser } from 'client/context/list'
+import { useI18n, useUser } from 'client/context/list'
 import { useActionSender, useJeopardy } from '../JeopardyView'
 import { JeopardyMedia } from '../utils/jeopardyPackLoading'
 import type { RealtimeJeopardySessionState, RealtimeJeopardyState } from 'shared/contracts/jeopardy'
@@ -55,10 +55,11 @@ function getTimedProgress(startedAt: string | null | undefined, endsAt: string |
 const FinalQuestion: React.FC<{ type: string; content: string; isRef?: boolean; Resources: MutableRefObject<JeopardyMedia> }> = props => {
     const playerRef = useRef<HTMLAudioElement | HTMLVideoElement | null>(null)
     const resolvedContent = resolveFinalContent(props.Resources, props.type, props.content, props.isRef)
+    const { t } = useI18n()
 
     switch (props.type) {
         case 'image': {
-            return <img src={resolvedContent} alt="Question Image" />
+            return <img src={resolvedContent} alt={t('image.alt.questionImage')} />
         }
         case 'video': {
             return (
@@ -69,7 +70,7 @@ const FinalQuestion: React.FC<{ type: string; content: string; isRef?: boolean; 
             return (
                 <>
                     <audio ref={playerRef} controls src={resolvedContent}></audio>
-                    <img src="/assets/jeopardy/audio.gif" alt="Audio question" />
+                    <img src="/assets/jeopardy/audio.gif" alt={t('image.alt.audioQuestion')} />
                 </>
             )
         }
@@ -89,10 +90,11 @@ const FinalBetDock: React.FC<{
     onConfirm: (value: number) => void
 }> = ({ initialValue, maxValue, onConfirm }) => {
     const [betValue, setBetValue] = useState(initialValue)
+    const { t } = useI18n()
 
     return (
         <>
-            <div className="text-xs font-semibold uppercase tracking-[0.28em] text-violet-200/60">Final Bet</div>
+            <div className="text-xs font-semibold uppercase tracking-[0.28em] text-violet-200/60">{t('jeopardy.finalBet')}</div>
             <div className="mt-3 text-4xl font-semibold tabular-nums text-white">{betValue}</div>
             <Box minWidth="260px" display="flex" justifyContent="center" alignItems="center">
                 <Slider
@@ -105,7 +107,7 @@ const FinalBetDock: React.FC<{
                 />
             </Box>
             <div className="mt-3 flex justify-end">
-                <Button onClick={() => onConfirm(betValue)}>Confirm Bet</Button>
+                <Button onClick={() => onConfirm(betValue)}>{t('jeopardy.confirmBet')}</Button>
             </div>
         </>
     )
@@ -115,15 +117,16 @@ const FinalAnswerDock: React.FC<{
     onSubmit: (answer: string) => void
 }> = ({ onSubmit }) => {
     const [answer, setAnswer] = useState('')
+    const { t } = useI18n()
 
     return (
         <>
-            <div className="text-xs font-semibold uppercase tracking-[0.28em] text-violet-200/60">Final Answer</div>
+            <div className="text-xs font-semibold uppercase tracking-[0.28em] text-violet-200/60">{t('jeopardy.finalAnswer')}</div>
             <div className="mt-3">
                 <TextField value={answer} onChange={event => setAnswer(event.target.value)} />
             </div>
             <div className="mt-3 flex justify-end">
-                <Button onClick={() => onSubmit(answer)}>Submit Answer</Button>
+                <Button onClick={() => onSubmit(answer)}>{t('jeopardy.submitAnswer')}</Button>
             </div>
         </>
     )
@@ -138,6 +141,7 @@ export const FinalRoundBoard: React.FC<
     const game = useJeopardy()
     const sendAction = useActionSender()
     const [timerNowMs, setTimerNowMs] = useState(() => Date.now())
+    const { t } = useI18n()
 
     const isMasterView = game.players.some(p => p.id === user.id && p.playerIsMaster)
     const phaseProgress = getTimedProgress(props.phaseStartedAt, props.phaseEndsAt, props.phaseTimeLeft, timerNowMs)
@@ -210,8 +214,8 @@ export const FinalRoundBoard: React.FC<
         case 'betting':
             content = (
                 <div className="mx-auto flex max-w-3xl flex-col items-center gap-4 px-6 text-center">
-                    <div className="text-xs font-semibold uppercase tracking-[0.28em] text-violet-200/60">Final Theme</div>
-                    <div className="text-3xl font-semibold text-white">{activeThemeName || 'Final Question'}</div>
+                    <div className="text-xs font-semibold uppercase tracking-[0.28em] text-violet-200/60">{t('jeopardy.finalTheme')}</div>
+                    <div className="text-3xl font-semibold text-white">{activeThemeName || t('jeopardy.finalQuestion')}</div>
                 </div>
             )
             break
@@ -261,16 +265,20 @@ export const FinalRoundBoard: React.FC<
             {verifyDockVisible && internal ? (
                 <div className={bottomDockPositionClassName}>
                     <div className={verifyDockPanelClassName}>
-                        <div className="text-xs font-semibold uppercase tracking-[0.28em] text-violet-200/60">Verify Final Answers</div>
-                        <div className="mt-3 text-sm text-white/80">Correct: {internal.correctAnswers?.join(', ') || 'None'}</div>
-                        <div className="text-sm text-white/65">Incorrect: {internal.incorrectAnswers?.join(', ') || 'None'}</div>
+                        <div className="text-xs font-semibold uppercase tracking-[0.28em] text-violet-200/60">{t('jeopardy.verifyFinalAnswers')}</div>
+                        <div className="mt-3 text-sm text-white/80">
+                            {t('common.correct')}: {internal.correctAnswers?.join(', ') || t('common.none')}
+                        </div>
+                        <div className="text-sm text-white/65">
+                            {t('common.incorrect')}: {internal.incorrectAnswers?.join(', ') || t('common.none')}
+                        </div>
                         <div className="mt-4 max-h-[40vh] overflow-auto">
-                            <Table aria-label="Final Answers" size="small">
+                            <Table aria-label={t('jeopardy.finalAnswers')} size="small">
                                 <TableHead>
                                     <TableRow>
-                                        <TableCell>Player</TableCell>
-                                        <TableCell>Answer</TableCell>
-                                        <TableCell>Action</TableCell>
+                                        <TableCell>{t('common.player')}</TableCell>
+                                        <TableCell>{t('common.answer')}</TableCell>
+                                        <TableCell>{t('common.action')}</TableCell>
                                     </TableRow>
                                 </TableHead>
                                 <TableBody>
@@ -285,17 +293,19 @@ export const FinalRoundBoard: React.FC<
                                                             color="success"
                                                             onClick={() => sendAction('$RateFinalAnswer', { answeringPlayerId: playerId, rate: 'approved' })}
                                                         >
-                                                            Approve
+                                                            {t('common.approve')}
                                                         </Button>
                                                         <Button
                                                             color="error"
                                                             onClick={() => sendAction('$RateFinalAnswer', { answeringPlayerId: playerId, rate: 'declined' })}
                                                         >
-                                                            Decline
+                                                            {t('common.decline')}
                                                         </Button>
                                                     </div>
                                                 ) : (
-                                                    <span className="text-sm capitalize text-white/70">{answer.rate}</span>
+                                                    <span className="text-sm capitalize text-white/70">
+                                                        {answer.rate === 'approved' ? t('jeopardy.answerStatus.approved') : t('jeopardy.answerStatus.declined')}
+                                                    </span>
                                                 )}
                                             </TableCell>
                                         </TableRow>
@@ -305,7 +315,7 @@ export const FinalRoundBoard: React.FC<
                         </div>
                         {Object.values(internal.finalAnswers).length > 0 && Object.values(internal.finalAnswers).every(answer => answer.rate) ? (
                             <div className="mt-4 flex justify-end">
-                                <Button onClick={() => sendAction('$ShowFinalScores', null)}>End</Button>
+                                <Button onClick={() => sendAction('$ShowFinalScores', null)}>{t('common.end')}</Button>
                             </div>
                         ) : null}
                     </div>

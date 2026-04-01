@@ -6,6 +6,7 @@ import { GlobalUsersListTitle } from '../global-users-list/GlobalUsersListTitle'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from 'client/ui/primitives'
 import { cn } from 'client/ui/lib/cn'
 import { GlobalOnlineUser } from '../global-users-list/useGlobalOnlineUsers'
+import { useI18n } from 'client/context/list'
 
 type HomeTabsProps = {
     className?: string
@@ -14,11 +15,13 @@ type HomeTabsProps = {
 }
 
 export const HomeTabs: React.FC<HomeTabsProps> = props => {
+    const { t } = useI18n()
+
     return (
         <Tabs defaultValue="lobbies" className={cn('flex h-full min-h-0 flex-col gap-4 overflow-visible px-4 py-4 sm:px-6', props.className)}>
             <TabsList className="grid h-12 w-full grid-cols-3">
-                <TabsTrigger value="lobbies">Lobbies</TabsTrigger>
-                <TabsTrigger value="chat">Chat</TabsTrigger>
+                <TabsTrigger value="lobbies">{t('home.lobbies')}</TabsTrigger>
+                <TabsTrigger value="chat">{t('common.chat')}</TabsTrigger>
                 <TabsTrigger value="online">
                     <GlobalUsersListTitle count={props.onlineCount} />
                 </TabsTrigger>

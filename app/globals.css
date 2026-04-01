@@ -40,8 +40,34 @@ html {
 body {
     min-height: var(--fullHeight);
     color: var(--text-primary);
-    font-family: 'Manrope', ui-sans-serif, system-ui, sans-serif;
+    font-family: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+    font-size: 1rem;
     background: transparent;
+}
+
+body[data-app-font='normal'] {
+    font-family: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+    font-size: 1rem;
+}
+
+body[data-app-font='silly'] {
+    font-family: var(--font-shantell-sans), ui-sans-serif, system-ui, sans-serif;
+    font-size: 1rem;
+}
+
+body[data-app-font='retro'] {
+    font-family: var(--font-handjet), ui-sans-serif, system-ui, sans-serif;
+    font-size: 1.3rem;
+}
+
+body[data-app-font='fancy'] {
+    font-family: var(--font-gabriela), ui-serif, Georgia, serif;
+    font-size: 1rem;
+}
+
+body[data-app-font='orthodox'] {
+    font-family: var(--font-cyrillic-old-a), ui-serif, Georgia, serif;
+    font-size: 1.2rem;
 }
 
 * {
@@ -67,6 +93,46 @@ a {
 
 button {
     cursor: pointer;
+}
+
+/*
+ * Tailwind text-size utilities default to rem, which bypasses body-level font-size
+ * changes. We remap the app's commonly used text utilities to em so font theme
+ * scaling propagates through the UI.
+ */
+.text-xs {
+    font-size: 0.75em;
+    line-height: 1.3333333em;
+}
+
+.text-sm {
+    font-size: 0.875em;
+    line-height: 1.4285714em;
+}
+
+.text-lg {
+    font-size: 1.125em;
+    line-height: 1.5555556em;
+}
+
+.text-xl {
+    font-size: 1.25em;
+    line-height: 1.4em;
+}
+
+.text-2xl {
+    font-size: 1.5em;
+    line-height: 1.3333333em;
+}
+
+.text-3xl {
+    font-size: 1.875em;
+    line-height: 1.2em;
+}
+
+.text-4xl {
+    font-size: 2.25em;
+    line-height: 1.1111111em;
 }
 
 #svgfilters {
