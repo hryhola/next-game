@@ -80,11 +80,11 @@ const QuestionValueDock: React.FC<{
     return (
         <>
             <div className="text-xs font-semibold uppercase tracking-[0.28em] text-violet-200/60">{title}</div>
+            <div className="mt-3 text-center text-2xl font-semibold text-white">{selectedValue}</div>
             <Box minWidth="260px" display="flex" justifyContent="center" alignItems="center">
                 <Slider
                     sx={{ mt: 4, mx: 2, mb: 2 }}
                     value={selectedValue}
-                    valueLabelDisplay="on"
                     onChange={(_, value) => setSelectedValue(value as number)}
                     min={minValue}
                     max={maxValue}

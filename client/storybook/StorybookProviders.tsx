@@ -146,6 +146,7 @@ export const StorybookProviders: React.FC<Props> = ({ children, user, lobby }) =
                                 value={{
                                     play: async () => {},
                                     setVolume,
+                                    stop: () => {},
                                     toggleMute: () => setVolume(current => (current === 0 ? 50 : 0)),
                                     volume
                                 }}
