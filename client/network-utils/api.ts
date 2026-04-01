@@ -119,6 +119,40 @@ async function handleWorkerApiRequest<E extends EndpointName>(endpoint: E, data:
                     undefined
                 ]
             }
+            case 'jeopardy-validate-pack': {
+                const request = data as Endpoints['jeopardy-validate-pack']['request']
+
+                if (!(request instanceof FormData)) {
+                    return [undefined, new Error('Jeopardy pack validation payload must be FormData')]
+                }
+
+                const response = await fetch(getCloudflareRealtimeApiUrl('/jeopardy/packs/validate'), {
+                    method: 'POST',
+                    headers: createWorkerAuthHeaders(null),
+                    body: request
+                })
+
+                if (!response.ok) {
+                    return [
+                        {
+                            success: false,
+                            message: await getWorkerErrorMessage(response, 'Failed to validate Jeopardy pack')
+                        } as Endpoints[E]['response'],
+                        undefined
+                    ]
+                }
+
+                const body = await response.json()
+
+                return [
+                    {
+                        success: true,
+                        compatible: Boolean(body.compatible),
+                        reason: typeof body.reason === 'string' && body.reason.trim() ? body.reason : undefined
+                    } as Endpoints[E]['response'],
+                    undefined
+                ]
+            }
             case 'lobby-data': {
                 const request = data as Endpoints['lobby-data']['request']
                 const response = await fetch(getCloudflareRealtimeApiUrl(`/lobbies/${encodeURIComponent(request.lobbyId)}/state`), {

@@ -18,6 +18,15 @@ export type GameGetSchemaResponse =
           initialDataScheme?: InitialGameDataSchema
       })
 
+export type JeopardyValidatePackRequest = FormData
+
+export type JeopardyValidatePackResponse =
+    | GeneralFailure
+    | (GeneralSuccess & {
+          compatible: boolean
+          reason?: string
+      })
+
 export type LobbyCreateRequest = FormData
 
 export type LobbyCreateResponse =
@@ -71,6 +80,7 @@ export type ProfileResponse =
 
 export type HTTPEndpoints = {
     'game-get-schema': EndpointInfo<GameGetSchemaRequest, GameGetSchemaResponse>
+    'jeopardy-validate-pack': EndpointInfo<JeopardyValidatePackRequest, JeopardyValidatePackResponse>
     'lobby-create': EndpointInfo<LobbyCreateRequest, LobbyCreateResponse>
     'lobby-data': EndpointInfo<LobbyDataRequest, LobbyDataResponse>
     'lobby-destroy': EndpointInfo<LobbyDestroyRequest, LobbyDestroyResponse>

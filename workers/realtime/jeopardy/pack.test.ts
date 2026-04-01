@@ -1,6 +1,7 @@
 import fs from 'fs'
 import path from 'path'
-import { getNormalizedQuestionById, parseJeopardyPackArchive } from './pack'
+import { JeopardyDeclaration } from '../../../shared/contracts/jeopardy'
+import { getNormalizedQuestionById, parseJeopardyPackArchive, validateJeopardyPackCompatibility } from './pack'
 
 const cwd = process.cwd()
 
@@ -9,6 +10,44 @@ async function readPack(relativePath: string) {
     const buffer = fs.readFileSync(filePath)
 
     return parseJeopardyPackArchive(buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength))
+}
+
+function createSingleQuestionPack(question: JeopardyDeclaration.Question): JeopardyDeclaration.Pack {
+    return {
+        _declaration: {
+            _attributes: {
+                encoding: 'utf-8',
+                version: '1.0'
+            }
+        },
+        package: {
+            _attributes: {
+                date: '01.04.2026',
+                difficulty: '1',
+                id: 'test-pack',
+                name: 'Test pack',
+                version: '4',
+                xmlns: 'https://example.com/ygpackage'
+            },
+            rounds: {
+                round: {
+                    _attributes: {
+                        name: 'Round 1'
+                    },
+                    themes: {
+                        theme: {
+                            _attributes: {
+                                name: 'Theme 1'
+                            },
+                            questions: {
+                                question
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 describe('jeopardy pack parser', () => {
@@ -20,6 +59,9 @@ describe('jeopardy pack parser', () => {
 
             expect(parsedPack.packName).toBeTruthy()
             expect(parsedPack.author).toBeTruthy()
+            expect(validateJeopardyPackCompatibility(parsedPack.declaration)).toEqual({
+                compatible: true
+            })
 
             const normalizedQuestions: ReturnType<typeof getNormalizedQuestionById>[] = []
 
@@ -85,5 +127,63 @@ describe('jeopardy pack parser', () => {
             type: 'text'
         })
         expect(replicQuestion?.questionItems[1]?.durationMs).toBe(8000)
+    })
+
+    it('marks SI custom question types as incompatible with a precise reason', () => {
+        const compatibility = validateJeopardyPackCompatibility(
+            createSingleQuestionPack({
+                _attributes: {
+                    price: '100',
+                    type: 'custom'
+                },
+                right: {
+                    answer: {
+                        _text: 'Answer'
+                    }
+                },
+                scenario: {
+                    atom: {
+                        _text: 'Question'
+                    }
+                }
+            })
+        )
+
+        expect(compatibility).toEqual({
+            compatible: false,
+            reason: 'Round "Round 1", theme "Theme 1", question 100 uses the SI custom question type, which requires script handling that the current Jeopardy implementation does not support.'
+        })
+    })
+
+    it('marks SI script steps as incompatible with a precise reason', () => {
+        const compatibility = validateJeopardyPackCompatibility(
+            createSingleQuestionPack({
+                _attributes: {
+                    price: '200'
+                },
+                right: {
+                    answer: {
+                        _text: 'Answer'
+                    }
+                },
+                scenario: {
+                    atom: {
+                        _text: 'Question'
+                    }
+                },
+                script: {
+                    step: {
+                        _attributes: {
+                            type: 'setTheme'
+                        }
+                    }
+                }
+            })
+        )
+
+        expect(compatibility).toEqual({
+            compatible: false,
+            reason: 'Round "Round 1", theme "Theme 1", question 200 uses SI script steps (setTheme), which the current Jeopardy implementation does not support.'
+        })
     })
 })

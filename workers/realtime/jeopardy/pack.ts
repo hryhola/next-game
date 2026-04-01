@@ -42,6 +42,33 @@ export interface NormalizedJeopardyQuestion {
     type: RealtimeJeopardyQuestionType
 }
 
+export type JeopardyPackCompatibilityResult =
+    | {
+          compatible: true
+      }
+    | {
+          compatible: false
+          reason: string
+      }
+
+const supportedLegacyQuestionTypes = new Set([
+    '',
+    'auction',
+    'bagcat',
+    'cat',
+    'forAll',
+    'forYourself',
+    'noRisk',
+    'secret',
+    'secretNoQuestion',
+    'secretPublicPrice',
+    'simple',
+    'sponsored',
+    'stake',
+    'stakeAll',
+    'withButton'
+])
+
 function arrayedOrEmpty<T>(value: T | T[] | null | undefined): T[] {
     if (value === null || value === undefined) {
         return []
@@ -60,6 +87,10 @@ function getThemes(round: JeopardyDeclaration.Round | null | undefined): Jeopard
 
 function getQuestions(theme: JeopardyDeclaration.Theme | null | undefined): JeopardyDeclaration.Question[] {
     return arrayedOrEmpty(theme?.questions?.question)
+}
+
+function getQuestionReference(round: JeopardyDeclaration.Round, theme: JeopardyDeclaration.Theme, question: JeopardyDeclaration.Question): string {
+    return `Round "${round._attributes.name}", theme "${theme._attributes.name}", question ${question._attributes.price}`
 }
 
 function getPrimaryAuthor(declaration: JeopardyDeclaration.Pack): string {
@@ -93,6 +124,12 @@ function getParamMap(question: JeopardyDeclaration.Question): Map<string, Jeopar
 
 function getParamText(param: JeopardyDeclaration.QuestionParameter | null | undefined): string {
     return param?._text || param?._cdata || ''
+}
+
+function getScriptStepTypes(question: JeopardyDeclaration.Question): string[] {
+    return arrayedOrEmpty(question.script?.step)
+        .map(step => step._attributes?.type?.trim() || '')
+        .filter(Boolean)
 }
 
 function toBoolean(value: boolean | string | undefined, fallback: boolean): boolean {
@@ -381,6 +418,70 @@ export async function parseJeopardyPackArchive(archive: ArrayBuffer): Promise<Pa
         dateCreated: declaration.package._attributes.date,
         declaration,
         packName: declaration.package._attributes.name
+    }
+}
+
+export function validateJeopardyPackCompatibility(declaration: JeopardyDeclaration.Pack): JeopardyPackCompatibilityResult {
+    const rounds = getRounds(declaration)
+
+    if (!rounds.length) {
+        return {
+            compatible: false,
+            reason: 'The pack does not contain any rounds.'
+        }
+    }
+
+    for (const round of rounds) {
+        const themes = getThemes(round)
+
+        if (!themes.length) {
+            return {
+                compatible: false,
+                reason: `Round "${round._attributes.name}" does not contain any themes.`
+            }
+        }
+
+        for (const theme of themes) {
+            const questions = getQuestions(theme)
+
+            if (!questions.length) {
+                return {
+                    compatible: false,
+                    reason: `Round "${round._attributes.name}", theme "${theme._attributes.name}" does not contain any questions.`
+                }
+            }
+
+            for (const question of questions) {
+                const reference = getQuestionReference(round, theme, question)
+                const rawType = getRawQuestionType(question)
+                const scriptStepTypes = getScriptStepTypes(question)
+
+                if (scriptStepTypes.length) {
+                    return {
+                        compatible: false,
+                        reason: `${reference} uses SI script steps (${scriptStepTypes.join(', ')}), which the current Jeopardy implementation does not support.`
+                    }
+                }
+
+                if (rawType === 'custom') {
+                    return {
+                        compatible: false,
+                        reason: `${reference} uses the SI custom question type, which requires script handling that the current Jeopardy implementation does not support.`
+                    }
+                }
+
+                if (!supportedLegacyQuestionTypes.has(rawType)) {
+                    return {
+                        compatible: false,
+                        reason: `${reference} uses unsupported SI question type "${rawType}".`
+                    }
+                }
+            }
+        }
+    }
+
+    return {
+        compatible: true
     }
 }
 

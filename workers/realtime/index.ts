@@ -4,7 +4,7 @@ import { R2AssetStore } from './assets/store'
 import { getIdentitySession, registerIdentity, revokeIdentitySession, updateIdentityProfile } from './auth/store'
 import { GlobalPresenceDO } from './durable-objects/GlobalPresenceDO'
 import { LobbyDO } from './durable-objects/LobbyDO'
-import { parseJeopardyPackArchive } from './jeopardy/pack'
+import { parseJeopardyPackArchive, validateJeopardyPackCompatibility } from './jeopardy/pack'
 import { clearSessionCookie, createSessionCookie, readSessionToken } from './lib/cookies'
 import { encodeHeaderValue } from './lib/headerEncoding'
 import { json } from './lib/json'
@@ -605,6 +605,47 @@ const worker: ExportedHandler<RealtimeWorkerEnv> = {
                 return stub.fetch(toGlobalPresenceRequest(request, '/chat', auth.session))
             }
 
+            if (url.pathname === '/jeopardy/packs/validate') {
+                if (request.method !== 'POST') {
+                    return methodNotAllowed('POST')
+                }
+
+                const auth = await requireSession(request, env)
+
+                if (!auth.ok) {
+                    return auth.error
+                }
+
+                if (!isMultipartFormRequest(request)) {
+                    return errorResponse(400, 'Jeopardy pack validation requires multipart form data', 'invalid_payload')
+                }
+
+                const formData = await request.formData()
+                const packFile = readOptionalFormFile(formData, 'pack')
+
+                if (!packFile) {
+                    return errorResponse(400, 'Jeopardy pack is required', 'missing_pack')
+                }
+
+                try {
+                    const packBytes = await packFile.arrayBuffer()
+                    const parsedPack = await parseJeopardyPackArchive(packBytes)
+                    const compatibility = validateJeopardyPackCompatibility(parsedPack.declaration)
+
+                    return json({
+                        compatible: compatibility.compatible,
+                        ok: true,
+                        reason: compatibility.compatible ? undefined : compatibility.reason
+                    })
+                } catch (error) {
+                    return json({
+                        compatible: false,
+                        ok: true,
+                        reason: error instanceof Error ? error.message : 'Failed to parse Jeopardy pack'
+                    })
+                }
+            }
+
             if (url.pathname === '/lobbies') {
                 if (request.method === 'GET') {
                     const lobbies = await listLobbies(env.IDENTITY_DB)
@@ -644,7 +685,20 @@ const worker: ExportedHandler<RealtimeWorkerEnv> = {
                             }
 
                             const packBytes = await packFile.arrayBuffer()
-                            const parsedPack = await parseJeopardyPackArchive(packBytes)
+                            let parsedPack: Awaited<ReturnType<typeof parseJeopardyPackArchive>>
+
+                            try {
+                                parsedPack = await parseJeopardyPackArchive(packBytes)
+                            } catch (error) {
+                                return errorResponse(400, error instanceof Error ? error.message : 'Failed to parse Jeopardy pack', 'invalid_pack')
+                            }
+
+                            const compatibility = validateJeopardyPackCompatibility(parsedPack.declaration)
+
+                            if (!compatibility.compatible) {
+                                return errorResponse(400, compatibility.reason, 'incompatible_pack')
+                            }
+
                             const storedPack = await assetStore.put({
                                 body: packBytes,
                                 contentType: packFile.type || 'application/octet-stream',
