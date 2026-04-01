@@ -112,7 +112,7 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
     const isMasterView = game.players.some(p => p.id === user.id && p.playerIsMaster)
     const setActiveBottomDock = lobby.setActiveBottomDock
 
-    const answerInputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null)
+    const answerInputRef = useRef<HTMLInputElement | null>(null)
 
     const answerRequestProgress = getTimedProgress(props.answerRequestStartedAt, props.answerRequestEndsAt, props.answerRequestTimeLeft, timerNowMs)
     const answerVerifyingProgress = getTimedProgress(props.answerVerifyingStartedAt, props.answerVerifyingEndsAt, props.answerVerifyingTimeLeft, timerNowMs)
@@ -137,6 +137,12 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
         ? 'fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom,0px)+148px)] md:bottom-0'
         : 'fixed inset-x-0 bottom-0'
     const showAnswerVerifyingProgressBar = props.answeringStatus === 'answer-verifying' && answerVerifyingProgress !== null
+
+    const submitAnswer = () => {
+        sendAction('$GiveAnswer', {
+            text: answerInputRef.current?.value
+        })
+    }
 
     function updatePlayerVolume() {
         if (!playerRef.current) return
@@ -401,18 +407,18 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
                     <div className={bottomDockPanelClassName}>
                         <div className="text-xs font-semibold uppercase tracking-[0.28em] text-violet-200/60">Your Answer</div>
                         <div className="mt-3">
-                            <TextField multiline inputRef={answerInputRef} />
+                            <TextField
+                                inputRef={answerInputRef}
+                                onKeyDown={event => {
+                                    if (event.key === 'Enter') {
+                                        event.preventDefault()
+                                        submitAnswer()
+                                    }
+                                }}
+                            />
                         </div>
                         <div className="mt-3 flex justify-end">
-                            <Button
-                                onClick={() =>
-                                    sendAction('$GiveAnswer', {
-                                        text: answerInputRef.current?.value
-                                    })
-                                }
-                            >
-                                Confirm
-                            </Button>
+                            <Button onClick={submitAnswer}>Confirm</Button>
                         </div>
                     </div>
                 </div>

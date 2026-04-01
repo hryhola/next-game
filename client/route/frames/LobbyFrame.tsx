@@ -121,7 +121,9 @@ export const LobbyFrame: React.FC = () => {
     useEventHandler('Lobby-Destroy', data => {
         if (data.lobbyId === lobbyRef.current.lobbyId) {
             push({
-                content: 'Lobby has been destroyed'
+                content: 'Lobby has been destroyed',
+                duration: 2400,
+                persistOnNextMount: true
             })
 
             ws.send('Universal-Subscription', {
