@@ -1099,15 +1099,16 @@ export class JeopardyLobbyFeature {
                 }
 
                 session.internal.finalBets[userId] = value
+                const playersThatMadeBet = Array.from(new Set([...(session.frame.playersThatMadeBet || []), userId]))
 
                 this.updateFrame(state, {
                     ...session.frame,
-                    playersThatMadeBet: [...session.frame.playersThatMadeBet, userId]
+                    playersThatMadeBet
                 })
 
                 const eligibleBetters = this.getContestants(state).filter(player => player.playerScore > 0)
 
-                if (session.frame.playersThatMadeBet.length + 1 >= eligibleBetters.length) {
+                if (playersThatMadeBet.length >= eligibleBetters.length) {
                     const sessionId = this.getActiveLobbySessionId(state)
 
                     if (sessionId) {
@@ -1152,15 +1153,16 @@ export class JeopardyLobbyFeature {
                 session.internal.finalAnswers[userId] = {
                     value: payload?.answer || ''
                 }
+                const playersThatAnswered = Array.from(new Set([...(session.frame.playersThatAnswered || []), userId]))
 
                 this.updateFrame(state, {
                     ...session.frame,
-                    playersThatAnswered: [...session.frame.playersThatAnswered, userId]
+                    playersThatAnswered
                 })
 
                 const eligibleAnswerers = this.getContestants(state).filter(player => player.playerScore > 0)
 
-                if (session.frame.playersThatAnswered.length + 1 >= eligibleAnswerers.length) {
+                if (playersThatAnswered.length >= eligibleAnswerers.length) {
                     const sessionId = this.getActiveLobbySessionId(state)
 
                     if (sessionId) {

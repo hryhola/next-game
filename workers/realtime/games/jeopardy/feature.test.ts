@@ -310,6 +310,29 @@ function createPackWithQuestions(questions: JeopardyDeclaration.Question[]): Jeo
     return pack
 }
 
+function createFinalRoundPack(question: JeopardyDeclaration.Question = createScenarioQuestion({ price: '100' })): JeopardyDeclaration.Pack {
+    const pack = createPack()
+
+    pack.package.rounds.round = {
+        _attributes: {
+            name: 'Final Round',
+            type: 'final'
+        },
+        themes: {
+            theme: {
+                _attributes: {
+                    name: 'Final Theme'
+                },
+                questions: {
+                    question
+                }
+            }
+        }
+    }
+
+    return pack
+}
+
 function createState(pack: JeopardyDeclaration.Pack = createPack(), contestantCount = 1): StoredLobbyState {
     const contestants = Array.from({ length: contestantCount }, (_, index) => ({
         id: `contestant-${index + 1}`,
@@ -435,6 +458,24 @@ async function advanceToAnswerRequest(feature: JeopardyLobbyFeature, state: Stor
     const frame = getQuestionFrame(state)
 
     expect(frame.answeringStatus).toBe('allowed')
+}
+
+async function advanceToFinalRound(feature: JeopardyLobbyFeature, state: StoredLobbyState, scheduler: MockScheduler) {
+    await startGame(feature, state)
+    await runScheduledTask(feature, state, scheduler, 'pack-preview.complete')
+
+    const skipPreviewResult = await feature.handleAction(state, 'master', '$SkipVote', null)
+
+    expect(skipPreviewResult.success).toBe(true)
+    expect(state.game.session?.frame.id).toBe('final-round-board')
+}
+
+async function advanceToFinalBetting(feature: JeopardyLobbyFeature, state: StoredLobbyState, scheduler: MockScheduler) {
+    await advanceToFinalRound(feature, state, scheduler)
+    await runScheduledTask(feature, state, scheduler, 'final.phase.skipping.complete')
+
+    expect(state.game.session?.frame.id).toBe('final-round-board')
+    expect((state.game.session?.frame as RealtimeJeopardyState.FinalRoundBoardFrame).status).toBe('betting')
 }
 
 describe('jeopardy flow', () => {
@@ -884,5 +925,61 @@ describe('jeopardy flow', () => {
         expect(staleMediaEndedResult.success).toBe(true)
         expect(staleMediaEndedResult.stateChanged).toBe(false)
         expect(getQuestionFrame(state).answeringStatus).toBe('allowed')
+    })
+
+    it('keeps final betting open until every eligible contestant has made a bet', async () => {
+        const state = createState(createFinalRoundPack(), 2)
+        const { feature, scheduler } = createFeatureHarness()
+
+        state.members.find(member => member.id === 'contestant-1')!.playerScore = 1000
+        state.members.find(member => member.id === 'contestant-2')!.playerScore = 800
+
+        await advanceToFinalBetting(feature, state, scheduler)
+
+        let frame = state.game.session?.frame as RealtimeJeopardyState.FinalRoundBoardFrame
+        expect(frame.status).toBe('betting')
+
+        const firstBetResult = await feature.handleAction(state, 'contestant-1', '$MakeFinalBet', { value: 400 })
+
+        expect(firstBetResult.success).toBe(true)
+        frame = state.game.session?.frame as RealtimeJeopardyState.FinalRoundBoardFrame
+        expect(frame.status).toBe('betting')
+        expect(frame.playersThatMadeBet).toEqual(['contestant-1'])
+
+        const secondBetResult = await feature.handleAction(state, 'contestant-2', '$MakeFinalBet', { value: 300 })
+
+        expect(secondBetResult.success).toBe(true)
+        frame = state.game.session?.frame as RealtimeJeopardyState.FinalRoundBoardFrame
+        expect(frame.status).toBe('answering')
+        expect(frame.playersThatMadeBet).toEqual(['contestant-1', 'contestant-2'])
+    })
+
+    it('keeps final answering open until every eligible contestant has submitted an answer', async () => {
+        const state = createState(createFinalRoundPack(), 2)
+        const { feature, scheduler } = createFeatureHarness()
+
+        state.members.find(member => member.id === 'contestant-1')!.playerScore = 1000
+        state.members.find(member => member.id === 'contestant-2')!.playerScore = 800
+
+        await advanceToFinalBetting(feature, state, scheduler)
+        expect((await feature.handleAction(state, 'contestant-1', '$MakeFinalBet', { value: 400 })).success).toBe(true)
+        expect((await feature.handleAction(state, 'contestant-2', '$MakeFinalBet', { value: 300 })).success).toBe(true)
+
+        let frame = state.game.session?.frame as RealtimeJeopardyState.FinalRoundBoardFrame
+        expect(frame.status).toBe('answering')
+
+        const firstAnswerResult = await feature.handleAction(state, 'contestant-1', '$GiveFinalAnswer', { answer: 'A1' })
+
+        expect(firstAnswerResult.success).toBe(true)
+        frame = state.game.session?.frame as RealtimeJeopardyState.FinalRoundBoardFrame
+        expect(frame.status).toBe('answering')
+        expect(frame.playersThatAnswered).toEqual(['contestant-1'])
+
+        const secondAnswerResult = await feature.handleAction(state, 'contestant-2', '$GiveFinalAnswer', { answer: 'A2' })
+
+        expect(secondAnswerResult.success).toBe(true)
+        frame = state.game.session?.frame as RealtimeJeopardyState.FinalRoundBoardFrame
+        expect(frame.status).toBe('answer-verifying')
+        expect(frame.playersThatAnswered).toEqual(['contestant-1', 'contestant-2'])
     })
 })
