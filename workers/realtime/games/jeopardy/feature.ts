@@ -1240,16 +1240,45 @@ export class JeopardyLobbyFeature {
                     success: true
                 }
             case '$MediaEnded':
-                if (session.frame.id !== 'question-content' || (session.frame.type !== 'video' && session.frame.type !== 'voice')) {
+                if (
+                    session.frame.id !== 'question-content' ||
+                    (session.frame.type !== 'video' && session.frame.type !== 'voice') ||
+                    !['showing-answer', 'showing-question'].includes(session.frame.specialPhase || '')
+                ) {
                     return {
-                        code: 'invalid_media_state',
-                        message: 'There is no active Jeopardy media atom to finish',
-                        success: false
+                        stateChanged: false,
+                        success: true
                     }
+                }
+
+                const payload = actionPayload as {
+                    content?: string
+                    mediaStartedAt?: string | null
+                    questionId?: RealtimeJeopardyQuestionId
+                    type?: 'video' | 'voice'
+                } | null
+                const doesPayloadMatchActiveMedia =
+                    (!payload?.questionId || payload.questionId === session.frame.questionId) &&
+                    (!payload?.type || payload.type === session.frame.type) &&
+                    (!payload?.mediaStartedAt || payload.mediaStartedAt === session.frame.mediaStartedAt) &&
+                    (payload?.content === undefined || payload.content === session.frame.content)
+
+                if (!doesPayloadMatchActiveMedia) {
+                    return {
+                        stateChanged: false,
+                        success: true
+                    }
+                }
+
+                const sessionId = this.getActiveLobbySessionId(state)
+
+                if (sessionId) {
+                    await this.cancelTask(sessionId, 'question.atom.complete', state).catch(() => null)
                 }
 
                 session.meta.mediaElapsedTimeMs = 0
                 session.meta.mediaStartedAt = null
+                this.clearQuestionPhaseTimer(state)
                 await this.showNextQuestionAtom(state)
 
                 return {
@@ -2058,6 +2087,8 @@ export class JeopardyLobbyFeature {
         if ((type === 'video' || type === 'voice') && atom.waitForFinish) {
             return
         }
+
+        this.setQuestionPhaseTimer(state, Math.max(autoAdvanceDelayMs, 0), Math.max(autoAdvanceDelayMs, 0), {})
 
         await this.scheduleTask(
             sessionId,
@@ -2892,6 +2923,20 @@ export class JeopardyLobbyFeature {
 
                 if (specialRemainingMs && phaseDurations[session.frame.specialPhase]) {
                     const timing = getPhaseTimingWindow(nowMs, phaseDurations[session.frame.specialPhase], specialRemainingMs)
+
+                    session.frame.phaseStartedAt = timing.startedAt
+                    session.frame.phaseEndsAt = timing.endsAt
+                    session.frame.phaseTimeLeft = timing.timeLeft
+                } else if (
+                    (session.frame.specialPhase === 'showing-question' || session.frame.specialPhase === 'showing-answer') &&
+                    getRemainingMs('jeopardy.question.atom.complete')
+                ) {
+                    const remainingMs = getRemainingMs('jeopardy.question.atom.complete') || 0
+                    const totalMs =
+                        session.frame.phaseStartedAt && session.frame.phaseEndsAt
+                            ? Math.max(new Date(session.frame.phaseEndsAt).getTime() - new Date(session.frame.phaseStartedAt).getTime(), 0)
+                            : JEOPARDY_CONTENT_DEFAULT_DURATION_MS
+                    const timing = getPhaseTimingWindow(nowMs, totalMs, remainingMs)
 
                     session.frame.phaseStartedAt = timing.startedAt
                     session.frame.phaseEndsAt = timing.endsAt

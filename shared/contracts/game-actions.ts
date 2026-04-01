@@ -96,7 +96,12 @@ export type JeopardyGameActionMap = {
         result: SuccessResult
     }
     $MediaEnded: {
-        payload: null
+        payload: {
+            content?: string
+            mediaStartedAt?: string | null
+            questionId?: RealtimeJeopardyQuestionId
+            type?: 'video' | 'voice'
+        } | null
         result: SuccessResult
     }
     $Pause: {

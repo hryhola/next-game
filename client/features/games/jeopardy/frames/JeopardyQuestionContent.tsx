@@ -340,7 +340,12 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
 
         ws.send('Game-SendAction', {
             actionName: '$MediaEnded',
-            actionPayload: null,
+            actionPayload: {
+                content: props.content,
+                mediaStartedAt: props.mediaStartedAt || null,
+                questionId: props.questionId,
+                type: props.type === 'video' || props.type === 'voice' ? props.type : undefined
+            },
             lobbyId: lobby.lobbyId
         })
     }

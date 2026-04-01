@@ -196,6 +196,44 @@ function createScenarioQuestion({
     }
 }
 
+function createScenarioQuestionWithAtoms({
+    atoms,
+    correctAnswer = 'Correct',
+    price,
+    type,
+    wrongAnswer
+}: {
+    atoms: JeopardyDeclaration.ContentItem[]
+    correctAnswer?: string
+    price: string
+    type?: string
+    wrongAnswer?: string
+}): JeopardyDeclaration.Question {
+    return {
+        _attributes: {
+            ...(type ? { type } : {}),
+            price
+        },
+        right: {
+            answer: {
+                _text: correctAnswer
+            }
+        },
+        ...(wrongAnswer
+            ? {
+                  wrong: {
+                      answer: {
+                          _text: wrongAnswer
+                      }
+                  }
+              }
+            : {}),
+        scenario: {
+            atom: atoms
+        }
+    }
+}
+
 function createParamQuestion({
     answerText = 'Answer',
     correctAnswer = 'Correct',
@@ -638,6 +676,49 @@ describe('jeopardy flow', () => {
         expect(answeringFrame.specialPhase).toBeUndefined()
     })
 
+    it('shows clue progress for auto-advanced image atoms before stake answers are allowed', async () => {
+        const pack = createPackWithQuestions([
+            createScenarioQuestionWithAtoms({
+                atoms: [
+                    {
+                        _attributes: {
+                            isRef: 'True',
+                            type: 'image'
+                        },
+                        _text: '@stake-image.jpg'
+                    },
+                    {
+                        _attributes: {
+                            type: 'marker'
+                        }
+                    },
+                    {
+                        _text: 'Stake answer'
+                    }
+                ],
+                price: '300',
+                type: 'stake'
+            })
+        ])
+        const state = createState(pack)
+        const { feature, scheduler } = createFeatureHarness()
+
+        await advanceToQuestion(feature, state, scheduler, '0-0-0')
+
+        const setStakeResult = await feature.handleAction(state, 'contestant-1', '$SetQuestionValue', { value: 500 })
+
+        expect(setStakeResult.success).toBe(true)
+
+        const frame = getQuestionFrame(state)
+
+        expect(frame.type).toBe('image')
+        expect(frame.specialPhase).toBe('showing-question')
+        expect(frame.phaseStartedAt).toBe('2026-03-31T12:00:00.000Z')
+        expect(frame.phaseEndsAt).toBe('2026-03-31T12:00:05.000Z')
+        expect(frame.phaseTimeLeft).toBe(100)
+        expect(scheduler.listSuffixes()).toContain('question.atom.complete')
+    })
+
     it('lets the chooser transfer a secret question to another contestant', async () => {
         const pack = createPackWithQuestions([
             createParamQuestion({
@@ -763,5 +844,45 @@ describe('jeopardy flow', () => {
 
         expect(state.game.session?.frame.id).toBe('question-board')
         expect((state.game.session?.frame as RealtimeJeopardyState.QuestionBoardFrame).pickerId).toBe('contestant-1')
+    })
+
+    it('ignores stale media-ended events after a media atom has already auto-advanced', async () => {
+        const pack = createPackWithQuestions([
+            createScenarioQuestionWithAtoms({
+                atoms: [
+                    {
+                        _attributes: {
+                            duration: '1',
+                            type: 'video',
+                            waitForFinish: 'False'
+                        },
+                        _text: 'clip.mp4'
+                    }
+                ],
+                price: '300'
+            })
+        ])
+        const state = createState(pack)
+        const { feature, scheduler } = createFeatureHarness()
+
+        await advanceToQuestion(feature, state, scheduler, '0-0-0')
+
+        const mediaFrame = getQuestionFrame(state)
+        const staleMediaPayload = {
+            content: mediaFrame.content,
+            mediaStartedAt: mediaFrame.mediaStartedAt,
+            questionId: mediaFrame.questionId,
+            type: mediaFrame.type
+        }
+
+        await runScheduledTask(feature, state, scheduler, 'question.atom.complete')
+
+        expect(getQuestionFrame(state).answeringStatus).toBe('allowed')
+
+        const staleMediaEndedResult = await feature.handleAction(state, 'contestant-1', '$MediaEnded', staleMediaPayload)
+
+        expect(staleMediaEndedResult.success).toBe(true)
+        expect(staleMediaEndedResult.stateChanged).toBe(false)
+        expect(getQuestionFrame(state).answeringStatus).toBe('allowed')
     })
 })
