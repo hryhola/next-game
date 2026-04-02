@@ -333,6 +333,14 @@ function createFinalRoundPack(question: JeopardyDeclaration.Question = createSce
     return pack
 }
 
+function createPackWithRounds(rounds: JeopardyDeclaration.Round[]): JeopardyDeclaration.Pack {
+    const pack = createPack()
+
+    pack.package.rounds.round = rounds
+
+    return pack
+}
+
 function createState(pack: JeopardyDeclaration.Pack = createPack(), contestantCount = 1): StoredLobbyState {
     const contestants = Array.from({ length: contestantCount }, (_, index) => ({
         id: `contestant-${index + 1}`,
@@ -434,7 +442,7 @@ async function startGame(feature: JeopardyLobbyFeature, state: StoredLobbyState)
     expect(feature.getActiveLobbySessionId(state)).toBeTruthy()
 }
 
-async function advanceToQuestion(feature: JeopardyLobbyFeature, state: StoredLobbyState, scheduler: MockScheduler, questionId: string) {
+async function advanceToQuestionBoard(feature: JeopardyLobbyFeature, state: StoredLobbyState, scheduler: MockScheduler) {
     await startGame(feature, state)
     await runScheduledTask(feature, state, scheduler, 'pack-preview.complete')
 
@@ -442,6 +450,10 @@ async function advanceToQuestion(feature: JeopardyLobbyFeature, state: StoredLob
 
     expect(skipPreviewResult.success).toBe(true)
     expect(state.game.session?.frame.id).toBe('question-board')
+}
+
+async function advanceToQuestion(feature: JeopardyLobbyFeature, state: StoredLobbyState, scheduler: MockScheduler, questionId: string) {
+    await advanceToQuestionBoard(feature, state, scheduler)
 
     const pickQuestionResult = await feature.handleAction(state, 'master', '$PickQuestion', {
         questionId
@@ -541,6 +553,209 @@ describe('jeopardy flow', () => {
 
         expect(result.success).toBe(true)
         expect(state.game.session?.frame.id).toBe('pack-preview')
+    })
+
+    it('does not get stuck in clue presentation when a legacy image question starts with an empty atom', async () => {
+        const pack = createPackWithQuestions([
+            {
+                _attributes: {
+                    price: '100'
+                },
+                right: {
+                    answer: {
+                        _text: 'Answer'
+                    }
+                },
+                scenario: {
+                    atom: [
+                        {},
+                        {
+                            _attributes: {
+                                type: 'image'
+                            },
+                            _text: '@cat.jpg'
+                        }
+                    ]
+                }
+            }
+        ])
+        const state = createState(pack)
+        const { feature, scheduler } = createFeatureHarness()
+
+        await advanceToQuestion(feature, state, scheduler, '0-0-0')
+
+        let frame = getQuestionFrame(state)
+
+        expect(frame.type).toBe('image')
+        expect(frame.content).toBe('cat.jpg')
+        expect(frame.answeringStatus).toBe('too-early')
+
+        await runScheduledTask(feature, state, scheduler, 'question.atom.complete')
+
+        frame = getQuestionFrame(state)
+
+        expect(frame.answeringStatus).toBe('allowed')
+        expect(frame.specialPhase).toBeUndefined()
+        expect(scheduler.listSuffixes()).toContain('answer-request.complete')
+    })
+
+    it('lets the master skip a category and clears only that category on the board', async () => {
+        const state = createState()
+        const { feature, scheduler } = createFeatureHarness()
+
+        await advanceToQuestionBoard(feature, state, scheduler)
+
+        const result = await feature.handleAction(state, 'master', '$SkipCategory', {
+            themeId: '0-0'
+        })
+
+        expect(result.success).toBe(true)
+        expect(state.game.session?.internal.answeredQuestions).toEqual(['0-0-0'])
+        expect(state.game.session?.frame).toMatchObject({
+            id: 'question-board',
+            roundId: 0
+        })
+        expect((state.game.session?.frame as RealtimeJeopardyState.QuestionBoardFrame).themes).toEqual([
+            {
+                name: 'Theme 1',
+                question: [
+                    {
+                        isAnswered: true,
+                        price: '100',
+                        questionId: '0-0-0'
+                    }
+                ],
+                themeId: '0-0'
+            },
+            {
+                name: 'Theme 2',
+                question: [
+                    {
+                        isAnswered: false,
+                        price: '200',
+                        questionId: '0-1-0'
+                    }
+                ],
+                themeId: '0-1'
+            }
+        ])
+    })
+
+    it('allows only the Jeopardy master to skip categories', async () => {
+        const state = createState()
+        const { feature, scheduler } = createFeatureHarness()
+
+        await advanceToQuestionBoard(feature, state, scheduler)
+
+        const result = await feature.handleAction(state, 'contestant-1', '$SkipCategory', {
+            themeId: '0-0'
+        })
+
+        expect(result.success).toBe(false)
+        expect(result.code).toBe('forbidden')
+        expect(state.game.session?.internal.answeredQuestions).toEqual([])
+    })
+
+    it('does not allow category skipping while a question is already being opened', async () => {
+        const state = createState()
+        const { feature, scheduler } = createFeatureHarness()
+
+        await advanceToQuestionBoard(feature, state, scheduler)
+
+        const pickResult = await feature.handleAction(state, 'master', '$PickQuestion', {
+            questionId: '0-0-0'
+        })
+
+        expect(pickResult.success).toBe(true)
+
+        const result = await feature.handleAction(state, 'master', '$SkipCategory', {
+            themeId: '0-1'
+        })
+
+        expect(result.success).toBe(false)
+        expect(result.code).toBe('already_picked')
+        expect(state.game.session?.frame).toMatchObject({
+            id: 'question-board',
+            pickedQuestion: '0-0-0'
+        })
+    })
+
+    it('moves to the next round when the master skips the last remaining category', async () => {
+        const pack = createPackWithRounds([
+            {
+                _attributes: {
+                    name: 'Round 1'
+                },
+                themes: {
+                    theme: {
+                        _attributes: {
+                            name: 'Theme 1'
+                        },
+                        questions: {
+                            question: createScenarioQuestion({
+                                price: '100'
+                            })
+                        }
+                    }
+                }
+            },
+            {
+                _attributes: {
+                    name: 'Round 2'
+                },
+                themes: {
+                    theme: {
+                        _attributes: {
+                            name: 'Theme 2'
+                        },
+                        questions: {
+                            question: createScenarioQuestion({
+                                price: '200'
+                            })
+                        }
+                    }
+                }
+            }
+        ])
+        const state = createState(pack)
+        const { feature, scheduler } = createFeatureHarness()
+
+        await advanceToQuestionBoard(feature, state, scheduler)
+
+        const result = await feature.handleAction(state, 'master', '$SkipCategory', {
+            themeId: '0-0'
+        })
+
+        expect(result.success).toBe(true)
+        expect(state.game.session?.internal.currentRoundId).toBe(1)
+        expect(state.game.session?.frame).toEqual({
+            id: 'rounds-preview',
+            isRoundName: true,
+            text: 'Round 2'
+        })
+        expect(scheduler.listSuffixes()).toEqual(['round-preview.theme.0'])
+
+        await runScheduledTask(feature, state, scheduler, 'round-preview.theme.0')
+        await runScheduledTask(feature, state, scheduler, 'round-preview.complete')
+
+        expect(state.game.session?.frame).toMatchObject({
+            id: 'question-board',
+            roundId: 1
+        })
+    })
+
+    it('ends the game when the master skips the last remaining category in the final round', async () => {
+        const state = createState(createPackWithQuestions([createScenarioQuestion({ price: '100' })]))
+        const { feature, scheduler } = createFeatureHarness()
+
+        await advanceToQuestionBoard(feature, state, scheduler)
+
+        const result = await feature.handleAction(state, 'master', '$SkipCategory', {
+            themeId: '0-0'
+        })
+
+        expect(result.success).toBe(true)
+        expect(state.game.session?.frame.id).toBe('final-score')
     })
 
     it('preserves remaining answer time when pausing and resuming mid-answer', async () => {

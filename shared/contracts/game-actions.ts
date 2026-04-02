@@ -1,4 +1,4 @@
-import type { RealtimeJeopardyQuestionId } from './jeopardy'
+import type { RealtimeJeopardyQuestionId, RealtimeJeopardyThemeId } from './jeopardy'
 import type { TicTacToeCellCoords } from './realtime-lobby'
 
 export type GameActor = {
@@ -163,6 +163,12 @@ export type JeopardyGameActionMap = {
     $SkipFinalTheme: {
         payload: {
             themeIndex: number
+        }
+        result: SuccessResult
+    }
+    $SkipCategory: {
+        payload: {
+            themeId: RealtimeJeopardyThemeId
         }
         result: SuccessResult
     }

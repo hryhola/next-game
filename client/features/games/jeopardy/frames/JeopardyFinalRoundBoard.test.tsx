@@ -93,11 +93,12 @@ describe('FinalRoundBoard', () => {
     it('shows the final answer widget over the clue to contestants who still need to answer', () => {
         const players = createPlayers()
 
-        renderWithProviders(<FinalRoundBoard {...(createFinalFrame({ status: 'answering' }) as any)} Resources={resources as never} />, {
+        renderWithProviders(<FinalRoundBoard {...(createFinalFrame({ phaseTimeLeft: 55, status: 'answering' }) as any)} Resources={resources as never} />, {
             game: createGameValue({
                 players,
                 session: {
                     frame: createFinalFrame({
+                        phaseTimeLeft: 55,
                         status: 'answering'
                     }),
                     internal: {
@@ -118,27 +119,72 @@ describe('FinalRoundBoard', () => {
 
         expect(screen.getByText('Final clue')).toBeInTheDocument()
         expect(screen.getByText('Final Answer')).toBeInTheDocument()
+        const progressBar = screen.getByRole('progressbar')
+
+        expect(screen.getByRole('button', { name: 'Submit Answer' }).closest('.glass-card')?.contains(progressBar)).toBe(true)
         expect(screen.getByRole('button', { name: 'Submit Answer' })).toBeInTheDocument()
     })
 
     it('shows final-answer verification controls to the master with submitted answers', () => {
         const players = createPlayers()
 
-        renderWithProviders(<FinalRoundBoard {...(createFinalFrame({ status: 'answer-verifying' }) as any)} Resources={resources as never} />, {
+        renderWithProviders(
+            <FinalRoundBoard {...(createFinalFrame({ phaseTimeLeft: 70, status: 'answer-verifying' }) as any)} Resources={resources as never} />,
+            {
+                game: createGameValue({
+                    players,
+                    session: {
+                        frame: createFinalFrame({
+                            phaseTimeLeft: 70,
+                            status: 'answer-verifying'
+                        }),
+                        internal: {
+                            correctAnswers: ['Correct'],
+                            finalAnswers: {
+                                'contestant-1': {
+                                    value: 'Answer 1'
+                                }
+                            },
+                            incorrectAnswers: ['Wrong']
+                        },
+                        isPaused: false
+                    }
+                }),
+                lobby: createLobbyData({
+                    id: 'lobby-1',
+                    members: players
+                }),
+                user: createUserData({
+                    id: 'master',
+                    userNickname: 'Master'
+                })
+            }
+        )
+
+        expect(screen.getByText('Verify Final Answers')).toBeInTheDocument()
+        expect(screen.getByText('Correct: Correct')).toBeInTheDocument()
+        expect(screen.getByText('Incorrect: Wrong')).toBeInTheDocument()
+        const progressBar = screen.getByRole('progressbar')
+
+        expect(screen.getByRole('button', { name: 'Approve' }).closest('.glass-card')?.contains(progressBar)).toBe(true)
+        expect(screen.getByRole('button', { name: 'Approve' })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: 'Decline' })).toBeInTheDocument()
+    })
+
+    it('keeps the final-answer timer at the bottom for viewers who are not answering', () => {
+        const players = createPlayers()
+
+        renderWithProviders(<FinalRoundBoard {...(createFinalFrame({ phaseTimeLeft: 55, status: 'answering' }) as any)} Resources={resources as never} />, {
             game: createGameValue({
                 players,
                 session: {
                     frame: createFinalFrame({
-                        status: 'answer-verifying'
+                        phaseTimeLeft: 55,
+                        playersThatAnswered: ['contestant-1'],
+                        status: 'answering'
                     }),
                     internal: {
-                        correctAnswers: ['Correct'],
-                        finalAnswers: {
-                            'contestant-1': {
-                                value: 'Answer 1'
-                            }
-                        },
-                        incorrectAnswers: ['Wrong']
+                        finalAnswers: {}
                     },
                     isPaused: false
                 }
@@ -153,10 +199,49 @@ describe('FinalRoundBoard', () => {
             })
         })
 
-        expect(screen.getByText('Verify Final Answers')).toBeInTheDocument()
-        expect(screen.getByText('Correct: Correct')).toBeInTheDocument()
-        expect(screen.getByText('Incorrect: Wrong')).toBeInTheDocument()
-        expect(screen.getByRole('button', { name: 'Approve' })).toBeInTheDocument()
-        expect(screen.getByRole('button', { name: 'Decline' })).toBeInTheDocument()
+        const progressBar = screen.getByRole('progressbar')
+
+        expect(progressBar.closest('.glass-card')).toBeNull()
+    })
+
+    it('keeps the final verification timer at the bottom for non-master viewers', () => {
+        const players = createPlayers()
+
+        renderWithProviders(
+            <FinalRoundBoard {...(createFinalFrame({ phaseTimeLeft: 70, status: 'answer-verifying' }) as any)} Resources={resources as never} />,
+            {
+                game: createGameValue({
+                    players,
+                    session: {
+                        frame: createFinalFrame({
+                            phaseTimeLeft: 70,
+                            status: 'answer-verifying'
+                        }),
+                        internal: {
+                            correctAnswers: ['Correct'],
+                            finalAnswers: {
+                                'contestant-1': {
+                                    value: 'Answer 1'
+                                }
+                            },
+                            incorrectAnswers: ['Wrong']
+                        },
+                        isPaused: false
+                    }
+                }),
+                lobby: createLobbyData({
+                    id: 'lobby-1',
+                    members: players
+                }),
+                user: createUserData({
+                    id: 'contestant-1',
+                    userNickname: 'Contestant 1'
+                })
+            }
+        )
+
+        const progressBar = screen.getByRole('progressbar')
+
+        expect(progressBar.closest('.glass-card')).toBeNull()
     })
 })

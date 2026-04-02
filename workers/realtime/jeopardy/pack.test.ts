@@ -129,6 +129,32 @@ describe('jeopardy pack parser', () => {
         expect(replicQuestion?.questionItems[1]?.durationMs).toBe(8000)
     })
 
+    it('ignores empty legacy scenario atoms before image clues in УберПак1', async () => {
+        const parsedPack = await readPack('УберПак1.siq')
+        const garfieldQuestion = getNormalizedQuestionById(parsedPack.declaration, '0-3-1')
+        const lynxQuestion = getNormalizedQuestionById(parsedPack.declaration, '0-3-3')
+        const caracalQuestion = getNormalizedQuestionById(parsedPack.declaration, '0-3-4')
+
+        expect(garfieldQuestion?.questionItems).toEqual([
+            expect.objectContaining({
+                content: 'cat_4.jpg',
+                type: 'image'
+            })
+        ])
+        expect(lynxQuestion?.questionItems).toEqual([
+            expect.objectContaining({
+                content: 'cat_22.jpg',
+                type: 'image'
+            })
+        ])
+        expect(caracalQuestion?.questionItems).toEqual([
+            expect.objectContaining({
+                content: 'cat_3.jpg',
+                type: 'image'
+            })
+        ])
+    })
+
     it('normalizes legacy SI special aliases to the supported Jeopardy question types', () => {
         const pack = createSingleQuestionPack({
             _attributes: {
@@ -229,6 +255,37 @@ describe('jeopardy pack parser', () => {
         expect(getNormalizedQuestionById(noRiskPack, '0-0-0')?.type).toBe('noRisk')
         expect(getNormalizedQuestionById(noRiskPack, '0-0-0')?.priceMultiplier).toBe(2)
         expect(getNormalizedQuestionById(stakeAllPack, '0-0-0')?.type).toBe('stakeAll')
+    })
+
+    it('drops empty scenario atoms instead of turning them into blank text steps', () => {
+        const pack = createSingleQuestionPack({
+            _attributes: {
+                price: '100'
+            },
+            right: {
+                answer: {
+                    _text: 'Answer'
+                }
+            },
+            scenario: {
+                atom: [
+                    {},
+                    {
+                        _attributes: {
+                            type: 'image'
+                        },
+                        _text: '@cat.jpg'
+                    }
+                ]
+            }
+        })
+
+        expect(getNormalizedQuestionById(pack, '0-0-0')?.questionItems).toEqual([
+            expect.objectContaining({
+                content: 'cat.jpg',
+                type: 'image'
+            })
+        ])
     })
 
     it('marks SI custom question types as incompatible with a precise reason', () => {

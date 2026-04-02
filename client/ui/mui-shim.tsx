@@ -264,16 +264,16 @@ export function Typography({ variant = 'body1', sx, style, color, align, compone
         variant === 'h1'
             ? '3rem'
             : variant === 'h2'
-            ? '2.5rem'
-            : variant === 'h3'
-            ? '2rem'
-            : variant === 'h4'
-            ? '1.5rem'
-            : variant === 'h6'
-            ? '1.125rem'
-            : variant === 'overline'
-            ? '0.75rem'
-            : '1rem'
+              ? '2.5rem'
+              : variant === 'h3'
+                ? '2rem'
+                : variant === 'h4'
+                  ? '1.5rem'
+                  : variant === 'h6'
+                    ? '1.125rem'
+                    : variant === 'overline'
+                      ? '0.75rem'
+                      : '1rem'
 
     return (
         <Comp
@@ -475,7 +475,14 @@ export function LinearProgress({
         color === 'success' ? 'from-emerald-400 to-lime-300' : color === 'secondary' ? 'from-fuchsia-400 to-violet-400' : 'from-violet-400 to-fuchsia-400'
 
     return (
-        <div className="h-2 w-full overflow-hidden rounded-full bg-white/10" style={{ ...resolveSx(sx), ...style }}>
+        <div
+            className="h-2 w-full overflow-hidden rounded-full bg-white/10"
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={Math.max(0, Math.min(100, value))}
+            style={{ ...resolveSx(sx), ...style }}
+        >
             <div className={cn('h-full rounded-full bg-gradient-to-r', gradient)} style={{ width: `${value}%` }} />
         </div>
     )

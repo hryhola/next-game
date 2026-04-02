@@ -76,6 +76,132 @@ function createPlayers() {
 }
 
 describe('QuestionContent', () => {
+    it('shows no progress bar during clue presentation before buzzing is allowed', () => {
+        const players = createPlayers()
+
+        renderWithProviders(
+            <QuestionContent
+                {...(createQuestionFrame({
+                    answeringStatus: 'too-early',
+                    specialPhase: 'showing-question'
+                }) as any)}
+                Resources={resources as never}
+                packFetchingTimeMs={0}
+                useMediaTimestamp={false}
+            />,
+            {
+                game: createGameValue({
+                    players,
+                    session: {
+                        frame: createQuestionFrame({
+                            answeringStatus: 'too-early',
+                            specialPhase: 'showing-question'
+                        }),
+                        internal: {},
+                        isPaused: false
+                    }
+                }),
+                lobby: createLobbyData({
+                    id: 'lobby-1',
+                    members: players
+                }),
+                user: createUserData({
+                    id: 'contestant-1',
+                    userNickname: 'Contestant 1'
+                })
+            }
+        )
+
+        expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
+    })
+
+    it('shows a progress bar during the buzzer window for a normal question', () => {
+        const players = createPlayers()
+
+        renderWithProviders(
+            <QuestionContent
+                {...(createQuestionFrame({
+                    answeringStatus: 'allowed',
+                    answerRequestTimeLeft: 60,
+                    questionType: 'simple'
+                }) as any)}
+                Resources={resources as never}
+                packFetchingTimeMs={0}
+                useMediaTimestamp={false}
+            />,
+            {
+                game: createGameValue({
+                    players,
+                    session: {
+                        frame: createQuestionFrame({
+                            answeringStatus: 'allowed',
+                            answerRequestTimeLeft: 60,
+                            questionType: 'simple'
+                        }),
+                        internal: {},
+                        isPaused: false
+                    }
+                }),
+                lobby: createLobbyData({
+                    id: 'lobby-1',
+                    members: players
+                }),
+                user: createUserData({
+                    id: 'contestant-1',
+                    userNickname: 'Contestant 1'
+                })
+            }
+        )
+
+        expect(screen.getByRole('progressbar')).toBeInTheDocument()
+    })
+
+    it('shows a progress bar while the answering contestant is writing a normal answer', () => {
+        const players = createPlayers()
+
+        renderWithProviders(
+            <QuestionContent
+                {...(createQuestionFrame({
+                    answeringPlayerId: 'contestant-1',
+                    answeringStatus: 'answering',
+                    answerGivingTimeLeft: 40,
+                    questionType: 'simple'
+                }) as any)}
+                Resources={resources as never}
+                packFetchingTimeMs={0}
+                useMediaTimestamp={false}
+            />,
+            {
+                game: createGameValue({
+                    players,
+                    session: {
+                        frame: createQuestionFrame({
+                            answeringPlayerId: 'contestant-1',
+                            answeringStatus: 'answering',
+                            answerGivingTimeLeft: 40,
+                            questionType: 'simple'
+                        }),
+                        internal: {},
+                        isPaused: false
+                    }
+                }),
+                lobby: createLobbyData({
+                    id: 'lobby-1',
+                    members: players
+                }),
+                user: createUserData({
+                    id: 'contestant-1',
+                    userNickname: 'Contestant 1'
+                })
+            }
+        )
+
+        const progressBar = screen.getByRole('progressbar')
+
+        expect(progressBar).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: 'Confirm' }).closest('.glass-card')?.contains(progressBar)).toBe(true)
+    })
+
     it('shows the player selection dock to the active chooser', () => {
         const players = createPlayers()
 
@@ -207,6 +333,7 @@ describe('QuestionContent', () => {
         renderWithProviders(
             <QuestionContent
                 {...(createQuestionFrame({
+                    answerVerifyingTimeLeft: 80,
                     answeringStatus: 'answer-verifying',
                     specialPhase: 'question-verifying'
                 }) as any)}
@@ -219,6 +346,7 @@ describe('QuestionContent', () => {
                     players,
                     session: {
                         frame: createQuestionFrame({
+                            answerVerifyingTimeLeft: 80,
                             answeringStatus: 'answer-verifying',
                             specialPhase: 'question-verifying'
                         }),
@@ -250,7 +378,112 @@ describe('QuestionContent', () => {
 
         expect(screen.getByText('Verify Answer')).toBeInTheDocument()
         expect(screen.getByText('Answer: Submitted answer')).toBeInTheDocument()
+        const progressBar = screen.getByRole('progressbar')
+
+        expect(progressBar).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: 'Approve' }).closest('.glass-card')?.contains(progressBar)).toBe(true)
         expect(screen.getByRole('button', { name: 'Approve' })).toBeInTheDocument()
         expect(screen.getByRole('button', { name: 'Decline' })).toBeInTheDocument()
+    })
+
+    it('shows the answer timer at the bottom of the screen for viewers who are not answering', () => {
+        const players = createPlayers()
+
+        renderWithProviders(
+            <QuestionContent
+                {...(createQuestionFrame({
+                    answeringPlayerId: 'contestant-1',
+                    answeringStatus: 'answering',
+                    answerGivingTimeLeft: 40,
+                    questionType: 'simple'
+                }) as any)}
+                Resources={resources as never}
+                packFetchingTimeMs={0}
+                useMediaTimestamp={false}
+            />,
+            {
+                game: createGameValue({
+                    players,
+                    session: {
+                        frame: createQuestionFrame({
+                            answeringPlayerId: 'contestant-1',
+                            answeringStatus: 'answering',
+                            answerGivingTimeLeft: 40,
+                            questionType: 'simple'
+                        }),
+                        internal: {},
+                        isPaused: false
+                    }
+                }),
+                lobby: createLobbyData({
+                    id: 'lobby-1',
+                    members: players
+                }),
+                user: createUserData({
+                    id: 'contestant-2',
+                    userNickname: 'Contestant 2'
+                })
+            }
+        )
+
+        const progressBar = screen.getByRole('progressbar')
+
+        expect(progressBar).toBeInTheDocument()
+        expect(progressBar.closest('.glass-card')).toBeNull()
+    })
+
+    it('shows the verification timer at the bottom of the screen for non-master viewers', () => {
+        const players = createPlayers()
+
+        renderWithProviders(
+            <QuestionContent
+                {...(createQuestionFrame({
+                    answerVerifyingTimeLeft: 80,
+                    answeringStatus: 'answer-verifying',
+                    specialPhase: 'question-verifying'
+                }) as any)}
+                Resources={resources as never}
+                packFetchingTimeMs={0}
+                useMediaTimestamp={false}
+            />,
+            {
+                game: createGameValue({
+                    players,
+                    session: {
+                        frame: createQuestionFrame({
+                            answerVerifyingTimeLeft: 80,
+                            answeringStatus: 'answer-verifying',
+                            specialPhase: 'question-verifying'
+                        }),
+                        internal: {
+                            correctAnswers: ['Correct'],
+                            currentAnsweringPlayerAnswerText: 'Submitted answer',
+                            currentAnsweringPlayerId: 'contestant-1',
+                            currentQuestionAnswers: {
+                                'contestant-1': {
+                                    value: 'Submitted answer',
+                                    wager: 700
+                                }
+                            },
+                            incorrectAnswers: ['Wrong']
+                        },
+                        isPaused: false
+                    }
+                }),
+                lobby: createLobbyData({
+                    id: 'lobby-1',
+                    members: players
+                }),
+                user: createUserData({
+                    id: 'contestant-2',
+                    userNickname: 'Contestant 2'
+                })
+            }
+        )
+
+        const progressBar = screen.getByRole('progressbar')
+
+        expect(progressBar).toBeInTheDocument()
+        expect(progressBar.closest('.glass-card')).toBeNull()
     })
 })

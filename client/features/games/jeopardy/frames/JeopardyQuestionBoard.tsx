@@ -2,7 +2,7 @@ import React from 'react'
 import { Box, Button, Divider } from 'client/ui/mui-shim'
 import { useLobby, useRequestHandler, useUser } from 'client/context/list'
 import { useActionSender, useJeopardy } from '../JeopardyView'
-import type { RealtimeJeopardyQuestionId, RealtimeJeopardyState } from 'shared/contracts/jeopardy'
+import type { RealtimeJeopardyQuestionId, RealtimeJeopardyState, RealtimeJeopardyThemeId } from 'shared/contracts/jeopardy'
 
 export const QuestionBoard: React.FC<RealtimeJeopardyState.QuestionBoardFrame> = props => {
     const sendAction = useActionSender()
@@ -53,6 +53,16 @@ export const QuestionBoard: React.FC<RealtimeJeopardyState.QuestionBoardFrame> =
         })
     }
 
+    const handleThemeSkip = (themeId: RealtimeJeopardyThemeId) => () => {
+        if (isBoardLocked) {
+            return
+        }
+
+        sendAction('$SkipCategory', {
+            themeId
+        })
+    }
+
     return (
         <Box
             sx={{
@@ -69,7 +79,22 @@ export const QuestionBoard: React.FC<RealtimeJeopardyState.QuestionBoardFrame> =
             <Box className="mx-auto w-full px-4 lg:max-w-[1080px] xl:max-w-[1240px]">
                 {props.themes.map(t => (
                     <Box key={t.themeId}>
-                        <Divider>{t.name}</Divider>
+                        <Divider>
+                            <span className="inline-flex items-center gap-3">
+                                <span>{t.name}</span>
+                                {isMasterView ? (
+                                    <Button
+                                        size="small"
+                                        variant="outlined"
+                                        aria-label={`Skip ${t.name}`}
+                                        disabled={isBoardLocked || !t.question.some(question => !question.isAnswered)}
+                                        onClick={handleThemeSkip(t.themeId)}
+                                    >
+                                        Skip
+                                    </Button>
+                                ) : null}
+                            </span>
+                        </Divider>
                         <Box display="flex" justifyContent="space-evenly" className="gap-2">
                             {t.question.map(q => {
                                 const isActiveQuestion = activePickedQuestionId === q.questionId

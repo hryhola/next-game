@@ -117,6 +117,7 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
     const answerInputRef = useRef<HTMLInputElement | null>(null)
 
     const answerRequestProgress = getTimedProgress(props.answerRequestStartedAt, props.answerRequestEndsAt, props.answerRequestTimeLeft, timerNowMs)
+    const answerGivingProgress = getTimedProgress(props.answerGivingStartedAt, props.answerGivingEndsAt, props.answerGivingTimeLeft, timerNowMs)
     const answerVerifyingProgress = getTimedProgress(props.answerVerifyingStartedAt, props.answerVerifyingEndsAt, props.answerVerifyingTimeLeft, timerNowMs)
     const bottomDockPositionClassName =
         'pointer-events-none fixed inset-x-0 z-40 flex justify-center px-4 bottom-[calc(env(safe-area-inset-bottom,0px)+88px)] md:bottom-6'
@@ -135,10 +136,15 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
         Boolean(props.eligiblePlayerIds?.includes(user.id)) &&
         !Boolean(props.playersThatMadeBet?.includes(user.id))
     const verifyDockVisible = props.answeringStatus === 'answer-verifying' && isMasterView && Boolean(session?.internal?.currentAnsweringPlayerId)
-    const progressBarPositionClassName = verifyDockVisible
-        ? 'fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom,0px)+148px)] md:bottom-0'
-        : 'fixed inset-x-0 bottom-0'
+    const progressBarPositionClassName = 'fixed inset-x-0 bottom-0'
+    const showAnswerProgressBar =
+        (props.answeringStatus === 'allowed' && answerRequestProgress !== null) || (props.answeringStatus === 'answering' && answerGivingProgress !== null)
+    const answerProgressValue = props.answeringStatus === 'answering' ? answerGivingProgress : answerRequestProgress
     const showAnswerVerifyingProgressBar = props.answeringStatus === 'answer-verifying' && answerVerifyingProgress !== null
+    const showInlineAnswerProgressBar = answerDockVisible && props.answeringStatus === 'answering' && answerGivingProgress !== null
+    const showInlineVerifyProgressBar = verifyDockVisible && showAnswerVerifyingProgressBar
+    const showBottomAnswerProgressBar = showAnswerProgressBar && !showInlineAnswerProgressBar
+    const showBottomVerifyProgressBar = showAnswerVerifyingProgressBar && !showInlineVerifyProgressBar
 
     const submitAnswer = () => {
         sendAction('$GiveAnswer', {
@@ -171,6 +177,7 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
     useEffect(() => {
         const hasLiveWorkerTimer =
             (props.answeringStatus === 'allowed' && props.answerRequestStartedAt && props.answerRequestEndsAt) ||
+            (props.answeringStatus === 'answering' && props.answerGivingStartedAt && props.answerGivingEndsAt) ||
             (props.answeringStatus === 'answer-verifying' && props.answerVerifyingStartedAt && props.answerVerifyingEndsAt)
 
         if (!hasLiveWorkerTimer) {
@@ -363,6 +370,11 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
                                 </Table>
                             </div>
                         ) : null}
+                        {showInlineVerifyProgressBar ? (
+                            <div className="mt-4">
+                                <LinearProgress variant="determinate" value={answerVerifyingProgress} color="success" />
+                            </div>
+                        ) : null}
                         <div className="mt-3 flex flex-wrap justify-end gap-3">
                             <Button color="error" onClick={() => sendAction('$RateAnswer', { rating: 'declined' })}>
                                 {t('common.decline')}
@@ -425,20 +437,25 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
                                 }}
                             />
                         </div>
+                        {showInlineAnswerProgressBar ? (
+                            <div className="mt-4">
+                                <LinearProgress variant="determinate" value={answerGivingProgress} color="secondary" />
+                            </div>
+                        ) : null}
                         <div className="mt-3 flex justify-end">
                             <Button onClick={submitAnswer}>{t('common.confirmShort')}</Button>
                         </div>
                     </div>
                 </div>
             ) : null}
-            {showAnswerVerifyingProgressBar && (
+            {showBottomVerifyProgressBar && (
                 <Box className={progressBarPositionClassName}>
                     <LinearProgress variant="determinate" value={answerVerifyingProgress} color="success" />
                 </Box>
             )}
-            {props.answeringStatus === 'allowed' && answerRequestProgress !== null && (
+            {showBottomAnswerProgressBar && answerProgressValue !== null && (
                 <Box className={progressBarPositionClassName}>
-                    <LinearProgress variant="determinate" value={answerRequestProgress} color="secondary" />
+                    <LinearProgress variant="determinate" value={answerProgressValue} color="secondary" />
                 </Box>
             )}
         </>

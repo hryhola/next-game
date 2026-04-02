@@ -168,7 +168,14 @@ export const FinalRoundBoard: React.FC<
             !props.playersThatAnswered.includes(currentPlayer.id)
         )
     const verifyDockVisible = isMasterView && props.status === 'answer-verifying' && Boolean(internal)
-    const hasBottomDock = bettingDockVisible || answeringDockVisible || verifyDockVisible
+    const showInlineAnswerProgressBar = answeringDockVisible && props.status === 'answering' && phaseProgress !== null
+    const showInlineVerifyProgressBar = verifyDockVisible && props.status === 'answer-verifying' && phaseProgress !== null
+    const showBottomProgressBar =
+        phaseProgress !== null &&
+        (['betting', 'skipping'].includes(props.status) ||
+            (props.status === 'answering' && !showInlineAnswerProgressBar) ||
+            (props.status === 'answer-verifying' && !showInlineVerifyProgressBar))
+    const hasBottomDock = bettingDockVisible && props.status === 'betting'
     const progressBarPositionClassName = hasBottomDock
         ? 'fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom,0px)+148px)] md:bottom-0'
         : 'fixed inset-x-0 bottom-0'
@@ -259,6 +266,11 @@ export const FinalRoundBoard: React.FC<
                             key={`final-answer:${user.id}:${props.playersThatAnswered.join(',')}`}
                             onSubmit={answer => sendAction('$GiveFinalAnswer', { answer })}
                         />
+                        {showInlineAnswerProgressBar ? (
+                            <div className="mt-4">
+                                <LinearProgress variant="determinate" value={phaseProgress} />
+                            </div>
+                        ) : null}
                     </div>
                 </div>
             ) : null}
@@ -313,6 +325,11 @@ export const FinalRoundBoard: React.FC<
                                 </TableBody>
                             </Table>
                         </div>
+                        {showInlineVerifyProgressBar ? (
+                            <div className="mt-4">
+                                <LinearProgress variant="determinate" value={phaseProgress} color="success" />
+                            </div>
+                        ) : null}
                         {Object.values(internal.finalAnswers).length > 0 && Object.values(internal.finalAnswers).every(answer => answer.rate) ? (
                             <div className="mt-4 flex justify-end">
                                 <Button onClick={() => sendAction('$ShowFinalScores', null)}>{t('common.end')}</Button>
@@ -321,9 +338,9 @@ export const FinalRoundBoard: React.FC<
                     </div>
                 </div>
             ) : null}
-            {phaseProgress !== null && ['answering', 'betting', 'skipping'].includes(props.status) ? (
+            {showBottomProgressBar ? (
                 <Box className={progressBarPositionClassName}>
-                    <LinearProgress variant="determinate" value={phaseProgress} />
+                    <LinearProgress variant="determinate" value={phaseProgress} color={props.status === 'answer-verifying' ? 'success' : 'secondary'} />
                 </Box>
             ) : null}
         </>

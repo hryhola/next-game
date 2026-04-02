@@ -215,13 +215,18 @@ function normalizeContentItem(item: JeopardyDeclaration.ContentItem): Normalized
     const rawContent = item._text || item._cdata || ''
     const isRef = toBoolean(item._attributes?.isRef, Boolean(rawType && rawType !== 'text' && rawType !== 'say' && rawType !== 'html'))
     const content = isRef && rawContent.startsWith('@') ? rawContent.slice(1) : rawContent
+    const normalizedType = normalizeItemType(rawType)
+
+    if (!isRef && ['html', 'text'].includes(normalizedType) && !content.trim()) {
+        return null
+    }
 
     return {
         content,
         durationMs: parseDurationMs(item._attributes?.duration),
         isRef,
         placement: normalizePlacement(rawType, item._attributes?.placement),
-        type: normalizeItemType(rawType),
+        type: normalizedType,
         waitForFinish: toBoolean(item._attributes?.waitForFinish, true)
     }
 }

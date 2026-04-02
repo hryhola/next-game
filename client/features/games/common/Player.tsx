@@ -27,6 +27,7 @@ export const Player: React.FC<Props> = props => {
     const lobby = useLobby()
     const { t } = useI18n()
     const size = props.size || 'small'
+    const isClickablePlayerHeader = !props.isLoading && user.userNickname !== props.player.userNickname && lobby.myRole === 'player'
 
     const sizes = {
         width: size === 'medium' ? 200 * 0.95 : 90,
@@ -60,7 +61,7 @@ export const Player: React.FC<Props> = props => {
         <>
             {user.userNickname !== props.player.userNickname && lobby.myRole === 'player' ? (
                 <PlayerMenu player={props.player}>
-                    <div>
+                    <div className="cursor-pointer">
                         <ProfilePicture
                             size={sizes.width}
                             maxSize={sizes.maxWidth}

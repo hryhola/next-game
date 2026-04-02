@@ -5,6 +5,7 @@ import type {
     RealtimeJeopardySessionInternal,
     RealtimeJeopardySessionState,
     RealtimeJeopardyState,
+    RealtimeJeopardyThemeId,
     RealtimeJeopardyWinner
 } from '../../../../shared/contracts/jeopardy'
 import { shuffle } from '../../../../util/array'
@@ -361,6 +362,52 @@ export class JeopardyLobbyFeature {
                         JEOPARDY_PICK_QUESTION_DELAY_MS,
                         state
                     )
+                }
+
+                return {
+                    stateChanged: true,
+                    success: true
+                }
+            }
+            case '$SkipCategory': {
+                if (session.frame.id !== 'question-board') {
+                    return {
+                        code: 'invalid_frame',
+                        message: 'You can only skip a category from the question board',
+                        success: false
+                    }
+                }
+
+                if (!isMaster) {
+                    return {
+                        code: 'forbidden',
+                        message: 'Only the Jeopardy master can skip categories',
+                        success: false
+                    }
+                }
+
+                if (session.frame.pickedQuestion) {
+                    return {
+                        code: 'already_picked',
+                        message: `Question ${session.frame.pickedQuestion} is already being opened`,
+                        success: false
+                    }
+                }
+
+                const payload = actionPayload as { themeId?: RealtimeJeopardyThemeId } | null
+
+                if (!payload?.themeId) {
+                    return {
+                        code: 'invalid_payload',
+                        message: 'Theme id is required',
+                        success: false
+                    }
+                }
+
+                const skipped = await this.skipCategory(state, payload.themeId)
+
+                if (!skipped.success) {
+                    return skipped
                 }
 
                 return {
@@ -1644,6 +1691,94 @@ export class JeopardyLobbyFeature {
         return session.meta.currentQuestionFlow?.currentPrice || session.internal.currentQuestionPrice || 0
     }
 
+    private async continueFromAnsweredQuestions(state: StoredLobbyState, roundId: number, answeredQuestions: RealtimeJeopardyQuestionId[]): Promise<void> {
+        const game = this.getGame(state)
+
+        if (!game) {
+            return
+        }
+
+        const roundQuestions = getRoundQuestions(game.packDeclaration, roundId) || []
+        const roundCompleted = roundQuestions.every(id => answeredQuestions.includes(id))
+
+        if (!roundCompleted) {
+            this.showQuestionBoard(state, roundId)
+            return
+        }
+
+        const nextRoundId = roundId + 1
+
+        if (nextRoundId > getRoundsCount(game.packDeclaration) - 1) {
+            await this.showFinalScores(state)
+            return
+        }
+
+        this.updateInternal(state, {
+            currentRoundId: nextRoundId
+        })
+
+        if (isFinalRound(game.packDeclaration, nextRoundId)) {
+            if (this.getContestants(state).some(player => player.playerScore > 0)) {
+                await this.beginRoundPreview(state, nextRoundId)
+            } else {
+                await this.showFinalScores(state)
+            }
+
+            return
+        }
+
+        await this.beginRoundPreview(state, nextRoundId)
+    }
+
+    private async skipCategory(
+        state: StoredLobbyState,
+        themeId: RealtimeJeopardyThemeId
+    ): Promise<{ code: string; message: string; success: false } | { success: true }> {
+        const session = this.getSession(state)
+
+        if (!session || session.frame.id !== 'question-board') {
+            return {
+                code: 'invalid_frame',
+                message: 'Question board is not active',
+                success: false
+            }
+        }
+
+        const theme = session.frame.themes.find(item => item.themeId === themeId)
+
+        if (!theme) {
+            return {
+                code: 'theme_not_found',
+                message: 'Category not found',
+                success: false
+            }
+        }
+
+        const unansweredQuestionIds = theme.question
+            .map(question => question.questionId)
+            .filter(questionId => !session.internal.answeredQuestions.includes(questionId))
+
+        if (!unansweredQuestionIds.length) {
+            return {
+                code: 'theme_answered',
+                message: 'This category has already been cleared',
+                success: false
+            }
+        }
+
+        const answeredQuestions = [...session.internal.answeredQuestions, ...unansweredQuestionIds]
+
+        this.updateInternal(state, {
+            answeredQuestions
+        })
+
+        await this.continueFromAnsweredQuestions(state, session.internal.currentRoundId, answeredQuestions)
+
+        return {
+            success: true
+        }
+    }
+
     private getEligibleSecretTargets(state: StoredLobbyState, selectionMode: 'any' | 'exceptCurrent'): StoredLobbyMember[] {
         const session = this.getSession(state)
         const pickerId = session?.internal.pickerId
@@ -2678,37 +2813,7 @@ export class JeopardyLobbyFeature {
             incorrectAnswers: null
         })
 
-        const roundId = session.internal.currentRoundId
-        const roundQuestions = getRoundQuestions(game.packDeclaration, roundId) || []
-        const roundCompleted = roundQuestions.every(id => answeredQuestions.includes(id))
-
-        if (!roundCompleted) {
-            this.showQuestionBoard(state, roundId)
-            return
-        }
-
-        const nextRoundId = roundId + 1
-
-        if (nextRoundId > getRoundsCount(game.packDeclaration) - 1) {
-            await this.showFinalScores(state)
-            return
-        }
-
-        this.updateInternal(state, {
-            currentRoundId: nextRoundId
-        })
-
-        if (isFinalRound(game.packDeclaration, nextRoundId)) {
-            if (this.getContestants(state).some(player => player.playerScore > 0)) {
-                await this.beginRoundPreview(state, nextRoundId)
-            } else {
-                await this.showFinalScores(state)
-            }
-
-            return
-        }
-
-        await this.beginRoundPreview(state, nextRoundId)
+        await this.continueFromAnsweredQuestions(state, session.internal.currentRoundId, answeredQuestions)
     }
 
     private async showFinalRoundBoard(state: StoredLobbyState): Promise<void> {
