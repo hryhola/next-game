@@ -129,6 +129,108 @@ describe('jeopardy pack parser', () => {
         expect(replicQuestion?.questionItems[1]?.durationMs).toBe(8000)
     })
 
+    it('normalizes legacy SI special aliases to the supported Jeopardy question types', () => {
+        const pack = createSingleQuestionPack({
+            _attributes: {
+                price: '100',
+                type: 'bagcat'
+            },
+            type: {
+                _attributes: {
+                    name: 'bagcat'
+                },
+                param: [
+                    {
+                        _attributes: {
+                            name: 'knows'
+                        },
+                        _text: 'before'
+                    }
+                ]
+            },
+            right: {
+                answer: {
+                    _text: 'Answer'
+                }
+            },
+            scenario: {
+                atom: {
+                    _text: 'Question'
+                }
+            }
+        })
+
+        const neverKnownPack = createSingleQuestionPack({
+            _attributes: {
+                price: '100',
+                type: 'bagcat'
+            },
+            type: {
+                _attributes: {
+                    name: 'bagcat'
+                },
+                param: [
+                    {
+                        _attributes: {
+                            name: 'knows'
+                        },
+                        _text: 'never'
+                    }
+                ]
+            },
+            right: {
+                answer: {
+                    _text: 'Answer'
+                }
+            },
+            scenario: {
+                atom: {
+                    _text: 'Question'
+                }
+            }
+        })
+
+        const noRiskPack = createSingleQuestionPack({
+            _attributes: {
+                price: '200',
+                type: 'sponsored'
+            },
+            right: {
+                answer: {
+                    _text: 'Answer'
+                }
+            },
+            scenario: {
+                atom: {
+                    _text: 'Question'
+                }
+            }
+        })
+
+        const stakeAllPack = createSingleQuestionPack({
+            _attributes: {
+                price: '300',
+                type: 'stakeAll'
+            },
+            right: {
+                answer: {
+                    _text: 'Answer'
+                }
+            },
+            scenario: {
+                atom: {
+                    _text: 'Question'
+                }
+            }
+        })
+
+        expect(getNormalizedQuestionById(pack, '0-0-0')?.type).toBe('secretPublicPrice')
+        expect(getNormalizedQuestionById(neverKnownPack, '0-0-0')?.type).toBe('secretNoQuestion')
+        expect(getNormalizedQuestionById(noRiskPack, '0-0-0')?.type).toBe('noRisk')
+        expect(getNormalizedQuestionById(noRiskPack, '0-0-0')?.priceMultiplier).toBe(2)
+        expect(getNormalizedQuestionById(stakeAllPack, '0-0-0')?.type).toBe('stakeAll')
+    })
+
     it('marks SI custom question types as incompatible with a precise reason', () => {
         const compatibility = validateJeopardyPackCompatibility(
             createSingleQuestionPack({

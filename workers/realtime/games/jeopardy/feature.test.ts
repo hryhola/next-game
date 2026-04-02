@@ -717,6 +717,70 @@ describe('jeopardy flow', () => {
         expect(answeringFrame.specialPhase).toBeUndefined()
     })
 
+    it('keeps no-risk questions safe on a miss and still awards the doubled value on approval', async () => {
+        const pack = createPackWithQuestions([
+            createParamQuestion({
+                price: '100',
+                type: 'noRisk',
+                params: [
+                    {
+                        _attributes: {
+                            name: 'question',
+                            type: 'content'
+                        },
+                        item: {
+                            _text: 'No-risk question'
+                        }
+                    }
+                ]
+            }),
+            createParamQuestion({
+                price: '100',
+                type: 'forYourself',
+                params: [
+                    {
+                        _attributes: {
+                            name: 'question',
+                            type: 'content'
+                        },
+                        item: {
+                            _text: 'For-yourself question'
+                        }
+                    }
+                ]
+            })
+        ])
+        const state = createState(pack)
+        const { feature, scheduler } = createFeatureHarness()
+
+        state.members.find(member => member.id === 'contestant-1')!.playerScore = 300
+
+        await advanceToQuestion(feature, state, scheduler, '0-0-0')
+        await runScheduledTask(feature, state, scheduler, 'question.atom.complete')
+
+        expect(getQuestionFrame(state).questionType).toBe('noRisk')
+        expect((await feature.handleAction(state, 'contestant-1', '$GiveAnswer', { text: 'Wrong' })).success).toBe(true)
+        expect((await feature.handleAction(state, 'master', '$RateAnswer', { rating: 'declined' })).success).toBe(true)
+        expect(state.members.find(member => member.id === 'contestant-1')?.playerScore).toBe(300)
+
+        await runScheduledTask(feature, state, scheduler, 'question.atom.complete')
+
+        expect(state.game.session?.frame.id).toBe('question-board')
+
+        expect(
+            await feature.handleAction(state, 'master', '$PickQuestion', {
+                questionId: '0-0-1'
+            })
+        ).toMatchObject({ success: true })
+        await runScheduledTask(feature, state, scheduler, 'pick-question.complete')
+        await runScheduledTask(feature, state, scheduler, 'question.atom.complete')
+
+        expect(getQuestionFrame(state).questionType).toBe('forYourself')
+        expect((await feature.handleAction(state, 'contestant-1', '$GiveAnswer', { text: 'Right' })).success).toBe(true)
+        expect((await feature.handleAction(state, 'master', '$RateAnswer', { rating: 'approved' })).success).toBe(true)
+        expect(state.members.find(member => member.id === 'contestant-1')?.playerScore).toBe(500)
+    })
+
     it('shows clue progress for auto-advanced image atoms before stake answers are allowed', async () => {
         const pack = createPackWithQuestions([
             createScenarioQuestionWithAtoms({
@@ -758,6 +822,86 @@ describe('jeopardy flow', () => {
         expect(frame.phaseEndsAt).toBe('2026-03-31T12:00:05.000Z')
         expect(frame.phaseTimeLeft).toBe(100)
         expect(scheduler.listSuffixes()).toContain('question.atom.complete')
+    })
+
+    it('allows the chosen contestant to set the public price before a secret-public-price question starts', async () => {
+        const pack = createPackWithQuestions([
+            createParamQuestion({
+                price: '400',
+                type: 'secretPublicPrice',
+                params: [
+                    {
+                        _attributes: {
+                            name: 'theme'
+                        },
+                        _text: 'Public Secret'
+                    },
+                    {
+                        _attributes: {
+                            name: 'price',
+                            type: 'numberSet'
+                        },
+                        numberSet: {
+                            _attributes: {
+                                maximum: '700',
+                                minimum: '300',
+                                step: '200'
+                            }
+                        }
+                    },
+                    {
+                        _attributes: {
+                            name: 'selectionMode'
+                        },
+                        _text: 'exceptCurrent'
+                    },
+                    {
+                        _attributes: {
+                            name: 'question',
+                            type: 'content'
+                        },
+                        item: {
+                            _text: 'Public price secret question'
+                        }
+                    }
+                ]
+            })
+        ])
+        const state = createState(pack, 2)
+        const { feature, scheduler } = createFeatureHarness()
+
+        await advanceToQuestion(feature, state, scheduler, '0-0-0')
+
+        let frame = getQuestionFrame(state)
+
+        expect(frame.specialPhase).toBe('selecting-player')
+        expect(frame.eligiblePlayerIds).toEqual(['contestant-2'])
+
+        expect(
+            await feature.handleAction(state, 'contestant-1', '$SelectQuestionPlayer', {
+                playerId: 'contestant-2'
+            })
+        ).toMatchObject({ success: true })
+
+        frame = getQuestionFrame(state)
+        expect(frame.specialPhase).toBe('choosing-price')
+        expect(frame.answeringPlayerId).toBe('contestant-2')
+        expect(frame.selectedPlayerId).toBe('contestant-2')
+        expect(frame.priceOptions).toEqual([300, 500, 700])
+
+        expect((await feature.handleAction(state, 'contestant-2', '$SetQuestionValue', { value: 500 })).success).toBe(true)
+
+        frame = getQuestionFrame(state)
+        expect(frame.specialPhase).toBe('showing-question')
+        expect(frame.questionPrice).toBe(500)
+        expect(frame.content).toBe('Public price secret question')
+
+        await runScheduledTask(feature, state, scheduler, 'question.atom.complete')
+
+        frame = getQuestionFrame(state)
+        expect(frame.answeringStatus).toBe('answering')
+        expect(frame.answeringPlayerId).toBe('contestant-2')
+        expect(frame.questionPrice).toBe(500)
     })
 
     it('lets the chooser transfer a secret question to another contestant', async () => {
@@ -894,6 +1038,112 @@ describe('jeopardy flow', () => {
         expect(frame.answeringPlayerId).toBe('contestant-1')
         expect(frame.selectedPlayerId).toBe('contestant-1')
         expect(frame.specialPhase).toBeUndefined()
+    })
+
+    it('resolves secret-no-question immediately after selection and gives the chooser role to the recipient', async () => {
+        const pack = createPackWithQuestions([
+            createParamQuestion({
+                price: '400',
+                type: 'secretNoQuestion',
+                params: [
+                    {
+                        _attributes: {
+                            name: 'theme'
+                        },
+                        _text: 'Gift Theme'
+                    }
+                ]
+            }),
+            createScenarioQuestion({
+                price: '500'
+            })
+        ])
+        const state = createState(pack, 2)
+        const { feature, scheduler } = createFeatureHarness()
+
+        await advanceToQuestion(feature, state, scheduler, '0-0-0')
+
+        let frame = getQuestionFrame(state)
+
+        expect(frame.specialPhase).toBe('selecting-player')
+        expect(frame.eligiblePlayerIds).toEqual(['contestant-2'])
+
+        expect(
+            await feature.handleAction(state, 'contestant-1', '$SelectQuestionPlayer', {
+                playerId: 'contestant-2'
+            })
+        ).toMatchObject({ success: true })
+
+        expect(state.members.find(member => member.id === 'contestant-2')?.playerScore).toBe(400)
+        expect(state.game.session?.frame.id).toBe('question-board')
+
+        const boardFrame = state.game.session?.frame as RealtimeJeopardyState.QuestionBoardFrame
+
+        expect(boardFrame.pickerId).toBe('contestant-2')
+        expect(boardFrame.themes[0]?.question[0]?.isAnswered).toBe(true)
+        expect(boardFrame.themes[0]?.question[1]?.isAnswered).toBe(false)
+    })
+
+    it('only lets eligible hidden-stake contestants answer and scores stake-all questions by wager', async () => {
+        const pack = createPackWithQuestions([
+            createParamQuestion({
+                price: '300',
+                type: 'stakeAll',
+                params: [
+                    {
+                        _attributes: {
+                            name: 'question',
+                            type: 'content'
+                        },
+                        item: {
+                            _text: 'Stake all question'
+                        }
+                    }
+                ]
+            })
+        ])
+        const state = createState(pack, 2)
+        const { feature, scheduler } = createFeatureHarness()
+
+        state.members.find(member => member.id === 'contestant-1')!.playerScore = 400
+        state.members.find(member => member.id === 'contestant-2')!.playerScore = 0
+
+        await advanceToQuestion(feature, state, scheduler, '0-0-0')
+
+        let frame = getQuestionFrame(state)
+
+        expect(frame.specialPhase).toBe('making-hidden-stakes')
+        expect(frame.eligiblePlayerIds).toEqual(['contestant-1'])
+
+        const ineligibleStakeResult = await feature.handleAction(state, 'contestant-2', '$SetQuestionValue', { value: 50 })
+
+        expect(ineligibleStakeResult).toMatchObject({
+            code: 'invalid_bettor',
+            success: false
+        })
+
+        expect((await feature.handleAction(state, 'contestant-1', '$SetQuestionValue', { value: 250 })).success).toBe(true)
+
+        frame = getQuestionFrame(state)
+        expect(frame.specialPhase).toBe('showing-question')
+        expect(frame.playersThatMadeBet).toEqual(['contestant-1'])
+
+        await runScheduledTask(feature, state, scheduler, 'question.atom.complete')
+
+        frame = getQuestionFrame(state)
+        expect(frame.answeringStatus).toBe('answering')
+        expect(frame.eligiblePlayerIds).toEqual(['contestant-1'])
+
+        const ineligibleAnswerResult = await feature.handleAction(state, 'contestant-2', '$GiveAnswer', { text: 'Free answer' })
+
+        expect(ineligibleAnswerResult).toMatchObject({
+            code: 'invalid_answer_turn',
+            success: false
+        })
+
+        expect((await feature.handleAction(state, 'contestant-1', '$GiveAnswer', { text: 'Risked answer' })).success).toBe(true)
+        expect((await feature.handleAction(state, 'master', '$RateAnswer', { rating: 'declined' })).success).toBe(true)
+        expect(state.members.find(member => member.id === 'contestant-1')?.playerScore).toBe(150)
     })
 
     it('collects for-all answers from multiple contestants and verifies them sequentially', async () => {
@@ -1047,5 +1297,28 @@ describe('jeopardy flow', () => {
         frame = state.game.session?.frame as RealtimeJeopardyState.FinalRoundBoardFrame
         expect(frame.status).toBe('answer-verifying')
         expect(frame.playersThatAnswered).toEqual(['contestant-1', 'contestant-2'])
+    })
+
+    it('applies final answer ratings to bets and shows the correct winner on the final score board', async () => {
+        const state = createState(createFinalRoundPack(), 2)
+        const { feature, scheduler } = createFeatureHarness()
+
+        state.members.find(member => member.id === 'contestant-1')!.playerScore = 1000
+        state.members.find(member => member.id === 'contestant-2')!.playerScore = 800
+
+        await advanceToFinalBetting(feature, state, scheduler)
+        expect((await feature.handleAction(state, 'contestant-1', '$MakeFinalBet', { value: 400 })).success).toBe(true)
+        expect((await feature.handleAction(state, 'contestant-2', '$MakeFinalBet', { value: 300 })).success).toBe(true)
+        expect((await feature.handleAction(state, 'contestant-1', '$GiveFinalAnswer', { answer: 'A1' })).success).toBe(true)
+        expect((await feature.handleAction(state, 'contestant-2', '$GiveFinalAnswer', { answer: 'A2' })).success).toBe(true)
+
+        expect((await feature.handleAction(state, 'master', '$RateFinalAnswer', { answeringPlayerId: 'contestant-1', rate: 'declined' })).success).toBe(true)
+        expect((await feature.handleAction(state, 'master', '$RateFinalAnswer', { answeringPlayerId: 'contestant-2', rate: 'approved' })).success).toBe(true)
+        expect(state.members.find(member => member.id === 'contestant-1')?.playerScore).toBe(600)
+        expect(state.members.find(member => member.id === 'contestant-2')?.playerScore).toBe(1100)
+
+        expect((await feature.handleAction(state, 'master', '$ShowFinalScores', null)).success).toBe(true)
+        expect(state.game.session?.frame.id).toBe('final-score')
+        expect((state.game.session?.frame as RealtimeJeopardyState.FinalScoreFrame).winner.id).toBe('contestant-2')
     })
 })

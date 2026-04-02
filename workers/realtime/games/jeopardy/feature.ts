@@ -627,7 +627,16 @@ export class JeopardyLobbyFeature {
                 const isMultiAnswerQuestion = flow?.questionType === 'forAll' || flow?.questionType === 'stakeAll'
 
                 if (isMultiAnswerQuestion) {
-                    if (actor.id === state.creatorUserId || session.frame.playersWhoAnswered.includes(userId)) {
+                    const eligiblePlayers =
+                        flow?.questionType === 'stakeAll'
+                            ? this.getContestants(state).filter(player => Boolean(session.internal.currentQuestionBets?.[player.id]))
+                            : this.getContestants(state)
+
+                    if (
+                        actor.id === state.creatorUserId ||
+                        session.frame.playersWhoAnswered.includes(userId) ||
+                        !eligiblePlayers.some(player => player.id === userId)
+                    ) {
                         return {
                             code: 'invalid_answer_turn',
                             message: 'It is not your turn to answer',
@@ -649,11 +658,6 @@ export class JeopardyLobbyFeature {
                         ...session.frame,
                         playersWhoAnswered
                     })
-
-                    const eligiblePlayers =
-                        flow?.questionType === 'stakeAll'
-                            ? this.getContestants(state).filter(player => Boolean(session.internal.currentQuestionBets?.[player.id]))
-                            : this.getContestants(state)
 
                     if (playersWhoAnswered.length >= eligiblePlayers.length) {
                         const sessionId = this.getActiveLobbySessionId(state)
