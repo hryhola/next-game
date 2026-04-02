@@ -260,6 +260,7 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
     const valueSelectionKey = `${props.questionId}:${props.specialPhase || 'none'}:${(props.priceOptions || []).join(',')}:${props.questionPrice || ''}:${
         currentPlayer?.playerScore || ''
     }`
+    const textContentClassName = props.type === 'text' ? 'px-4 lg:px-16 xl:px-30' : undefined
 
     let content!: React.ReactNode
 
@@ -307,7 +308,7 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
     return (
         <>
             <Grid display="grid" justifyContent="center" alignContent="center" width="100vw" height="var(--fullHeight)" overflow="hidden">
-                <Grid sx={{ textAlign: 'center' }} item>
+                <Grid sx={{ textAlign: 'center' }} className={textContentClassName} item>
                     {content}
                 </Grid>
             </Grid>

@@ -1,6 +1,6 @@
 import React from 'react'
 import { Box, Button, Divider } from 'client/ui/mui-shim'
-import { useLobby, useRequestHandler, useUser } from 'client/context/list'
+import { useI18n, useLobby, useRequestHandler, useUser } from 'client/context/list'
 import { useActionSender, useJeopardy } from '../JeopardyView'
 import type { RealtimeJeopardyQuestionId, RealtimeJeopardyState, RealtimeJeopardyThemeId } from 'shared/contracts/jeopardy'
 
@@ -9,6 +9,7 @@ export const QuestionBoard: React.FC<RealtimeJeopardyState.QuestionBoardFrame> =
     const user = useUser()
     const lobby = useLobby()
     const game = useJeopardy()
+    const I18n = useI18n()
 
     const isMyTurn = props.pickerId === user.id
     const isMasterView = game.players.some(p => p.id === user.id && p.playerIsMaster)
@@ -90,40 +91,41 @@ export const QuestionBoard: React.FC<RealtimeJeopardyState.QuestionBoardFrame> =
                                         disabled={isBoardLocked || !t.question.some(question => !question.isAnswered)}
                                         onClick={handleThemeSkip(t.themeId)}
                                     >
-                                        Skip
+                                        {I18n.t('common.skip')}
                                     </Button>
                                 ) : null}
                             </span>
                         </Divider>
-                        <Box display="flex" justifyContent="space-evenly" className="gap-2">
-                            {t.question.map(q => {
-                                const isActiveQuestion = activePickedQuestionId === q.questionId
-                                const isDisabled = !canPickQuestions || q.isAnswered || isBoardLocked
+                        <div className="py-1">
+                            <div className="flex w-full gap-2">
+                                {t.question.map(q => {
+                                    const isActiveQuestion = activePickedQuestionId === q.questionId
+                                    const isDisabled = !canPickQuestions || q.isAnswered || isBoardLocked
 
-                                return (
-                                    <Button
-                                        fullWidth
-                                        size="large"
-                                        variant="text"
-                                        key={q.questionId}
-                                        id={q.questionId}
-                                        className={[
-                                            'h-[90px] border-0 shadow-none',
-                                            isActiveQuestion
-                                                ? 'bg-gradient-to-r from-violet-500 via-purple-500 to-fuchsia-500 text-slate-950 shadow-[0_18px_40px_rgba(139,92,246,0.35)] disabled:opacity-100'
-                                                : 'bg-white/4 text-violet-100 disabled:bg-white/4 disabled:text-violet-100/45',
-                                            canPickQuestions && !isBoardLocked && !q.isAnswered
-                                                ? 'hover:bg-gradient-to-r hover:from-violet-500 hover:via-purple-500 hover:to-fuchsia-500 hover:text-slate-950 hover:shadow-[0_18px_40px_rgba(139,92,246,0.35)]'
-                                                : ''
-                                        ].join(' ')}
-                                        disabled={isDisabled}
-                                        onClick={handleQuestionPick}
-                                    >
-                                        {!q.isAnswered ? q.price : ''}
-                                    </Button>
-                                )
-                            })}
-                        </Box>
+                                    return (
+                                        <Button
+                                            size="large"
+                                            variant="text"
+                                            key={q.questionId}
+                                            id={q.questionId}
+                                            className={[
+                                                'h-[90px] min-w-0 flex-1 border-0 shadow-none md:min-w-[7rem]',
+                                                isActiveQuestion
+                                                    ? 'bg-gradient-to-r from-violet-500 via-purple-500 to-fuchsia-500 text-slate-950 shadow-[0_18px_40px_rgba(139,92,246,0.35)] disabled:opacity-100'
+                                                    : 'bg-white/4 text-violet-100 disabled:bg-white/4 disabled:text-violet-100/45',
+                                                canPickQuestions && !isBoardLocked && !q.isAnswered
+                                                    ? 'hover:bg-gradient-to-r hover:from-violet-500 hover:via-purple-500 hover:to-fuchsia-500 hover:text-slate-950 hover:shadow-[0_18px_40px_rgba(139,92,246,0.35)]'
+                                                    : ''
+                                            ].join(' ')}
+                                            disabled={isDisabled}
+                                            onClick={handleQuestionPick}
+                                        >
+                                            {!q.isAnswered ? q.price : ''}
+                                        </Button>
+                                    )
+                                })}
+                            </div>
+                        </div>
                     </Box>
                 ))}
             </Box>

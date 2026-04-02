@@ -1023,7 +1023,7 @@ export class JeopardyLobbyFeature {
                             return { stateChanged: true, success: true }
                         }
 
-                        await this.cancelTask(sessionId, 'question.atom.complete', state).catch(() => null)
+                        await this.cancelQuestionAtomTask(sessionId, state).catch(() => null)
 
                         await this.showNextQuestionAtom(state)
                         return { stateChanged: true, success: true }
@@ -1337,7 +1337,7 @@ export class JeopardyLobbyFeature {
                 const sessionId = this.getActiveLobbySessionId(state)
 
                 if (sessionId) {
-                    await this.cancelTask(sessionId, 'question.atom.complete', state).catch(() => null)
+                    await this.cancelQuestionAtomTask(sessionId, state).catch(() => null)
                 }
 
                 session.meta.mediaElapsedTimeMs = 0
@@ -1876,6 +1876,18 @@ export class JeopardyLobbyFeature {
         return `${this.getSessionTaskPrefix(sessionId)}${suffix}`
     }
 
+    private getQuestionAtomTaskPrefix(sessionId: string): string {
+        return this.getTaskKey(sessionId, 'question.atom.complete.')
+    }
+
+    private getQuestionAtomTaskSuffix(flow: StoredJeopardySession['meta']['currentQuestionFlow']): string | null {
+        if (!flow) {
+            return null
+        }
+
+        return `question.atom.complete.${flow.stage}.${flow.shownAtomIndex}`
+    }
+
     private async scheduleTask(
         sessionId: string,
         suffix: string,
@@ -1916,6 +1928,18 @@ export class JeopardyLobbyFeature {
         }
 
         await this.deps.scheduler.cancel(key)
+    }
+
+    private async cancelQuestionAtomTask(sessionId: string, state?: StoredLobbyState): Promise<void> {
+        const session = state ? this.getSession(state) : null
+        const prefix = this.getQuestionAtomTaskPrefix(sessionId)
+
+        if (session?.isPaused) {
+            session.meta.pausedTasks = session.meta.pausedTasks.filter(task => !task.key.startsWith(prefix))
+            return
+        }
+
+        await this.deps.scheduler.cancelByPrefix(prefix)
     }
 
     private async cancelSessionTasks(sessionId: string, state?: StoredLobbyState): Promise<void> {
@@ -2242,9 +2266,15 @@ export class JeopardyLobbyFeature {
 
         this.setQuestionPhaseTimer(state, Math.max(autoAdvanceDelayMs, 0), Math.max(autoAdvanceDelayMs, 0), {})
 
+        const questionAtomTaskSuffix = this.getQuestionAtomTaskSuffix(session.meta.currentQuestionFlow)
+
+        if (!questionAtomTaskSuffix) {
+            return
+        }
+
         await this.scheduleTask(
             sessionId,
-            'question.atom.complete',
+            questionAtomTaskSuffix,
             {
                 sessionId,
                 type: 'jeopardy.question.atom.complete'

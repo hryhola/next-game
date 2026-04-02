@@ -7,7 +7,7 @@ import { cn } from 'client/ui/lib/cn'
 import { ChatBox } from 'client/ui'
 import { ChatMessageComponent } from 'client/ui/chat/ChatMessage'
 import { Button, Slider } from 'client/ui/primitives'
-import { Check, ChevronDown, LogOut, MessageCircle, MoreHorizontal, OctagonX, Volume2, VolumeX, X } from 'lucide-react'
+import { Check, LogOut, MessageCircle, MoreHorizontal, OctagonX, Volume2, VolumeX, X } from 'lucide-react'
 import type { TChatMessage } from 'shared/contracts/app'
 
 interface LobbyControlsProps {
@@ -342,7 +342,6 @@ export const LobbyControls: React.FC<LobbyControlsProps> = props => {
                     >
                         <MessageCircle className={controlIconClassName} strokeWidth={2.25} />
                         {t('common.chat')}
-                        <ChevronDown className={controlIconClassName} strokeWidth={2.25} />
                     </Button>
 
                     {extraButtons.length ? (

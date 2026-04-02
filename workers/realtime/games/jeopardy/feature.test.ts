@@ -28,12 +28,23 @@ class MockScheduler {
         return [...this.tasks].sort((left, right) => left.scheduledAt - right.scheduledAt)
     }
 
-    takeBySuffix(suffix: string): ScheduledTask {
-        const task = this.tasks.find(item => item.key.endsWith(suffix))
+    async complete(keys: string[]): Promise<void> {
+        const keySet = new Set(keys)
+        this.tasks = this.tasks.filter(task => !keySet.has(task.key))
+    }
+
+    peekBySuffix(suffix: string): ScheduledTask {
+        const task = this.tasks.find(item => this.matchesSuffix(item, suffix))
 
         if (!task) {
             throw new Error(`Expected scheduled task with suffix ${suffix}`)
         }
+
+        return task
+    }
+
+    takeBySuffix(suffix: string): ScheduledTask {
+        const task = this.peekBySuffix(suffix)
 
         this.tasks = this.tasks.filter(item => item.key !== task.key)
 
@@ -41,7 +52,21 @@ class MockScheduler {
     }
 
     listSuffixes(): string[] {
-        return this.tasks.map(task => task.key.split(':').at(-1)!)
+        return this.tasks.map(task => this.normalizeSuffix(task.key))
+    }
+
+    private matchesSuffix(task: ScheduledTask, suffix: string): boolean {
+        return this.normalizeSuffix(task.key) === suffix || task.key.endsWith(suffix)
+    }
+
+    private normalizeSuffix(key: string): string {
+        const rawSuffix = key.split(':').at(-1)!
+
+        if (rawSuffix.startsWith('question.atom.complete.')) {
+            return 'question.atom.complete'
+        }
+
+        return rawSuffix
     }
 }
 
@@ -433,6 +458,15 @@ async function runScheduledTask(feature: JeopardyLobbyFeature, state: StoredLobb
     const result = await feature.handleTask(state, task.payload)
 
     expect(result.stateChanged).toBe(true)
+}
+
+async function runAlarmScheduledTask(feature: JeopardyLobbyFeature, state: StoredLobbyState, scheduler: MockScheduler, suffix: string) {
+    const task = scheduler.peekBySuffix(suffix)
+    const result = await feature.handleTask(state, task.payload)
+
+    expect(result.stateChanged).toBe(true)
+
+    await scheduler.complete([task.key])
 }
 
 async function startGame(feature: JeopardyLobbyFeature, state: StoredLobbyState) {
@@ -1037,6 +1071,50 @@ describe('jeopardy flow', () => {
         expect(frame.phaseEndsAt).toBe('2026-03-31T12:00:05.000Z')
         expect(frame.phaseTimeLeft).toBe(100)
         expect(scheduler.listSuffixes()).toContain('question.atom.complete')
+    })
+
+    it('keeps the next clue timer alive across durable-object alarm completion for multi-step clues', async () => {
+        const pack = createPackWithQuestions([
+            createScenarioQuestionWithAtoms({
+                atoms: [
+                    {
+                        _text: 'Назвіть вид грибів'
+                    },
+                    {
+                        _attributes: {
+                            isRef: 'True',
+                            type: 'image'
+                        },
+                        _text: '@mush612.jpg'
+                    }
+                ],
+                correctAnswer: 'Лисичка справжня / Cantharellus cibarius',
+                price: '300'
+            })
+        ])
+        const state = createState(pack)
+        const { feature, scheduler } = createFeatureHarness()
+
+        await advanceToQuestion(feature, state, scheduler, '0-0-0')
+
+        let frame = getQuestionFrame(state)
+        expect(frame.content).toBe('Назвіть вид грибів')
+        expect(frame.type).toBe('text')
+        expect(scheduler.listSuffixes()).toContain('question.atom.complete')
+
+        await runAlarmScheduledTask(feature, state, scheduler, 'question.atom.complete')
+
+        frame = getQuestionFrame(state)
+        expect(frame.content).toBe('mush612.jpg')
+        expect(frame.type).toBe('image')
+        expect(frame.specialPhase).toBe('showing-question')
+        expect(scheduler.listSuffixes()).toContain('question.atom.complete')
+
+        await runAlarmScheduledTask(feature, state, scheduler, 'question.atom.complete')
+
+        frame = getQuestionFrame(state)
+        expect(frame.answeringStatus).toBe('allowed')
+        expect(frame.answerRequestTimeLeft).toBe(100)
     })
 
     it('allows the chosen contestant to set the public price before a secret-public-price question starts', async () => {
