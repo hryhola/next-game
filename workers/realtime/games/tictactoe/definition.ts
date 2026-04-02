@@ -119,6 +119,10 @@ export function createTicTacToeGameFeature(): LobbyGameFeature<StoredTicTacToeGa
             stateChanged: false,
             success: true
         }),
+        onTip: async () => ({
+            stateChanged: false,
+            success: true
+        }),
         onMembersChanged: async record => {
             const game = record.game as StoredTicTacToeGameState
             const nextParticipants = toParticipants(record)

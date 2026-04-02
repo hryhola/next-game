@@ -33,6 +33,7 @@ export interface LobbyGameFeature<TGame extends StoredLobbyGameState = StoredLob
     handleCommand(record: LobbyRecordV2, actorUserId: string, commandName: string, commandPayload: unknown, ctx: LobbyGameContext): Promise<LobbyMutationResult>
     handleTask(record: LobbyRecordV2, task: LobbyScheduledTaskPayload, ctx: LobbyGameContext): Promise<LobbyMutationResult>
     kind: RealtimeLobbyGameName
+    onTip(record: LobbyRecordV2, fromUserId: string, toUserId: string, ctx: LobbyGameContext): Promise<LobbyMutationResult>
     onMembersChanged(
         record: LobbyRecordV2,
         reason: 'creator_reassigned' | 'member_joined' | 'member_kicked' | 'member_left' | 'member_role_changed',

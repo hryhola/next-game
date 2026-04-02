@@ -110,6 +110,30 @@ export function createEmptyJeopardySession(): StoredJeopardySession {
 export class JeopardyLobbyFeature {
     constructor(private readonly deps: JeopardyDeps) {}
 
+    handleLobbyTip(state: StoredLobbyState, fromUserId: string, toUserId: string): { stateChanged: boolean; success: true } {
+        const session = this.getSession(state)
+        const fromPlayer = state.members.find(member => member.id === fromUserId && member.role === 'player')
+        const toPlayer = state.members.find(member => member.id === toUserId && member.role === 'player')
+
+        if (!session || !fromPlayer || !toPlayer) {
+            return {
+                stateChanged: false,
+                success: true
+            }
+        }
+
+        toPlayer.playerScore += 1
+
+        if (!fromPlayer.isCreator) {
+            fromPlayer.playerScore -= 1
+        }
+
+        return {
+            stateChanged: true,
+            success: true
+        }
+    }
+
     toPublicSession(session: StoredJeopardySession): RealtimeJeopardyPublicSession {
         const { internal: _internal, meta: _meta, ...publicSession } = session
 

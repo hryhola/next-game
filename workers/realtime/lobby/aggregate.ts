@@ -189,7 +189,14 @@ export class LobbyAggregate {
                     }
                 }
 
+                const tipSideEffectResult = await feature.onTip(this.record, fromMember.id, toMember.id, this.ctx)
+
+                if (!tipSideEffectResult.success) {
+                    return tipSideEffectResult
+                }
+
                 return {
+                    ...tipSideEffectResult,
                     lobbyEvent: {
                         eventName: 'tip',
                         eventPayload: {
@@ -199,7 +206,6 @@ export class LobbyAggregate {
                             to: toMember.userNickname
                         }
                     },
-                    stateChanged: false,
                     success: true
                 }
             }

@@ -217,6 +217,18 @@ export function createJeopardyGameFeature(ctx: Parameters<LobbyGameFeature['star
                 success: true as const
             }
         },
+        onTip: async (record, fromUserId, toUserId, featureCtx) => {
+            const lobbyState = toJeopardyLobbyState(record)
+            const feature = new JeopardyLobbyFeature(createJeopardyFeatureDeps(featureCtx, {}, {}))
+            const result = feature.handleLobbyTip(lobbyState, fromUserId, toUserId)
+
+            syncJeopardyRecordFromLobbyState(record, lobbyState)
+
+            return {
+                ...result,
+                success: true as const
+            }
+        },
         onMembersChanged: async (record, _reason, featureCtx) => {
             const game = record.game as StoredJeopardyGameState
             const nextParticipants = toParticipants(record)

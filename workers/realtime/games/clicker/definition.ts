@@ -144,6 +144,10 @@ export function createClickerGameFeature(): LobbyGameFeature<StoredClickerGameSt
                 success: true
             }
         },
+        onTip: async () => ({
+            stateChanged: false,
+            success: true
+        }),
         onMembersChanged: async (record, reason, featureCtx) => {
             const game = record.game as StoredClickerGameState
             const nextParticipants = toParticipants(record)
