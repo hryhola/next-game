@@ -1,10 +1,18 @@
 import { cookies, headers } from 'next/headers'
 import type { IdentitySession, RealtimeLobbyListItem, RealtimeLobbySnapshot } from 'shared/contracts'
+import type { AdminLobbyListItem, AdminUserListItem } from 'shared/contracts/http-api'
 import { getCloudflareRealtimeApiUrl } from 'client/network-utils/realtimeMode'
+import { getAdminAuthorizationHeader } from 'client/server/adminAuth'
 import { toAppLobbyData } from 'client/network-utils/realtimeAdapter'
 import type { LobbyData, UserData } from 'shared/contracts/app'
 
 type JsonValue = Record<string, unknown>
+
+type AdminStateWorkerResponse = {
+    lobbies?: AdminLobbyListItem[]
+    ok?: boolean
+    users?: AdminUserListItem[]
+}
 
 function sanitizeForClient<T>(value: T): T {
     return JSON.parse(JSON.stringify(value)) as T
@@ -156,13 +164,25 @@ export async function getLobbyBootstrap(lobbyId: string): Promise<{
 }
 
 export async function getAdminBootstrap() {
-    const token = await getSessionToken()
+    const authorization = getAdminAuthorizationHeader()
+
+    if (!authorization) {
+        return sanitizeForClient({
+            isAuthenticated: false,
+            lobbies: [] as AdminLobbyListItem[],
+            users: [] as AdminUserListItem[]
+        })
+    }
+
+    const response = await readJson<AdminStateWorkerResponse>('/admin/state', undefined, {
+        headers: {
+            authorization
+        }
+    })
 
     return sanitizeForClient({
-        generatedAt: new Date().toISOString(),
-        health: await readJson('/health'),
-        session: await readJson('/auth/session', token),
-        presence: await readJson('/presence/state', token),
-        lobbies: await readJson('/lobbies', token)
+        isAuthenticated: Boolean(response?.ok),
+        lobbies: response?.ok ? response.lobbies || [] : [],
+        users: response?.ok ? response.users || [] : []
     })
 }

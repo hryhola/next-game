@@ -23,6 +23,52 @@ function createWorkerAuthHeaders(contentType: 'json' | null = 'json'): Headers {
 async function handleWorkerApiRequest<E extends EndpointName>(endpoint: E, data: Endpoints[E]['request']): Promise<Resulted<Endpoints[E]['response']>> {
     try {
         switch (endpoint) {
+            case 'admin-user-destroy': {
+                const request = data as Endpoints['admin-user-destroy']['request']
+                const response = await fetch(`/api/admin/users/${encodeURIComponent(request.userId)}`, {
+                    method: 'DELETE'
+                })
+
+                if (!response.ok) {
+                    return [
+                        {
+                            success: false,
+                            message: await getWorkerErrorMessage(response, 'Failed to destroy user')
+                        } as Endpoints[E]['response'],
+                        undefined
+                    ]
+                }
+
+                return [
+                    {
+                        success: true
+                    } as Endpoints[E]['response'],
+                    undefined
+                ]
+            }
+            case 'admin-lobby-destroy': {
+                const request = data as Endpoints['admin-lobby-destroy']['request']
+                const response = await fetch(`/api/admin/lobbies/${encodeURIComponent(request.lobbyId)}`, {
+                    method: 'DELETE'
+                })
+
+                if (!response.ok) {
+                    return [
+                        {
+                            success: false,
+                            message: await getWorkerErrorMessage(response, 'Failed to destroy lobby')
+                        } as Endpoints[E]['response'],
+                        undefined
+                    ]
+                }
+
+                return [
+                    {
+                        success: true
+                    } as Endpoints[E]['response'],
+                    undefined
+                ]
+            }
             case 'game-get-schema': {
                 const request = data as Endpoints['game-get-schema']['request']
 

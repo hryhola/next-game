@@ -27,6 +27,40 @@ export type JeopardyValidatePackResponse =
           reason?: string
       })
 
+export type AdminUserListItem = {
+    id: string
+    lastSeenAt: string | null
+    name: string
+}
+
+export type AdminLobbyListItem = {
+    createdAt: string
+    id: string
+    membersCount: number
+    name: string
+    onlineUsers: number
+    updatedAt: string
+}
+
+export type AdminStateResponse =
+    | GeneralFailure
+    | (GeneralSuccess & {
+          lobbies: AdminLobbyListItem[]
+          users: AdminUserListItem[]
+      })
+
+export type AdminUserDestroyRequest = {
+    userId: string
+}
+
+export type AdminUserDestroyResponse = GeneralSuccess | GeneralFailure
+
+export type AdminLobbyDestroyRequest = {
+    lobbyId: string
+}
+
+export type AdminLobbyDestroyResponse = GeneralSuccess | GeneralFailure
+
 export type LobbyCreateRequest = FormData
 
 export type LobbyCreateResponse =
@@ -79,6 +113,8 @@ export type ProfileResponse =
       })
 
 export type HTTPEndpoints = {
+    'admin-lobby-destroy': EndpointInfo<AdminLobbyDestroyRequest, AdminLobbyDestroyResponse>
+    'admin-user-destroy': EndpointInfo<AdminUserDestroyRequest, AdminUserDestroyResponse>
     'game-get-schema': EndpointInfo<GameGetSchemaRequest, GameGetSchemaResponse>
     'jeopardy-validate-pack': EndpointInfo<JeopardyValidatePackRequest, JeopardyValidatePackResponse>
     'lobby-create': EndpointInfo<LobbyCreateRequest, LobbyCreateResponse>

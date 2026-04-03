@@ -1,6 +1,11 @@
+import { RouteProviders } from 'client/app/RouteProviders'
 import { AdminRoute } from 'client/routes/AdminRoute'
 import { getAdminBootstrap } from 'client/server/realtime'
 
 export default async function AdminPage() {
-    return <AdminRoute state={JSON.stringify(await getAdminBootstrap(), null, 4)} />
+    return (
+        <RouteProviders>
+            <AdminRoute data={await getAdminBootstrap()} />
+        </RouteProviders>
+    )
 }

@@ -1,7 +1,9 @@
+import type { AdminLobbyListItem } from '../../shared/contracts/http-api'
 import type { RegisterIdentityRequest, UpdateIdentityProfileRequest } from '../../shared/contracts/identity'
 import type { CreateLobbyRequest } from '../../shared/contracts/realtime-lobby'
+import { matchesBasicAuthHeader } from '../../shared/lib/basicAuth'
 import { R2AssetStore } from './assets/store'
-import { getIdentitySession, registerIdentity, revokeIdentitySession, updateIdentityProfile } from './auth/store'
+import { destroyIdentityUser, getIdentitySession, listIdentityUsers, registerIdentity, revokeIdentitySession, updateIdentityProfile } from './auth/store'
 import { GlobalPresenceDO } from './durable-objects/GlobalPresenceDO'
 import { LobbyDO } from './durable-objects/LobbyDO'
 import { parseJeopardyPackArchive, validateJeopardyPackCompatibility } from './jeopardy/pack'
@@ -59,6 +61,30 @@ function parseAssetRoute(pathname: string): { assetId: string } | null {
 
     return {
         assetId: decodeURIComponent(match[1])
+    }
+}
+
+function parseAdminUserRoute(pathname: string): { userId: string } | null {
+    const match = pathname.match(/^\/admin\/users\/([^/]+)\/?$/)
+
+    if (!match) {
+        return null
+    }
+
+    return {
+        userId: decodeURIComponent(match[1])
+    }
+}
+
+function parseAdminLobbyRoute(pathname: string): { lobbyId: string } | null {
+    const match = pathname.match(/^\/admin\/lobbies\/([^/]+)\/?$/)
+
+    if (!match) {
+        return null
+    }
+
+    return {
+        lobbyId: decodeURIComponent(match[1])
     }
 }
 
@@ -244,12 +270,20 @@ function methodNotAllowed(...methods: string[]): Response {
 
 type ResolvedSession = NonNullable<Awaited<ReturnType<typeof getIdentitySession>>>
 
-type SessionRequirement =
+type SessionRequirement = {
+    ok: false
+    error: Response
+    session?: never
+    sessionToken?: never
+}
+
+type AdminRequirement =
     | {
           ok: false
           error: Response
-          session?: never
-          sessionToken?: never
+      }
+    | {
+          ok: true
       }
     | {
           ok: true
@@ -281,6 +315,50 @@ async function requireSession(request: Request, env: RealtimeWorkerEnv): Promise
         ok: true,
         session,
         sessionToken
+    }
+}
+
+function createAdminAuthErrorResponse(status: number, message: string, code: string): Response {
+    return json(
+        {
+            ok: false,
+            message,
+            code
+        },
+        {
+            status,
+            headers: {
+                'www-authenticate': 'Basic realm="Admin", charset="UTF-8"'
+            }
+        }
+    )
+}
+
+async function requireAdminBasicAuth(request: Request, env: RealtimeWorkerEnv): Promise<AdminRequirement> {
+    const username = env.ADMIN_USERNAME?.trim()
+    const password = env.ADMIN_PASSWORD?.trim()
+
+    if (!username || !password) {
+        return {
+            ok: false,
+            error: createAdminAuthErrorResponse(503, 'Admin credentials are not configured', 'admin_auth_missing')
+        }
+    }
+
+    if (
+        !matchesBasicAuthHeader(request.headers.get('authorization'), {
+            password,
+            username
+        })
+    ) {
+        return {
+            ok: false,
+            error: createAdminAuthErrorResponse(401, 'Admin authentication is required', 'admin_auth_required')
+        }
+    }
+
+    return {
+        ok: true
     }
 }
 
@@ -644,6 +722,155 @@ const worker: ExportedHandler<RealtimeWorkerEnv> = {
                         reason: error instanceof Error ? error.message : 'Failed to parse Jeopardy pack'
                     })
                 }
+            }
+
+            if (url.pathname === '/admin/state') {
+                if (request.method !== 'GET') {
+                    return methodNotAllowed('GET')
+                }
+
+                const auth = await requireAdminBasicAuth(request, env)
+
+                if (!auth.ok) {
+                    return auth.error
+                }
+
+                const users = await listIdentityUsers(env.IDENTITY_DB)
+                const lobbies = await listLobbies(env.IDENTITY_DB)
+                const adminLobbies = await Promise.all(
+                    lobbies.map(async lobby => {
+                        let onlineUsers = 0
+
+                        try {
+                            const healthResponse = await getLobbyStub(env, lobby.id).fetch(new Request('https://lobby.internal/health'))
+
+                            if (healthResponse.ok) {
+                                const health = (await healthResponse.json()) as { onlineUsers?: number }
+
+                                if (typeof health.onlineUsers === 'number') {
+                                    onlineUsers = health.onlineUsers
+                                }
+                            }
+                        } catch (_error) {
+                            onlineUsers = 0
+                        }
+
+                        const adminLobby: AdminLobbyListItem = {
+                            createdAt: lobby.createdAt,
+                            id: lobby.id,
+                            membersCount: lobby.membersCount,
+                            name: lobby.name,
+                            onlineUsers,
+                            updatedAt: lobby.updatedAt
+                        }
+
+                        return adminLobby
+                    })
+                )
+
+                return json({
+                    ok: true,
+                    lobbies: adminLobbies,
+                    users
+                })
+            }
+
+            const adminUserRoute = parseAdminUserRoute(url.pathname)
+
+            if (adminUserRoute) {
+                if (request.method !== 'DELETE') {
+                    return methodNotAllowed('DELETE')
+                }
+
+                const auth = await requireAdminBasicAuth(request, env)
+
+                if (!auth.ok) {
+                    return auth.error
+                }
+
+                const existingUsers = await listIdentityUsers(env.IDENTITY_DB)
+
+                if (!existingUsers.some(user => user.id === adminUserRoute.userId)) {
+                    return errorResponse(404, 'User not found', 'user_not_found')
+                }
+
+                const lobbies = await listLobbies(env.IDENTITY_DB)
+
+                for (const lobby of lobbies) {
+                    const response = await getLobbyStub(env, lobby.id).fetch(
+                        new Request('https://lobby.internal/admin/remove-member', {
+                            method: 'POST',
+                            headers: {
+                                'content-type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                userId: adminUserRoute.userId
+                            })
+                        })
+                    )
+
+                    if (!response.ok) {
+                        const responseBody = (await response.json().catch(() => null)) as { message?: string } | null
+
+                        return errorResponse(
+                            500,
+                            responseBody?.message || `Failed to remove user ${adminUserRoute.userId} from active lobbies`,
+                            'admin_user_cleanup_failed'
+                        )
+                    }
+                }
+
+                try {
+                    await getGlobalPresenceStub(env).fetch(
+                        new Request('https://presence.internal/admin/disconnect-user', {
+                            method: 'POST',
+                            headers: {
+                                'content-type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                userId: adminUserRoute.userId
+                            })
+                        })
+                    )
+                } catch (_error) {
+                    // Presence disconnect is best-effort; deleting the user remains the source of truth.
+                }
+
+                const userAssets = await assetStore.listActiveByOwner('user', adminUserRoute.userId)
+                await Promise.allSettled(userAssets.map(asset => assetStore.delete(asset.id)))
+
+                const deleted = await destroyIdentityUser(env.IDENTITY_DB, adminUserRoute.userId)
+
+                if (!deleted) {
+                    return errorResponse(404, 'User not found', 'user_not_found')
+                }
+
+                return json({
+                    ok: true
+                })
+            }
+
+            const adminLobbyRoute = parseAdminLobbyRoute(url.pathname)
+
+            if (adminLobbyRoute) {
+                if (request.method !== 'DELETE') {
+                    return methodNotAllowed('DELETE')
+                }
+
+                const auth = await requireAdminBasicAuth(request, env)
+
+                if (!auth.ok) {
+                    return auth.error
+                }
+
+                return getLobbyStub(env, adminLobbyRoute.lobbyId).fetch(
+                    new Request('https://lobby.internal/admin/destroy', {
+                        method: 'DELETE',
+                        headers: {
+                            'x-lobby-id': encodeHeaderValue(adminLobbyRoute.lobbyId)
+                        }
+                    })
+                )
             }
 
             if (url.pathname === '/lobbies') {

@@ -102,12 +102,20 @@ export class LobbyDO extends DurableObject<RealtimeWorkerEnv> {
             return this.handleDestroy(request, lobbyId)
         }
 
+        if (url.pathname === '/admin/destroy') {
+            return this.handleAdminDestroy(request, lobbyId)
+        }
+
         if (url.pathname === '/join') {
             return this.handleJoin(request)
         }
 
         if (url.pathname === '/leave') {
             return this.handleLeave(request)
+        }
+
+        if (url.pathname === '/admin/remove-member') {
+            return this.handleAdminRemoveMember(request)
         }
 
         if (url.pathname === '/health') {
@@ -132,6 +140,7 @@ export class LobbyDO extends DurableObject<RealtimeWorkerEnv> {
                 updatedAt: record.lobby.updatedAt,
                 members: record.members.length,
                 activeConnections: this.getOpenSockets().length,
+                onlineUsers: this.getOnlineUserCount(),
                 gameStatus: aggregate.buildLobbyListItem().status
             })
         }
@@ -429,6 +438,36 @@ export class LobbyDO extends DurableObject<RealtimeWorkerEnv> {
         })
     }
 
+    private async handleAdminDestroy(request: Request, lobbyId: string): Promise<Response> {
+        if (request.method !== 'DELETE') {
+            return json(
+                {
+                    ok: false,
+                    message: 'Method not allowed'
+                },
+                { status: 405 }
+            )
+        }
+
+        const record = await this.repository.get()
+
+        if (!record) {
+            return json(
+                {
+                    ok: false,
+                    message: 'Lobby not found'
+                },
+                { status: 404 }
+            )
+        }
+
+        await this.destroyRoom(lobbyId, record, 'admin_destroyed')
+
+        return json({
+            ok: true
+        })
+    }
+
     private async handleJoin(request: Request): Promise<Response> {
         if (request.method !== 'POST') {
             return json(
@@ -550,6 +589,90 @@ export class LobbyDO extends DurableObject<RealtimeWorkerEnv> {
         return json({
             ok: true,
             lobby: aggregate.buildState(identity.user.id)
+        })
+    }
+
+    private async handleAdminRemoveMember(request: Request): Promise<Response> {
+        if (request.method !== 'POST') {
+            return json(
+                {
+                    ok: false,
+                    message: 'Method not allowed'
+                },
+                { status: 405 }
+            )
+        }
+
+        const record = await this.repository.get()
+
+        if (!record) {
+            return json(
+                {
+                    ok: false,
+                    message: 'Lobby not found'
+                },
+                { status: 404 }
+            )
+        }
+
+        const body = (await request.json().catch(() => null)) as { userId?: string } | null
+        const userId = body?.userId?.trim()
+
+        if (!userId) {
+            return json(
+                {
+                    ok: false,
+                    message: 'User id is required'
+                },
+                { status: 400 }
+            )
+        }
+
+        const aggregate = this.createAggregate(record)
+        const result = await aggregate.handleLobbyCommand(
+            {
+                id: userId,
+                userColor: '#ffffff',
+                userNickname: userId
+            },
+            'leave',
+            null
+        )
+
+        if (!result.success) {
+            if (result.code === 'not_in_room') {
+                return json({
+                    ok: true,
+                    removed: false
+                })
+            }
+
+            return json(
+                {
+                    ok: false,
+                    message: result.message,
+                    code: result.code
+                },
+                { status: 400 }
+            )
+        }
+
+        if (result.destroyed) {
+            await this.destroyRoom(record.lobby.id, aggregate.getRecord(), 'admin_member_removed')
+
+            return json({
+                ok: true,
+                destroyed: true,
+                removed: true
+            })
+        }
+
+        await this.applyMutationResult(aggregate, result)
+        this.closeUserSockets(userId, 1008, 'removed by admin')
+
+        return json({
+            ok: true,
+            removed: true
         })
     }
 
@@ -729,6 +852,20 @@ export class LobbyDO extends DurableObject<RealtimeWorkerEnv> {
 
     private getOpenSockets(tag?: string): WebSocket[] {
         return this.ctx.getWebSockets(tag).filter(socket => socket.readyState === WebSocket.OPEN)
+    }
+
+    private getOnlineUserCount(): number {
+        const onlineUsers = new Set<string>()
+
+        this.getOpenSockets().forEach(socket => {
+            const attachment = socket.deserializeAttachment() as LobbySocketAttachment | null
+
+            if (attachment?.user.id) {
+                onlineUsers.add(attachment.user.id)
+            }
+        })
+
+        return onlineUsers.size
     }
 
     private createAggregate(record: LobbyRecordV2): LobbyAggregate {

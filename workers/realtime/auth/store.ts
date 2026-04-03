@@ -1,3 +1,4 @@
+import type { AdminUserListItem } from '../../../shared/contracts/http-api'
 import type { IdentityProfile, IdentitySession, UpdateIdentityProfileRequest } from '../../../shared/contracts/identity'
 import { SESSION_TTL_MS } from './constants'
 
@@ -15,6 +16,12 @@ type UserLookupRow = {
     userNickname: string
     userColor: string
     userAvatarUrl: string | null
+}
+
+type AdminUserLookupRow = {
+    id: string
+    lastSeenAt: string | null
+    name: string
 }
 
 type CreateSessionResult = {
@@ -261,6 +268,59 @@ export async function revokeIdentitySession(db: D1Database, sessionToken: string
         )
         .bind(nowIso(), tokenHash)
         .run()
+}
+
+export async function listIdentityUsers(db: D1Database): Promise<AdminUserListItem[]> {
+    const result = await db
+        .prepare(
+            `
+                SELECT
+                    u.id as id,
+                    u.nickname as name,
+                    MAX(s.last_seen_at) as lastSeenAt
+                FROM users u
+                LEFT JOIN sessions s ON s.user_id = u.id
+                GROUP BY u.id, u.nickname, u.updated_at
+                ORDER BY COALESCE(MAX(s.last_seen_at), u.updated_at) DESC, lower(u.nickname) ASC
+            `
+        )
+        .all<AdminUserLookupRow>()
+
+    return (result.results || []).map(row => ({
+        id: row.id,
+        lastSeenAt: row.lastSeenAt,
+        name: row.name
+    }))
+}
+
+export async function destroyIdentityUser(db: D1Database, userId: string): Promise<boolean> {
+    const existingUser = await db
+        .prepare(
+            `
+                SELECT id
+                FROM users
+                WHERE id = ?1
+                LIMIT 1
+            `
+        )
+        .bind(userId)
+        .first<{ id: string }>()
+
+    if (!existingUser) {
+        return false
+    }
+
+    await db
+        .prepare(
+            `
+                DELETE FROM users
+                WHERE id = ?1
+            `
+        )
+        .bind(userId)
+        .run()
+
+    return true
 }
 
 export async function updateIdentityProfile(db: D1Database, session: IdentitySession, patch: UpdateIdentityProfileRequest): Promise<IdentitySession> {

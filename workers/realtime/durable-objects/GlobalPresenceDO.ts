@@ -80,6 +80,10 @@ export class GlobalPresenceDO extends DurableObject<RealtimeWorkerEnv> {
             return this.handleChatRequest(request)
         }
 
+        if (url.pathname === '/admin/disconnect-user') {
+            return this.handleDisconnectUser(request)
+        }
+
         if (url.pathname === '/events/lobbies-updated') {
             if (request.method !== 'POST') {
                 return json(
@@ -252,6 +256,45 @@ export class GlobalPresenceDO extends DurableObject<RealtimeWorkerEnv> {
             status: 101,
             webSocket: client
         } as ResponseInit & { webSocket: WebSocket })
+    }
+
+    private async handleDisconnectUser(request: Request): Promise<Response> {
+        if (request.method !== 'POST') {
+            return json(
+                {
+                    ok: false,
+                    message: 'Method not allowed'
+                },
+                { status: 405 }
+            )
+        }
+
+        const body = (await request.json().catch(() => null)) as { userId?: string } | null
+        const userId = body?.userId?.trim()
+
+        if (!userId) {
+            return json(
+                {
+                    ok: false,
+                    message: 'User id is required'
+                },
+                { status: 400 }
+            )
+        }
+
+        this.getOpenSockets(userId).forEach(socket => {
+            try {
+                socket.close(1008, 'user removed')
+            } catch (_error) {
+                return
+            }
+        })
+
+        this.broadcastPresenceSnapshot()
+
+        return json({
+            ok: true
+        })
     }
 
     private async getChatMessages(): Promise<RealtimeChatMessage[]> {
