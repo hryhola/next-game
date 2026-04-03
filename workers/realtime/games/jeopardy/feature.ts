@@ -410,7 +410,19 @@ export class JeopardyLobbyFeature {
                     return skipped
                 }
 
+                const action = this.createSuccessfulGameAction(
+                    {
+                        id: actor.id,
+                        type: 'player'
+                    },
+                    '$SkipCategory',
+                    {
+                        themeId: payload.themeId
+                    }
+                )
+
                 return {
+                    action,
                     stateChanged: true,
                     success: true
                 }

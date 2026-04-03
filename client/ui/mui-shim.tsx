@@ -323,7 +323,7 @@ export function Skeleton({ sx, style, ...props }: React.HTMLAttributes<HTMLDivEl
 
 export function Divider({ children, ...props }: React.HTMLAttributes<HTMLDivElement>) {
     return (
-        <div className="my-3 flex items-center gap-3 text-sm font-semibold uppercase tracking-[0.25em] text-violet-200/55" {...props}>
+        <div className="my-6 flex items-center gap-3 text-sm font-semibold uppercase tracking-[0.25em] text-violet-200/55" {...props}>
             <span className="h-px flex-1 bg-white/10" />
             {children ? <span>{children}</span> : null}
             <span className="h-px flex-1 bg-white/10" />

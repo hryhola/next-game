@@ -92,6 +92,12 @@ const JeopardySounds: React.FC = () => {
         audioRef.current.play('jep_final_delete.mp3')
     })
 
+    useJeopardyAction('$SkipCategory', data => {
+        if (!data.result.success) return
+
+        audioRef.current.play('jep_final_delete.mp3')
+    })
+
     React.useEffect(() => {
         const frame = game.session?.frame || null
         const previousFrame = previousFrameRef.current

@@ -644,6 +644,18 @@ describe('jeopardy flow', () => {
         })
 
         expect(result.success).toBe(true)
+        expect(result.action).toMatchObject({
+            payload: {
+                actionName: '$SkipCategory',
+                actionPayload: {
+                    themeId: '0-0'
+                },
+                actionResult: {
+                    success: true
+                }
+            },
+            type: 'game.event'
+        })
         expect(state.game.session?.internal.answeredQuestions).toEqual(['0-0-0'])
         expect(state.game.session?.frame).toMatchObject({
             id: 'question-board',
