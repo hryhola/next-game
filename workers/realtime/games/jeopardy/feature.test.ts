@@ -633,6 +633,56 @@ describe('jeopardy flow', () => {
         expect(scheduler.listSuffixes()).toContain('answer-request.complete')
     })
 
+    it('publishes metadata for a picked non-standard question', async () => {
+        const pack = createPackWithQuestions([
+            createScenarioQuestion({
+                price: '500',
+                type: 'stake'
+            })
+        ])
+        const state = createState(pack)
+        const { feature, scheduler } = createFeatureHarness()
+
+        await advanceToQuestionBoard(feature, state, scheduler)
+
+        const result = await feature.handleAction(state, 'master', '$PickQuestion', {
+            questionId: '0-0-0'
+        })
+
+        expect(result.success).toBe(true)
+        expect(result.action).toMatchObject({
+            payload: {
+                actionName: '$PickQuestion',
+                actionPayload: {
+                    questionId: '0-0-0'
+                },
+                actionResult: {
+                    questionPrice: 500,
+                    questionTheme: 'Theme 1',
+                    questionType: 'stake',
+                    success: true
+                }
+            }
+        })
+    })
+
+    it('keeps the master answer reference populated during question presentation', async () => {
+        const pack = createPackWithQuestions([
+            createScenarioQuestion({
+                correctAnswer: 'Right answer',
+                price: '300',
+                wrongAnswer: 'Wrong answer'
+            })
+        ])
+        const state = createState(pack)
+        const { feature, scheduler } = createFeatureHarness()
+
+        await advanceToQuestion(feature, state, scheduler, '0-0-0')
+
+        expect(state.game.session?.internal.correctAnswers).toEqual(['Right answer'])
+        expect(state.game.session?.internal.incorrectAnswers).toEqual(['Wrong answer'])
+    })
+
     it('lets the master skip a category and clears only that category on the board', async () => {
         const state = createState()
         const { feature, scheduler } = createFeatureHarness()
@@ -651,6 +701,7 @@ describe('jeopardy flow', () => {
                     themeId: '0-0'
                 },
                 actionResult: {
+                    themeName: 'Theme 1',
                     success: true
                 }
             },
@@ -907,6 +958,32 @@ describe('jeopardy flow', () => {
 
         expect(revealFrame.answeringStatus).toBe('too-late')
         expect(revealFrame.content).toBe('Answer 1')
+    })
+
+    it('emits the rated player id when the master verifies an answer', async () => {
+        const state = createState()
+        const { feature, scheduler } = createFeatureHarness()
+
+        await advanceToAnswerRequest(feature, state, scheduler)
+
+        expect((await feature.handleAction(state, 'contestant-1', '$AnswerRequest', null)).success).toBe(true)
+        expect((await feature.handleAction(state, 'contestant-1', '$GiveAnswer', { text: 'Test answer' })).success).toBe(true)
+
+        const result = await feature.handleAction(state, 'master', '$RateAnswer', {
+            rating: 'approved'
+        })
+
+        expect(result.success).toBe(true)
+        expect(result.action).toMatchObject({
+            payload: {
+                actionName: '$RateAnswer',
+                actionResult: {
+                    answeringPlayerId: 'contestant-1',
+                    rating: 'approved',
+                    success: true
+                }
+            }
+        })
     })
 
     it('reopens the answer request when the active answering player leaves', async () => {
@@ -1617,8 +1694,37 @@ describe('jeopardy flow', () => {
         expect((await feature.handleAction(state, 'contestant-1', '$GiveFinalAnswer', { answer: 'A1' })).success).toBe(true)
         expect((await feature.handleAction(state, 'contestant-2', '$GiveFinalAnswer', { answer: 'A2' })).success).toBe(true)
 
-        expect((await feature.handleAction(state, 'master', '$RateFinalAnswer', { answeringPlayerId: 'contestant-1', rate: 'declined' })).success).toBe(true)
-        expect((await feature.handleAction(state, 'master', '$RateFinalAnswer', { answeringPlayerId: 'contestant-2', rate: 'approved' })).success).toBe(true)
+        const declineResult = await feature.handleAction(state, 'master', '$RateFinalAnswer', {
+            answeringPlayerId: 'contestant-1',
+            rate: 'declined'
+        })
+        const approveResult = await feature.handleAction(state, 'master', '$RateFinalAnswer', {
+            answeringPlayerId: 'contestant-2',
+            rate: 'approved'
+        })
+
+        expect(declineResult.success).toBe(true)
+        expect(declineResult.action).toMatchObject({
+            payload: {
+                actionName: '$RateFinalAnswer',
+                actionResult: {
+                    answeringPlayerId: 'contestant-1',
+                    rate: 'declined',
+                    success: true
+                }
+            }
+        })
+        expect(approveResult.success).toBe(true)
+        expect(approveResult.action).toMatchObject({
+            payload: {
+                actionName: '$RateFinalAnswer',
+                actionResult: {
+                    answeringPlayerId: 'contestant-2',
+                    rate: 'approved',
+                    success: true
+                }
+            }
+        })
         expect(state.members.find(member => member.id === 'contestant-1')?.playerScore).toBe(600)
         expect(state.members.find(member => member.id === 'contestant-2')?.playerScore).toBe(1100)
 

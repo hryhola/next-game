@@ -75,20 +75,29 @@ export const QuestionBoard: React.FC<RealtimeJeopardyState.QuestionBoardFrame> =
                 (themeId, index, themeIds) => themeIds.indexOf(themeId) === index
             )
 
-            return orderedThemeIds.flatMap(themeId => {
+            return orderedThemeIds.reduce<RenderedTheme[]>((nextThemes, themeId) => {
                 const incomingTheme = incomingById.get(themeId)
                 const previousTheme = previousById.get(themeId)
 
                 if (incomingTheme) {
                     if (isThemeCleared(incomingTheme)) {
-                        return previousTheme ? [{ phase: 'hiding', theme: previousTheme.theme } satisfies RenderedTheme] : []
+                        if (previousTheme) {
+                            nextThemes.push({ phase: 'hiding', theme: previousTheme.theme })
+                        }
+
+                        return nextThemes
                     }
 
-                    return [{ phase: 'visible', theme: incomingTheme } satisfies RenderedTheme]
+                    nextThemes.push({ phase: 'visible', theme: incomingTheme })
+                    return nextThemes
                 }
 
-                return previousTheme ? [{ phase: 'hiding', theme: previousTheme.theme } satisfies RenderedTheme] : []
-            })
+                if (previousTheme) {
+                    nextThemes.push({ phase: 'hiding', theme: previousTheme.theme })
+                }
+
+                return nextThemes
+            }, [])
         })
     }, [props.themes])
 

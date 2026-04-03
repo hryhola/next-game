@@ -386,6 +386,113 @@ describe('QuestionContent', () => {
         expect(screen.getByRole('button', { name: 'Decline' })).toBeInTheDocument()
     })
 
+    it('shows a compact answer guide to the Jeopardy master during question presentation', () => {
+        const players = createPlayers()
+
+        renderWithProviders(
+            <QuestionContent
+                {...(createQuestionFrame({
+                    answeringStatus: 'allowed',
+                    answerRequestTimeLeft: 60,
+                    questionType: 'simple',
+                    specialPhase: 'showing-question'
+                }) as any)}
+                Resources={resources as never}
+                packFetchingTimeMs={0}
+                useMediaTimestamp={false}
+            />,
+            {
+                game: createGameValue({
+                    players,
+                    session: {
+                        frame: createQuestionFrame({
+                            answeringStatus: 'allowed',
+                            answerRequestTimeLeft: 60,
+                            questionType: 'simple',
+                            specialPhase: 'showing-question'
+                        }),
+                        internal: {
+                            correctAnswers: ['Right answer'],
+                            incorrectAnswers: ['Wrong answer']
+                        },
+                        isPaused: false
+                    }
+                }),
+                lobby: createLobbyData({
+                    id: 'lobby-1',
+                    members: players
+                }),
+                user: createUserData({
+                    id: 'master',
+                    userNickname: 'Master'
+                })
+            }
+        )
+
+        const widget = screen.getByText('Answer Guide').closest('.jeopardy-floating-widget')
+
+        expect(widget).toHaveStyle({
+            top: 'calc(var(--playersHeaderHeight, 0px) + 16px + var(--lobbyControlsRightHeight, 0px) + 12px)'
+        })
+        expect(screen.getByText('Answer Guide')).toBeInTheDocument()
+        expect(screen.getByText('Right answer')).toBeInTheDocument()
+        expect(screen.getByText('Wrong answer')).toBeInTheDocument()
+        expect(screen.queryByText('Verify Answer')).not.toBeInTheDocument()
+    })
+
+    it('hides the compact answer guide when the verification dock is active', () => {
+        const players = createPlayers()
+
+        renderWithProviders(
+            <QuestionContent
+                {...(createQuestionFrame({
+                    answerVerifyingTimeLeft: 80,
+                    answeringStatus: 'answer-verifying',
+                    specialPhase: 'question-verifying'
+                }) as any)}
+                Resources={resources as never}
+                packFetchingTimeMs={0}
+                useMediaTimestamp={false}
+            />,
+            {
+                game: createGameValue({
+                    players,
+                    session: {
+                        frame: createQuestionFrame({
+                            answerVerifyingTimeLeft: 80,
+                            answeringStatus: 'answer-verifying',
+                            specialPhase: 'question-verifying'
+                        }),
+                        internal: {
+                            correctAnswers: ['Correct'],
+                            currentAnsweringPlayerAnswerText: 'Submitted answer',
+                            currentAnsweringPlayerId: 'contestant-1',
+                            currentQuestionAnswers: {
+                                'contestant-1': {
+                                    value: 'Submitted answer',
+                                    wager: 700
+                                }
+                            },
+                            incorrectAnswers: ['Wrong']
+                        },
+                        isPaused: false
+                    }
+                }),
+                lobby: createLobbyData({
+                    id: 'lobby-1',
+                    members: players
+                }),
+                user: createUserData({
+                    id: 'master',
+                    userNickname: 'Master'
+                })
+            }
+        )
+
+        expect(screen.getByText('Verify Answer')).toBeInTheDocument()
+        expect(screen.queryByText('Answer Guide')).not.toBeInTheDocument()
+    })
+
     it('shows the answer timer at the bottom of the screen for viewers who are not answering', () => {
         const players = createPlayers()
 

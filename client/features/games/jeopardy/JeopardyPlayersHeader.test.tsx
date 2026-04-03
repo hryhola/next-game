@@ -19,7 +19,9 @@ describe('JeopardyPlayersHeader', () => {
     })
 
     afterEach(() => {
-        jest.runOnlyPendingTimers()
+        act(() => {
+            jest.runOnlyPendingTimers()
+        })
         jest.useRealTimers()
     })
 
@@ -67,8 +69,8 @@ describe('JeopardyPlayersHeader', () => {
             })
         })
 
-        expect(getPlayerContainer('Contestant 1')).toHaveClass('bg-gradient-to-t')
-        expect(getPlayerContainer('Contestant 2')).not.toHaveClass('bg-gradient-to-t')
+        expect(getPlayerContainer('Contestant 1')).toHaveAttribute('data-highlight-tone', 'cyan')
+        expect(getPlayerContainer('Contestant 2')).not.toHaveAttribute('data-highlight-tone')
     })
 
     it('temporarily highlights a contestant who gets put on cooldown by an early buzz', () => {
@@ -132,12 +134,158 @@ describe('JeopardyPlayersHeader', () => {
             })
         })
 
-        expect(getPlayerContainer('Contestant 2')).toHaveClass('bg-gradient-to-t')
+        expect(getPlayerContainer('Contestant 2')).toHaveAttribute('data-highlight-tone', 'cyan')
 
         act(() => {
             jest.advanceTimersByTime(500)
         })
 
-        expect(getPlayerContainer('Contestant 2')).not.toHaveClass('bg-gradient-to-t')
+        expect(getPlayerContainer('Contestant 2')).not.toHaveAttribute('data-highlight-tone')
+    })
+
+    it('shows the active answering contestant in green for the whole answering window', () => {
+        const players = [
+            createPlayerData({
+                id: 'master',
+                memberIsCreator: true,
+                memberPosition: 0,
+                playerIsMaster: true,
+                userNickname: 'Master'
+            }),
+            createPlayerData({
+                id: 'contestant-1',
+                memberPosition: 1,
+                userNickname: 'Contestant 1'
+            }),
+            createPlayerData({
+                id: 'contestant-2',
+                memberPosition: 2,
+                userNickname: 'Contestant 2'
+            })
+        ]
+
+        renderWithProviders(<JeopardyPlayersHeader />, {
+            game: createGameValue({
+                players,
+                session: {
+                    frame: {
+                        answerGivingEndsAt: null,
+                        answerGivingStartedAt: null,
+                        answerGivingTimeLeft: 40,
+                        answerRequestEndsAt: null,
+                        answerRequestStartedAt: null,
+                        answerRequestTimeLeft: null,
+                        answerVerifyingEndsAt: null,
+                        answerVerifyingStartedAt: null,
+                        answerVerifyingTimeLeft: null,
+                        answeringPlayerId: 'contestant-2',
+                        answeringStatus: 'answering',
+                        content: 'Question',
+                        id: 'question-content',
+                        playersOnCooldown: [],
+                        playersWhoAnswered: ['contestant-2'],
+                        questionId: '0-0-0',
+                        skipVoted: [],
+                        type: 'text'
+                    },
+                    isPaused: false
+                }
+            }),
+            lobby: createLobbyData({
+                id: 'lobby-1',
+                members: players
+            }),
+            user: createUserData({
+                id: 'master',
+                userNickname: 'Master'
+            })
+        })
+
+        expect(getPlayerContainer('Contestant 2')).toHaveAttribute('data-highlight-tone', 'green')
+    })
+
+    it('briefly flashes the rated contestant blue on approval and red on decline', () => {
+        const ws = createWSHarness()
+        const players = [
+            createPlayerData({
+                id: 'master',
+                memberIsCreator: true,
+                memberPosition: 0,
+                playerIsMaster: true,
+                userNickname: 'Master'
+            }),
+            createPlayerData({
+                id: 'contestant-1',
+                memberPosition: 1,
+                userNickname: 'Contestant 1'
+            })
+        ]
+
+        renderWithProviders(<JeopardyPlayersHeader />, {
+            game: createGameValue({
+                players,
+                session: {
+                    frame: {
+                        id: 'question-board',
+                        pickerId: 'contestant-1',
+                        roundId: 0,
+                        themes: []
+                    },
+                    isPaused: false
+                }
+            }),
+            lobby: createLobbyData({
+                id: 'lobby-1',
+                members: players
+            }),
+            user: createUserData({
+                id: 'master',
+                userNickname: 'Master'
+            }),
+            ws
+        })
+
+        act(() => {
+            ws.emit('Game-SessionAction', {
+                actor: {
+                    id: 'master',
+                    type: 'player'
+                },
+                lobbyId: 'lobby-1',
+                payload: {
+                    rating: 'approved'
+                },
+                result: {
+                    answeringPlayerId: 'contestant-1',
+                    rating: 'approved',
+                    success: true
+                },
+                type: '$RateAnswer'
+            })
+        })
+
+        expect(getPlayerContainer('Contestant 1')).toHaveAttribute('data-highlight-tone', 'blue')
+
+        act(() => {
+            jest.advanceTimersByTime(900)
+            ws.emit('Game-SessionAction', {
+                actor: {
+                    id: 'master',
+                    type: 'player'
+                },
+                lobbyId: 'lobby-1',
+                payload: {
+                    rating: 'declined'
+                },
+                result: {
+                    answeringPlayerId: 'contestant-1',
+                    rating: 'declined',
+                    success: true
+                },
+                type: '$RateAnswer'
+            })
+        })
+
+        expect(getPlayerContainer('Contestant 1')).toHaveAttribute('data-highlight-tone', 'red')
     })
 })

@@ -327,7 +327,10 @@ export class JeopardyLobbyFeature {
                     }
                 }
 
-                if (!getJeopardyQuestionById(game.packDeclaration, payload.questionId)) {
+                const normalizedQuestion = getNormalizedQuestionById(game.packDeclaration, payload.questionId)
+                const boardTheme = session.frame.themes.find(theme => theme.question.some(question => question.questionId === payload.questionId))
+
+                if (!getJeopardyQuestionById(game.packDeclaration, payload.questionId) || !normalizedQuestion) {
                     return {
                         code: 'question_not_found',
                         message: 'Question not found',
@@ -365,6 +368,21 @@ export class JeopardyLobbyFeature {
                 }
 
                 return {
+                    action: this.createSuccessfulGameAction(
+                        {
+                            id: actor.id,
+                            type: 'player'
+                        },
+                        '$PickQuestion',
+                        {
+                            questionId: payload.questionId
+                        },
+                        {
+                            questionPrice: normalizedQuestion.price * normalizedQuestion.priceMultiplier,
+                            questionTheme: normalizedQuestion.questionTheme || boardTheme?.name || null,
+                            questionType: normalizedQuestion.type
+                        }
+                    ),
                     stateChanged: true,
                     success: true
                 }
@@ -404,6 +422,7 @@ export class JeopardyLobbyFeature {
                     }
                 }
 
+                const theme = session.frame.themes.find(item => item.themeId === payload.themeId)
                 const skipped = await this.skipCategory(state, payload.themeId)
 
                 if (!skipped.success) {
@@ -418,6 +437,9 @@ export class JeopardyLobbyFeature {
                     '$SkipCategory',
                     {
                         themeId: payload.themeId
+                    },
+                    {
+                        themeName: theme?.name
                     }
                 )
 
@@ -869,6 +891,10 @@ export class JeopardyLobbyFeature {
                         '$RateAnswer',
                         {
                             rating: payload.rating
+                        },
+                        {
+                            answeringPlayerId: currentPlayerId,
+                            rating: payload.rating
                         }
                     ),
                     stateChanged: true,
@@ -1123,6 +1149,9 @@ export class JeopardyLobbyFeature {
                     '$SkipFinalTheme',
                     {
                         themeIndex
+                    },
+                    {
+                        themeName: theme.name
                     }
                 )
 
@@ -1296,6 +1325,21 @@ export class JeopardyLobbyFeature {
                     rate === 'approved' ? session.internal.finalBets[answeringPlayerId] || 0 : -(session.internal.finalBets[answeringPlayerId] || 0)
 
                 return {
+                    action: this.createSuccessfulGameAction(
+                        {
+                            id: actor.id,
+                            type: 'player'
+                        },
+                        '$RateFinalAnswer',
+                        {
+                            answeringPlayerId,
+                            rate
+                        },
+                        {
+                            answeringPlayerId,
+                            rate
+                        }
+                    ),
                     stateChanged: true,
                     success: true
                 }
@@ -2123,8 +2167,9 @@ export class JeopardyLobbyFeature {
                   : this.getFallbackPickerId(state)
 
         const question = getNormalizedQuestionById(game.packDeclaration, questionId)
+        const answers = getJeopardyAnswers(game.packDeclaration, questionId)
 
-        if (!question) {
+        if (!question || !answers) {
             return
         }
 
@@ -2145,7 +2190,7 @@ export class JeopardyLobbyFeature {
         session.meta.answerRequestRemainingMs = null
         this.updateInternal(state, {
             answerIsApproved: null,
-            correctAnswers: null,
+            correctAnswers: answers[0],
             currentAnsweringPlayerAnswerText: null,
             currentAnsweringPlayerId: null,
             currentQuestionAnswers: {},
@@ -2153,7 +2198,7 @@ export class JeopardyLobbyFeature {
             currentQuestionPrice: session.meta.currentQuestionFlow.currentPrice,
             currentQuestionSelectedPlayerId: null,
             currentQuestionVerificationQueue: [],
-            incorrectAnswers: null,
+            incorrectAnswers: answers[1],
             pickerId: activePickerId
         })
 
@@ -2231,10 +2276,8 @@ export class JeopardyLobbyFeature {
         if (beforeMarker) {
             this.updateInternal(state, {
                 answerIsApproved: null,
-                correctAnswers: null,
                 currentAnsweringPlayerAnswerText: null,
-                currentAnsweringPlayerId: null,
-                incorrectAnswers: null
+                currentAnsweringPlayerId: null
             })
         }
 

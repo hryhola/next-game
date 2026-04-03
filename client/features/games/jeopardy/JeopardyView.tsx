@@ -5,6 +5,7 @@ import { JeopardyCanvas } from './JeopardyCanvas'
 import JeopardyControls from './JeopardyControls'
 import JeopardyPlayersHeader from './JeopardyPlayersHeader'
 import JeopardyPreSession from './JeopardyPreSession'
+import JeopardyAnnouncements from './JeopardyAnnouncements'
 import JeopardySounds from './JeopardySounds'
 import type { JeopardyGameActionMap } from 'shared/contracts/game-actions'
 import type { JeopardyInitialData, JeopardyPlayerData, JeopardySessionData } from 'shared/contracts/app'
@@ -20,6 +21,7 @@ export const [JeopardyView, useJeopardy, useJeopardyAction, useActionSender] = c
     return (
         <>
             <JeopardyPlayersHeader />
+            <JeopardyAnnouncements />
             <JeopardyCanvas isPackLoading={isPackLoading} setIsPackLoading={setIsPackLoading} />
             <JeopardyPreSession isPackLoading={isPackLoading} />
             <JeopardySounds />

@@ -51,10 +51,18 @@ export const LobbyControls: React.FC<LobbyControlsProps> = props => {
     const hasInitializedChatMessages = React.useRef(false)
     const seenChatMessageIds = React.useRef<Set<string>>(new Set())
     const previewTimeoutIds = React.useRef<Map<string, { fade: number; remove: number }>>(new Map())
+    const rightControlsRef = React.useRef<HTMLDivElement | null>(null)
 
     const isReadyCheckButtonVisible = !game.isSessionStarted
     const isCreatorView = lobby.members.find(member => member.memberIsCreator)?.id === user.id
     const isBottomDockOccupied = lobby.activeBottomDock !== null
+
+    const syncRightControlsHeight = React.useCallback(() => {
+        const rightControls = rightControlsRef.current
+        const height = rightControls ? Math.ceil(rightControls.getBoundingClientRect().height) : 0
+
+        document.documentElement.style.setProperty('--lobbyControlsRightHeight', `${height}px`)
+    }, [])
 
     const confirmDestroyLobby = () => {
         globalModal.confirm({
@@ -234,6 +242,27 @@ export const LobbyControls: React.FC<LobbyControlsProps> = props => {
         }
     }, [])
 
+    React.useEffect(() => {
+        syncRightControlsHeight()
+
+        const rightControls = rightControlsRef.current
+        const resizeObserver = typeof ResizeObserver !== 'undefined' && rightControls ? new ResizeObserver(() => syncRightControlsHeight()) : null
+
+        if (rightControls && resizeObserver) {
+            resizeObserver.observe(rightControls)
+        }
+
+        addEventListener('resize', syncRightControlsHeight)
+        addEventListener('orientationchange', syncRightControlsHeight)
+
+        return () => {
+            removeEventListener('resize', syncRightControlsHeight)
+            removeEventListener('orientationchange', syncRightControlsHeight)
+            resizeObserver?.disconnect()
+            document.documentElement.style.setProperty('--lobbyControlsRightHeight', '0px')
+        }
+    }, [syncRightControlsHeight])
+
     const handleSendLobbyMessage = (text: string) => {
         ws.send('Chat-Send', {
             lobbyId: lobby.lobbyId,
@@ -332,7 +361,7 @@ export const LobbyControls: React.FC<LobbyControlsProps> = props => {
                     </div>
                 </div>
 
-                <div className="pointer-events-none flex flex-col items-end gap-3">
+                <div ref={rightControlsRef} className="pointer-events-none flex flex-col items-end gap-3">
                     <Button
                         variant="secondary"
                         size="sm"

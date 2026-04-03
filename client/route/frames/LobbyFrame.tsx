@@ -4,8 +4,8 @@ import { useAudio, useEventHandler, useI18n, useLobby, useRequestHandler, useUse
 import { useClientRouter } from 'client/route/ClientRouter'
 import { LoadingOverlay } from 'client/ui'
 import { useToast } from 'client/ui/toast/ToastProvider'
+import { useLobbyMessages } from 'client/features/lobby/useLobbyMessages'
 import { ReadyCheckDialog } from 'client/features/ready-check/ReadyCheckDialog'
-import type { TChatMessage, TChatMessagePart } from 'shared/contracts/app'
 
 export const LobbyFrame: React.FC = () => {
     const lobby = useLobby()
@@ -20,18 +20,7 @@ export const LobbyFrame: React.FC = () => {
 
     const { push } = useToast()
     const { t, tMemberRole } = useI18n()
-
-    const appendLobbyMessage = (message: TChatMessage) => {
-        lobbyRef.current.setChatMessages(curr => [message, ...curr.filter(existing => existing.id !== message.id)])
-    }
-
-    const createLobbySystemMessage = (parts: TChatMessagePart[]): TChatMessage => ({
-        id: crypto.randomUUID(),
-        from: t('lobby.systemName'),
-        kind: 'system',
-        parts,
-        text: parts.map(part => part.text).join('')
-    })
+    const { appendLobbyMessage, createLobbySystemMessage } = useLobbyMessages()
 
     useRequestHandler('Chat-Get', data => {
         if (!data.success || data.scope !== 'lobby' || data.lobbyId !== lobbyRef.current.lobbyId) {
@@ -216,6 +205,9 @@ export const LobbyFrame: React.FC = () => {
     useEffect(() => {
         lobbyRef.current = lobby
     }, [lobby])
+
+    // Keep LobbyFrame game-agnostic. Game-specific reactions to shared realtime events
+    // belong inside each game's feature tree, not in this route shell.
 
     const sendSubscribeRequest = () => {
         ws.send('Universal-Subscription', {

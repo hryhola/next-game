@@ -6,8 +6,10 @@ import { PlayerMenu } from './PlayerMenu'
 import { Skeleton } from 'client/ui/primitives'
 import { cn } from 'client/ui/lib/cn'
 
+export type PlayerHighlightTone = 'blue' | 'cyan' | 'green' | 'red'
+
 type Props = {
-    isHighlighted?: boolean
+    highlightTone?: PlayerHighlightTone
     size?: 'medium' | 'small'
     subtitle?: 'score' | 'role'
 } & (PlayerProps | LoadingData)
@@ -39,8 +41,13 @@ export const Player: React.FC<Props> = props => {
             className={cn(
                 size === 'medium' ? 'py-1 text-center' : 'rounded-[1.75rem] px-2 py-1 text-center',
                 props.player?.userIsOnline === false && 'grayscale brightness-50',
-                props.isHighlighted && 'bg-gradient-to-t from-cyan-300/25 to-transparent'
+                props.highlightTone && 'player-highlight',
+                props.highlightTone === 'blue' && 'player-highlight-blue',
+                props.highlightTone === 'cyan' && 'player-highlight-cyan',
+                props.highlightTone === 'green' && 'player-highlight-green',
+                props.highlightTone === 'red' && 'player-highlight-red'
             )}
+            data-highlight-tone={props.highlightTone}
             style={{ width: sizes.width, maxWidth: sizes.maxWidth }}
         >
             {children}

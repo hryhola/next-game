@@ -99,6 +99,37 @@ const QuestionValueDock: React.FC<{
     )
 }
 
+const QuestionReferenceAnswersWidget: React.FC<{
+    correctAnswers: string[]
+    correctLabel: string
+    incorrectAnswers: string[]
+    incorrectLabel: string
+    title: string
+}> = ({ correctAnswers, correctLabel, incorrectAnswers, incorrectLabel, title }) => {
+    return (
+        <div
+            className="jeopardy-floating-widget glass-card fixed right-4 z-30 w-[min(22rem,calc(100vw-2rem))] p-4"
+            style={{ top: 'calc(var(--playersHeaderHeight, 0px) + 16px + var(--lobbyControlsRightHeight, 0px) + 12px)' }}
+        >
+            <div className="text-xs font-semibold uppercase tracking-[0.28em] text-violet-200/60">{title}</div>
+            <div className="mt-3 space-y-3 text-sm">
+                {correctAnswers.length ? (
+                    <div>
+                        <div className="text-[0.72em] font-semibold uppercase tracking-[0.22em] text-emerald-300">{correctLabel}</div>
+                        <div className="mt-1 text-emerald-100">{correctAnswers.join(', ')}</div>
+                    </div>
+                ) : null}
+                {incorrectAnswers.length ? (
+                    <div>
+                        <div className="text-[0.72em] font-semibold uppercase tracking-[0.22em] text-rose-300">{incorrectLabel}</div>
+                        <div className="mt-1 text-rose-100">{incorrectAnswers.join(', ')}</div>
+                    </div>
+                ) : null}
+            </div>
+        </div>
+    )
+}
+
 export const QuestionContent: React.FC<QuestionContentProps> = props => {
     const user = useUser()
     const lobby = useLobby()
@@ -254,6 +285,11 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
     const questionAnswers = session?.internal?.currentQuestionAnswers || {}
     const correctAnswers = session?.internal?.correctAnswers || []
     const incorrectAnswers = session?.internal?.incorrectAnswers || []
+    const referenceAnswersVisible =
+        isMasterView &&
+        !verifyDockVisible &&
+        (props.specialPhase === 'showing-question' || props.answeringStatus === 'allowed' || props.answeringStatus === 'answering') &&
+        (correctAnswers.length > 0 || incorrectAnswers.length > 0)
     const mostAnswersList: string[] = correctAnswers.length > incorrectAnswers.length ? correctAnswers : incorrectAnswers
     const currentPlayer = game.players.find(player => player.id === user.id)
     const resolvedContent = resolvePackContent(props.Resources, props.type, props.content, props.isRef)
@@ -312,6 +348,15 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
                     {content}
                 </Grid>
             </Grid>
+            {referenceAnswersVisible ? (
+                <QuestionReferenceAnswersWidget
+                    correctAnswers={correctAnswers}
+                    correctLabel={t('common.correct')}
+                    incorrectAnswers={incorrectAnswers}
+                    incorrectLabel={t('common.incorrect')}
+                    title={t('jeopardy.referenceAnswers')}
+                />
+            ) : null}
             {verifyDockVisible ? (
                 <div className={bottomDockPositionClassName}>
                     <div className={bottomDockPanelClassName}>

@@ -1,10 +1,11 @@
 import { useEffect, useRef } from 'react'
 import type { PlayerData } from 'shared/contracts/app'
-import { Player } from './Player'
+import { Player, type PlayerHighlightTone } from './Player'
 
 interface HeaderProps {
     members: PlayerData[]
     highlightedPlayedIds?: string[]
+    highlightToneByPlayerId?: Partial<Record<string, PlayerHighlightTone>>
     isLoading: boolean
     masterLabel?: 'role' | 'score'
 }
@@ -62,7 +63,7 @@ export const PlayersHeader: React.FC<HeaderProps> = props => {
                             <div key={p.id} className="pointer-events-auto">
                                 <Player
                                     player={p}
-                                    isHighlighted={props.highlightedPlayedIds?.includes(p.id)}
+                                    highlightTone={props.highlightToneByPlayerId?.[p.id] || (props.highlightedPlayedIds?.includes(p.id) ? 'cyan' : undefined)}
                                     size="medium"
                                     subtitle={p.playerIsMaster ? props.masterLabel : 'score'}
                                 />

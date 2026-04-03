@@ -40,5 +40,6 @@ For local development, `NEXT_PUBLIC_REALTIME_API_ORIGIN` should usually point at
 ## Useful Docs
 
 - `docs/cloudflare-migration-plan.md`
+- `docs/frontend-boundaries.md`
 - `docs/runtime-baseline.md`
 - `workers/realtime/README.md`

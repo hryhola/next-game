@@ -202,6 +202,83 @@ body[data-hide-tips='true'] .lobby-tip {
     outline-offset: 2px;
 }
 
+@keyframes player-highlight-enter {
+    0% {
+        transform: translateY(4px) scale(0.985);
+        filter: saturate(0.85);
+    }
+    100% {
+        transform: translateY(0) scale(1);
+        filter: saturate(1);
+    }
+}
+
+@keyframes player-highlight-glow {
+    0% {
+        opacity: 0.18;
+    }
+    50% {
+        opacity: 0.64;
+    }
+    100% {
+        opacity: 0.96;
+    }
+}
+
+@keyframes jeopardy-widget-float-in {
+    0% {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.player-highlight {
+    position: relative;
+    isolation: isolate;
+    animation: player-highlight-enter 180ms ease-out;
+    border-radius: 1.25rem;
+    background-image: linear-gradient(to top, var(--player-highlight-from, rgba(34, 211, 238, 0.28)), transparent 72%);
+}
+
+.player-highlight::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    box-shadow: var(--player-highlight-shadow, 0 0 0 rgba(0, 0, 0, 0));
+    opacity: 0.18;
+    pointer-events: none;
+    animation: player-highlight-glow 0.88s ease-in-out infinite alternate;
+}
+
+.player-highlight-cyan {
+    --player-highlight-from: rgba(34, 211, 238, 0.32);
+    --player-highlight-shadow: inset 0 0 0 1px rgba(103, 232, 249, 0.26), 0 0 22px rgba(34, 211, 238, 0.18);
+}
+
+.player-highlight-green {
+    --player-highlight-from: rgba(34, 197, 94, 0.34);
+    --player-highlight-shadow: inset 0 0 0 1px rgba(134, 239, 172, 0.28), 0 0 22px rgba(34, 197, 94, 0.22);
+}
+
+.player-highlight-blue {
+    --player-highlight-from: rgba(59, 130, 246, 0.34);
+    --player-highlight-shadow: inset 0 0 0 1px rgba(147, 197, 253, 0.28), 0 0 22px rgba(59, 130, 246, 0.22);
+}
+
+.player-highlight-red {
+    --player-highlight-from: rgba(239, 68, 68, 0.34);
+    --player-highlight-shadow: inset 0 0 0 1px rgba(252, 165, 165, 0.28), 0 0 22px rgba(239, 68, 68, 0.22);
+}
+
+.jeopardy-floating-widget {
+    animation: jeopardy-widget-float-in 220ms ease-out;
+}
+
 ::-webkit-scrollbar {
     width: 8px;
     height: 8px;

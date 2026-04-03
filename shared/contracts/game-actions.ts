@@ -1,4 +1,4 @@
-import type { RealtimeJeopardyQuestionId, RealtimeJeopardyThemeId } from './jeopardy'
+import type { RealtimeJeopardyQuestionId, RealtimeJeopardyQuestionType, RealtimeJeopardyThemeId } from './jeopardy'
 import type { TicTacToeCellCoords } from './realtime-lobby'
 
 export type GameActor = {
@@ -112,7 +112,11 @@ export type JeopardyGameActionMap = {
         payload: {
             questionId: RealtimeJeopardyQuestionId
         }
-        result: SuccessResult
+        result: SuccessResult & {
+            questionPrice?: number | null
+            questionTheme?: string | null
+            questionType?: RealtimeJeopardyQuestionType
+        }
     }
     $SelectQuestionPlayer: {
         payload: {
@@ -124,14 +128,20 @@ export type JeopardyGameActionMap = {
         payload: {
             rating: 'approved' | 'declined'
         }
-        result: SuccessResult
+        result: SuccessResult & {
+            answeringPlayerId?: string
+            rating?: 'approved' | 'declined'
+        }
     }
     $RateFinalAnswer: {
         payload: {
             answeringPlayerId: string
             rate: 'approved' | 'declined'
         }
-        result: SuccessResult
+        result: SuccessResult & {
+            answeringPlayerId?: string
+            rate?: 'approved' | 'declined'
+        }
     }
     $Resume: {
         payload: null
@@ -164,13 +174,17 @@ export type JeopardyGameActionMap = {
         payload: {
             themeIndex: number
         }
-        result: SuccessResult
+        result: SuccessResult & {
+            themeName?: string
+        }
     }
     $SkipCategory: {
         payload: {
             themeId: RealtimeJeopardyThemeId
         }
-        result: SuccessResult
+        result: SuccessResult & {
+            themeName?: string
+        }
     }
     $SkipVote: {
         payload: null
