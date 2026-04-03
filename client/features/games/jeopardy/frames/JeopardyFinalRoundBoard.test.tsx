@@ -1,6 +1,6 @@
 /** @jest-environment jsdom */
 
-import { screen } from '@testing-library/react'
+import { fireEvent, screen } from '@testing-library/react'
 import { createGameValue, createLobbyData, createPlayerData, createUserData, renderWithProviders } from 'client/test-utils/renderWithProviders'
 import { FinalRoundBoard } from './JeopardyFinalRoundBoard'
 
@@ -58,6 +58,66 @@ function createFinalFrame(overrides: Record<string, unknown> = {}) {
 }
 
 describe('FinalRoundBoard', () => {
+    it('renders final-round media atoms inside the same fullscreen-capable card presentation', () => {
+        const players = createPlayers()
+
+        renderWithProviders(
+            <FinalRoundBoard
+                {...(createFinalFrame({
+                    questionAtoms: [
+                        {
+                            content: '/assets/final-question.jpg',
+                            type: 'image'
+                        }
+                    ],
+                    status: 'answering'
+                }) as any)}
+                Resources={resources as never}
+            />,
+            {
+                game: createGameValue({
+                    players,
+                    session: {
+                        frame: createFinalFrame({
+                            questionAtoms: [
+                                {
+                                    content: '/assets/final-question.jpg',
+                                    type: 'image'
+                                }
+                            ],
+                            playersThatAnswered: ['contestant-1'],
+                            status: 'answering'
+                        }),
+                        internal: {
+                            finalAnswers: {}
+                        },
+                        isPaused: false
+                    }
+                }),
+                lobby: createLobbyData({
+                    id: 'lobby-1',
+                    members: players
+                }),
+                user: createUserData({
+                    id: 'master',
+                    userNickname: 'Master'
+                })
+            }
+        )
+
+        const mediaShell = screen.getByTestId('jeopardy-media-shell')
+        const mediaCard = screen.getByTestId('jeopardy-media-card')
+        const fullscreenButton = screen.getByRole('button', { name: 'Fullscreen' })
+
+        expect(mediaShell).toHaveAttribute('data-expanded', 'false')
+        expect(mediaCard.contains(fullscreenButton)).toBe(false)
+
+        fireEvent.click(fullscreenButton)
+
+        expect(mediaShell).toHaveAttribute('data-expanded', 'true')
+        expect(screen.getByRole('button', { name: 'Back to Card' })).toBeInTheDocument()
+    })
+
     it('shows the current bet value to the eligible contestant during final betting', () => {
         const players = createPlayers()
 

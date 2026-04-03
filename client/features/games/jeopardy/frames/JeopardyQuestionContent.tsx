@@ -21,34 +21,13 @@ import React, { MutableRefObject, useEffect, useRef, useState } from 'react'
 import { useActionSender, useJeopardy, useJeopardyAction } from '../JeopardyView'
 import { JeopardyMedia } from '../utils/jeopardyPackLoading'
 import { useTimedProgress } from '../utils/timedProgress'
+import { JeopardyContentAtom } from './JeopardyContentAtom'
 import type { RealtimeJeopardySessionState, RealtimeJeopardyState } from 'shared/contracts/jeopardy'
 
 type QuestionContentProps = RealtimeJeopardyState.QuestionContentFrame & {
     Resources: MutableRefObject<JeopardyMedia>
     packFetchingTimeMs: number
     useMediaTimestamp: boolean
-}
-
-function resolvePackContent(
-    Resources: MutableRefObject<JeopardyMedia>,
-    type: 'html' | 'image' | 'text' | 'video' | 'voice',
-    content: string,
-    isRef: boolean | undefined
-): string {
-    if (!isRef) {
-        return content
-    }
-
-    switch (type) {
-        case 'image':
-            return Resources.current.Images[content] || content
-        case 'video':
-            return Resources.current.Video[content] || content
-        case 'voice':
-            return Resources.current.Audio[content] || content
-        default:
-            return content
-    }
 }
 
 const QuestionValueDock: React.FC<{
@@ -264,60 +243,33 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
         (correctAnswers.length > 0 || incorrectAnswers.length > 0)
     const mostAnswersList: string[] = correctAnswers.length > incorrectAnswers.length ? correctAnswers : incorrectAnswers
     const currentPlayer = game.players.find(player => player.id === user.id)
-    const resolvedContent = resolvePackContent(props.Resources, props.type, props.content, props.isRef)
     const valueSelectionKey = `${props.questionId}:${props.specialPhase || 'none'}:${(props.priceOptions || []).join(',')}:${props.questionPrice || ''}:${
         currentPlayer?.playerScore || ''
     }`
-    const textContentClassName = props.type === 'text' ? 'px-4 lg:px-16 xl:px-30' : undefined
-
-    let content!: React.ReactNode
-
-    switch (props.type) {
-        case 'image': {
-            content = <img src={resolvedContent} alt={t('image.alt.questionImage')} />
-            break
-        }
-        case 'video': {
-            content = (
-                <video
-                    ref={playerRef as React.MutableRefObject<HTMLVideoElement | null>}
-                    style={{ maxWidth: '100vw' }}
-                    autoPlay
-                    onEnded={handleMediaEnded}
-                    src={resolvedContent}
-                ></video>
-            )
-            break
-        }
-        case 'voice': {
-            content = (
-                <>
-                    <audio ref={playerRef} autoPlay onEnded={handleMediaEnded} src={resolvedContent}></audio>
-                    <img src="/assets/jeopardy/audio.gif" alt={t('image.alt.audioQuestion')} />
-                </>
-            )
-            break
-        }
-        case 'html': {
-            content = <div dangerouslySetInnerHTML={{ __html: resolvedContent }} />
-            break
-        }
-        case 'text':
-        default: {
-            content =
-                props.contentPlacement === 'replic' ? (
-                    <div className="mx-auto max-w-3xl rounded-[1.5rem] border border-white/10 bg-blue-950/70 px-6 py-4 text-lg">{props.content}</div>
-                ) : (
-                    <>{props.content}</>
-                )
-        }
-    }
 
     return (
         <>
-            <Grid display="grid" justifyContent="center" alignContent="center" width="100vw" height="var(--fullHeight)" overflow="hidden">
-                <Grid sx={{ textAlign: 'center' }} className={textContentClassName} item>
-                    {content}
+            <Grid
+                display="grid"
+                justifyContent="center"
+                alignContent="center"
+                width="100vw"
+                height="calc(var(--fullHeight) - var(--playersHeaderHeight, 0px))"
+                mt="var(--playersHeaderHeight, 0px)"
+                overflow="hidden"
+            >
+                <Grid sx={{ textAlign: 'center' }} item>
+                    <JeopardyContentAtom
+                        Resources={props.Resources}
+                        content={props.content}
+                        contentPlacement={props.contentPlacement}
+                        isRef={props.isRef}
+                        mediaAutoPlay
+                        mediaControls={props.type === 'voice'}
+                        mediaElementRef={playerRef}
+                        onMediaEnded={handleMediaEnded}
+                        type={props.type}
+                    />
                 </Grid>
             </Grid>
             {referenceAnswersVisible ? (

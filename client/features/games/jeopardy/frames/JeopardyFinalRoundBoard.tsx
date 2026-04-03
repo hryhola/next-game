@@ -19,55 +19,22 @@ import { useI18n, useUser } from 'client/context/list'
 import { useActionSender, useJeopardy } from '../JeopardyView'
 import { JeopardyMedia } from '../utils/jeopardyPackLoading'
 import { useTimedProgress } from '../utils/timedProgress'
+import { JeopardyContentAtom } from './JeopardyContentAtom'
 import type { RealtimeJeopardySessionState, RealtimeJeopardyState } from 'shared/contracts/jeopardy'
-
-function resolveFinalContent(Resources: MutableRefObject<JeopardyMedia>, type: string, content: string, isRef: boolean | undefined) {
-    if (!isRef) {
-        return content
-    }
-
-    switch (type) {
-        case 'image':
-            return Resources.current.Images[content] || content
-        case 'video':
-            return Resources.current.Video[content] || content
-        case 'voice':
-            return Resources.current.Audio[content] || content
-        default:
-            return content
-    }
-}
 
 const FinalQuestion: React.FC<{ type: string; content: string; isRef?: boolean; Resources: MutableRefObject<JeopardyMedia> }> = props => {
     const playerRef = useRef<HTMLAudioElement | HTMLVideoElement | null>(null)
-    const resolvedContent = resolveFinalContent(props.Resources, props.type, props.content, props.isRef)
-    const { t } = useI18n()
 
-    switch (props.type) {
-        case 'image': {
-            return <img src={resolvedContent} alt={t('image.alt.questionImage')} />
-        }
-        case 'video': {
-            return (
-                <video ref={playerRef as React.MutableRefObject<HTMLVideoElement | null>} style={{ maxWidth: '100vw' }} controls src={resolvedContent}></video>
-            )
-        }
-        case 'voice': {
-            return (
-                <>
-                    <audio ref={playerRef} controls src={resolvedContent}></audio>
-                    <img src="/assets/jeopardy/audio.gif" alt={t('image.alt.audioQuestion')} />
-                </>
-            )
-        }
-        case 'html': {
-            return <div dangerouslySetInnerHTML={{ __html: resolvedContent }} />
-        }
-        case 'text':
-        default: {
-            return <>{props.content}</>
-        }
-    }
+    return (
+        <JeopardyContentAtom
+            Resources={props.Resources}
+            content={props.content}
+            isRef={props.isRef}
+            mediaControls
+            mediaElementRef={playerRef}
+            type={(props.type as RealtimeJeopardyState.QuestionContentFrame['type']) || 'text'}
+        />
+    )
 }
 
 const FinalBetDock: React.FC<{
@@ -222,7 +189,14 @@ export const FinalRoundBoard: React.FC<
 
     return (
         <>
-            <Grid display="grid" justifyContent="center" alignContent="center" width="100vw" minHeight="var(--fullHeight)">
+            <Grid
+                display="grid"
+                justifyContent="center"
+                alignContent="center"
+                width="100vw"
+                minHeight="calc(var(--fullHeight) - var(--playersHeaderHeight, 0px))"
+                mt="var(--playersHeaderHeight, 0px)"
+            >
                 <Grid sx={{ textAlign: 'center' }} item>
                     {content}
                 </Grid>

@@ -1,6 +1,6 @@
 /** @jest-environment jsdom */
 
-import { screen } from '@testing-library/react'
+import { fireEvent, screen } from '@testing-library/react'
 import { createGameValue, createLobbyData, createPlayerData, createUserData, renderWithProviders } from 'client/test-utils/renderWithProviders'
 import { QuestionContent } from './JeopardyQuestionContent'
 
@@ -76,6 +76,187 @@ function createPlayers() {
 }
 
 describe('QuestionContent', () => {
+    it('renders text atoms inside a dedicated card and scales typography by content length', () => {
+        const players = createPlayers()
+        const shortView = renderWithProviders(
+            <QuestionContent
+                {...(createQuestionFrame({
+                    content: 'Who is this?',
+                    questionType: 'simple'
+                }) as any)}
+                Resources={resources as never}
+                packFetchingTimeMs={0}
+                useMediaTimestamp={false}
+            />,
+            {
+                game: createGameValue({
+                    players,
+                    session: {
+                        frame: createQuestionFrame({
+                            content: 'Who is this?',
+                            questionType: 'simple'
+                        }),
+                        internal: {},
+                        isPaused: false
+                    }
+                }),
+                lobby: createLobbyData({
+                    id: 'lobby-1',
+                    members: players
+                }),
+                user: createUserData({
+                    id: 'contestant-1',
+                    userNickname: 'Contestant 1'
+                })
+            }
+        )
+
+        expect(screen.getByTestId('jeopardy-text-card')).toBeInTheDocument()
+        expect(screen.getByText('Who is this?')).toHaveAttribute('data-font-tier', 'short')
+
+        shortView.unmount()
+
+        renderWithProviders(
+            <QuestionContent
+                {...(createQuestionFrame({
+                    content:
+                        'This is a deliberately long Jeopardy clue that keeps going so the component has to reduce the font size instead of rendering the text with the same huge typography as a very short prompt.',
+                    questionType: 'simple'
+                }) as any)}
+                Resources={resources as never}
+                packFetchingTimeMs={0}
+                useMediaTimestamp={false}
+            />,
+            {
+                game: createGameValue({
+                    players,
+                    session: {
+                        frame: createQuestionFrame({
+                            content:
+                                'This is a deliberately long Jeopardy clue that keeps going so the component has to reduce the font size instead of rendering the text with the same huge typography as a very short prompt.',
+                            questionType: 'simple'
+                        }),
+                        internal: {},
+                        isPaused: false
+                    }
+                }),
+                lobby: createLobbyData({
+                    id: 'lobby-1',
+                    members: players
+                }),
+                user: createUserData({
+                    id: 'contestant-1',
+                    userNickname: 'Contestant 1'
+                })
+            }
+        )
+
+        expect(screen.getByText(/deliberately long Jeopardy clue/)).toHaveAttribute('data-font-tier', 'medium')
+    })
+
+    it('renders image atoms inside a media card and lets the user toggle fullscreen mode', () => {
+        const players = createPlayers()
+
+        renderWithProviders(
+            <QuestionContent
+                {...(createQuestionFrame({
+                    content: '/assets/test-question.jpg',
+                    questionType: 'simple',
+                    type: 'image'
+                }) as any)}
+                Resources={resources as never}
+                packFetchingTimeMs={0}
+                useMediaTimestamp={false}
+            />,
+            {
+                game: createGameValue({
+                    players,
+                    session: {
+                        frame: createQuestionFrame({
+                            content: '/assets/test-question.jpg',
+                            questionType: 'simple',
+                            type: 'image'
+                        }),
+                        internal: {},
+                        isPaused: false
+                    }
+                }),
+                lobby: createLobbyData({
+                    id: 'lobby-1',
+                    members: players
+                }),
+                user: createUserData({
+                    id: 'contestant-1',
+                    userNickname: 'Contestant 1'
+                })
+            }
+        )
+
+        const mediaShell = screen.getByTestId('jeopardy-media-shell')
+        const mediaCard = screen.getByTestId('jeopardy-media-card')
+        const fullscreenButton = screen.getByRole('button', { name: 'Fullscreen' })
+
+        expect(mediaShell).toHaveAttribute('data-expanded', 'false')
+        expect(fullscreenButton).toBeInTheDocument()
+        expect(mediaCard.contains(fullscreenButton)).toBe(false)
+
+        fireEvent.click(fullscreenButton)
+
+        expect(mediaShell).toHaveAttribute('data-expanded', 'true')
+        expect(screen.getByRole('dialog', { name: 'Question image' })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: 'Back to Card' })).toBeInTheDocument()
+        expect(mediaCard).toHaveStyle({
+            height: 'calc(var(--fullHeight, 100vh) - 7rem)',
+            width: 'calc(100vw - 2rem)'
+        })
+    })
+
+    it('renders audio atoms inside an audio card with the animated indicator', () => {
+        const players = createPlayers()
+
+        renderWithProviders(
+            <QuestionContent
+                {...(createQuestionFrame({
+                    content: '/assets/test-question.mp3',
+                    questionType: 'simple',
+                    type: 'voice'
+                }) as any)}
+                Resources={resources as never}
+                packFetchingTimeMs={0}
+                useMediaTimestamp={false}
+            />,
+            {
+                game: createGameValue({
+                    players,
+                    session: {
+                        frame: createQuestionFrame({
+                            content: '/assets/test-question.mp3',
+                            questionType: 'simple',
+                            type: 'voice'
+                        }),
+                        internal: {},
+                        isPaused: false
+                    }
+                }),
+                lobby: createLobbyData({
+                    id: 'lobby-1',
+                    members: players
+                }),
+                user: createUserData({
+                    id: 'contestant-1',
+                    userNickname: 'Contestant 1'
+                })
+            }
+        )
+
+        const audioCard = screen.getByTestId('jeopardy-audio-card')
+        const audioElement = audioCard.querySelector('audio')
+
+        expect(audioCard).toContainElement(screen.getByAltText('Audio question'))
+        expect(audioElement).not.toBeNull()
+        expect(audioElement).not.toHaveAttribute('controls')
+    })
+
     it('shows no progress bar during clue presentation before buzzing is allowed', () => {
         const players = createPlayers()
 
