@@ -156,6 +156,58 @@ describe('QuestionContent', () => {
         expect(screen.getByRole('progressbar')).toBeInTheDocument()
     })
 
+    it('keeps the buzzer progress alive when the client wall clock is skewed but the worker fallback progress is valid', () => {
+        const players = createPlayers()
+        const warningSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
+        const dateNowSpy = jest.spyOn(Date, 'now').mockReturnValue(new Date('2026-04-03T19:17:28.603Z').getTime())
+        const performanceNowSpy = jest.spyOn(performance, 'now').mockReturnValue(100)
+
+        renderWithProviders(
+            <QuestionContent
+                {...(createQuestionFrame({
+                    answerRequestEndsAt: '2026-04-03T19:17:17.603Z',
+                    answerRequestStartedAt: '2026-04-03T19:17:12.603Z',
+                    answerRequestTimeLeft: 80,
+                    answeringStatus: 'allowed',
+                    questionType: 'simple'
+                }) as any)}
+                Resources={resources as never}
+                packFetchingTimeMs={0}
+                useMediaTimestamp={false}
+            />,
+            {
+                game: createGameValue({
+                    players,
+                    session: {
+                        frame: createQuestionFrame({
+                            answerRequestEndsAt: '2026-04-03T19:17:17.603Z',
+                            answerRequestStartedAt: '2026-04-03T19:17:12.603Z',
+                            answerRequestTimeLeft: 80,
+                            answeringStatus: 'allowed',
+                            questionType: 'simple'
+                        }),
+                        internal: {},
+                        isPaused: false
+                    }
+                }),
+                lobby: createLobbyData({
+                    id: 'lobby-1',
+                    members: players
+                }),
+                user: createUserData({
+                    id: 'contestant-1',
+                    userNickname: 'Contestant 1'
+                })
+            }
+        )
+
+        expect(Number(screen.getByRole('progressbar').getAttribute('aria-valuenow'))).toBeCloseTo(80, 1)
+
+        warningSpy.mockRestore()
+        dateNowSpy.mockRestore()
+        performanceNowSpy.mockRestore()
+    })
+
     it('shows a progress bar while the answering contestant is writing a normal answer', () => {
         const players = createPlayers()
 

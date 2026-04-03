@@ -20,6 +20,7 @@ import { isCloudflareRealtimeEnabled } from 'client/network-utils/realtimeMode'
 import React, { MutableRefObject, useEffect, useRef, useState } from 'react'
 import { useActionSender, useJeopardy, useJeopardyAction } from '../JeopardyView'
 import { JeopardyMedia } from '../utils/jeopardyPackLoading'
+import { useTimedProgress } from '../utils/timedProgress'
 import type { RealtimeJeopardySessionState, RealtimeJeopardyState } from 'shared/contracts/jeopardy'
 
 type QuestionContentProps = RealtimeJeopardyState.QuestionContentFrame & {
@@ -48,24 +49,6 @@ function resolvePackContent(
         default:
             return content
     }
-}
-
-function getTimedProgress(startedAt: string | null | undefined, endsAt: string | null | undefined, fallback: number | null, nowMs: number): number | null {
-    if (!startedAt || !endsAt) {
-        return fallback
-    }
-
-    const startedAtMs = new Date(startedAt).getTime()
-    const endsAtMs = new Date(endsAt).getTime()
-
-    if (!Number.isFinite(startedAtMs) || !Number.isFinite(endsAtMs) || endsAtMs <= startedAtMs) {
-        return fallback
-    }
-
-    const totalDurationMs = endsAtMs - startedAtMs
-    const remainingMs = Math.max(0, endsAtMs - nowMs)
-
-    return Math.max(0, Math.min(100, (remainingMs / totalDurationMs) * 100))
 }
 
 const QuestionValueDock: React.FC<{
@@ -140,16 +123,36 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
     const audio = useAudio()
     const { t } = useI18n()
     const isWorkerMode = isCloudflareRealtimeEnabled()
-    const [timerNowMs, setTimerNowMs] = useState(() => Date.now())
     const session = game.session as RealtimeJeopardySessionState | null
     const isMasterView = game.players.some(p => p.id === user.id && p.playerIsMaster)
     const setActiveBottomDock = lobby.setActiveBottomDock
 
     const answerInputRef = useRef<HTMLInputElement | null>(null)
 
-    const answerRequestProgress = getTimedProgress(props.answerRequestStartedAt, props.answerRequestEndsAt, props.answerRequestTimeLeft, timerNowMs)
-    const answerGivingProgress = getTimedProgress(props.answerGivingStartedAt, props.answerGivingEndsAt, props.answerGivingTimeLeft, timerNowMs)
-    const answerVerifyingProgress = getTimedProgress(props.answerVerifyingStartedAt, props.answerVerifyingEndsAt, props.answerVerifyingTimeLeft, timerNowMs)
+    const answerRequestProgress = useTimedProgress({
+        debugLabel: `question:${props.questionId}:answer-request`,
+        endsAt: props.answerRequestEndsAt,
+        fallbackProgress: props.answerRequestTimeLeft,
+        isPaused: Boolean(game.session?.isPaused),
+        startedAt: props.answerRequestStartedAt,
+        trackingKey: `${props.questionId}:answer-request:${props.answeringStatus}`
+    })
+    const answerGivingProgress = useTimedProgress({
+        debugLabel: `question:${props.questionId}:answer-giving`,
+        endsAt: props.answerGivingEndsAt,
+        fallbackProgress: props.answerGivingTimeLeft,
+        isPaused: Boolean(game.session?.isPaused),
+        startedAt: props.answerGivingStartedAt,
+        trackingKey: `${props.questionId}:answer-giving:${props.answeringPlayerId || 'none'}:${props.answeringStatus}`
+    })
+    const answerVerifyingProgress = useTimedProgress({
+        debugLabel: `question:${props.questionId}:answer-verifying`,
+        endsAt: props.answerVerifyingEndsAt,
+        fallbackProgress: props.answerVerifyingTimeLeft,
+        isPaused: Boolean(game.session?.isPaused),
+        startedAt: props.answerVerifyingStartedAt,
+        trackingKey: `${props.questionId}:answer-verifying:${props.answeringStatus}`
+    })
     const bottomDockPositionClassName =
         'pointer-events-none fixed inset-x-0 z-40 flex justify-center px-4 bottom-[calc(env(safe-area-inset-bottom,0px)+88px)] md:bottom-6'
     const bottomDockPanelClassName = 'glass-card pointer-events-auto w-full max-w-xl rounded-[2rem] p-3'
@@ -204,37 +207,6 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
 
         playerRef.current.currentTime = (props.packFetchingTimeMs + props.elapsedMediaTimeMs) / 1000
     }, [props.elapsedMediaTimeMs, props.packFetchingTimeMs, props.questionId, props.useMediaTimestamp])
-
-    useEffect(() => {
-        const hasLiveWorkerTimer =
-            (props.answeringStatus === 'allowed' && props.answerRequestStartedAt && props.answerRequestEndsAt) ||
-            (props.answeringStatus === 'answering' && props.answerGivingStartedAt && props.answerGivingEndsAt) ||
-            (props.answeringStatus === 'answer-verifying' && props.answerVerifyingStartedAt && props.answerVerifyingEndsAt)
-
-        if (!hasLiveWorkerTimer) {
-            return
-        }
-
-        if (game.session?.isPaused) {
-            return
-        }
-
-        const intervalId = window.setInterval(() => setTimerNowMs(Date.now()), 100)
-
-        return () => {
-            window.clearInterval(intervalId)
-        }
-    }, [
-        props.answerGivingEndsAt,
-        props.answerGivingStartedAt,
-        props.answerRequestEndsAt,
-        props.answerRequestStartedAt,
-        props.answerVerifyingEndsAt,
-        props.answerVerifyingStartedAt,
-        props.answeringStatus,
-        game.session?.isPaused,
-        props.questionId
-    ])
 
     useEffect(() => {
         if (answerDockVisible) {

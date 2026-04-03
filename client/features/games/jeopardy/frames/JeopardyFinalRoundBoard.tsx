@@ -18,6 +18,7 @@ import {
 import { useI18n, useUser } from 'client/context/list'
 import { useActionSender, useJeopardy } from '../JeopardyView'
 import { JeopardyMedia } from '../utils/jeopardyPackLoading'
+import { useTimedProgress } from '../utils/timedProgress'
 import type { RealtimeJeopardySessionState, RealtimeJeopardyState } from 'shared/contracts/jeopardy'
 
 function resolveFinalContent(Resources: MutableRefObject<JeopardyMedia>, type: string, content: string, isRef: boolean | undefined) {
@@ -35,21 +36,6 @@ function resolveFinalContent(Resources: MutableRefObject<JeopardyMedia>, type: s
         default:
             return content
     }
-}
-
-function getTimedProgress(startedAt: string | null | undefined, endsAt: string | null | undefined, fallback: number | null | undefined, nowMs: number) {
-    if (!startedAt || !endsAt) {
-        return fallback ?? null
-    }
-
-    const startedAtMs = new Date(startedAt).getTime()
-    const endsAtMs = new Date(endsAt).getTime()
-
-    if (!Number.isFinite(startedAtMs) || !Number.isFinite(endsAtMs) || endsAtMs <= startedAtMs) {
-        return fallback ?? null
-    }
-
-    return Math.max(0, Math.min(100, ((endsAtMs - nowMs) / (endsAtMs - startedAtMs)) * 100))
 }
 
 const FinalQuestion: React.FC<{ type: string; content: string; isRef?: boolean; Resources: MutableRefObject<JeopardyMedia> }> = props => {
@@ -140,11 +126,17 @@ export const FinalRoundBoard: React.FC<
     const user = useUser()
     const game = useJeopardy()
     const sendAction = useActionSender()
-    const [timerNowMs, setTimerNowMs] = useState(() => Date.now())
     const { t } = useI18n()
 
     const isMasterView = game.players.some(p => p.id === user.id && p.playerIsMaster)
-    const phaseProgress = getTimedProgress(props.phaseStartedAt, props.phaseEndsAt, props.phaseTimeLeft, timerNowMs)
+    const phaseProgress = useTimedProgress({
+        debugLabel: `final-round:${props.status}:${props.skipperId || 'none'}`,
+        endsAt: props.phaseEndsAt,
+        fallbackProgress: props.phaseTimeLeft,
+        isPaused: Boolean(game.session?.isPaused),
+        startedAt: props.phaseStartedAt,
+        trackingKey: `final-round:${props.status}:${props.skipperId || 'none'}:${props.playersThatAnswered.join(',')}:${props.playersThatMadeBet.join(',')}`
+    })
     const session = game.session as RealtimeJeopardySessionState | null
     const internal = session?.internal
     const currentPlayer = game.players.find(player => player.id === user.id)
@@ -189,18 +181,6 @@ export const FinalRoundBoard: React.FC<
             themeIndex: id
         })
     }
-
-    useEffect(() => {
-        if (!props.phaseStartedAt || !props.phaseEndsAt) {
-            return
-        }
-
-        const intervalId = window.setInterval(() => setTimerNowMs(Date.now()), 100)
-
-        return () => {
-            window.clearInterval(intervalId)
-        }
-    }, [props.phaseEndsAt, props.phaseStartedAt, props.status])
 
     let content = <></>
 
