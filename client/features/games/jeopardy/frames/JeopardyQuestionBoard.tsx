@@ -51,7 +51,8 @@ export const QuestionBoard: React.FC<RealtimeJeopardyState.QuestionBoardFrame> =
     const pendingPickedQuestionIdRef = React.useRef<RealtimeJeopardyQuestionId | null>(null)
     const themeHideTimeoutsRef = React.useRef<Record<string, number>>({})
     const activePickedQuestionId = props.pickedQuestion || pendingPickedQuestionId
-    const canPickQuestions = lobby.myRole !== 'spectator' && (isMasterView || isMyTurn)
+    const isPaused = Boolean(game.session?.isPaused)
+    const canPickQuestions = !isPaused && lobby.myRole !== 'spectator' && (isMasterView || isMyTurn)
     const isBoardLocked = Boolean(activePickedQuestionId)
     const [renderedThemes, setRenderedThemes] = React.useState<RenderedTheme[]>(() =>
         props.themes.filter(theme => !isThemeCleared(theme)).map(theme => ({ phase: 'visible', theme }))
@@ -154,7 +155,7 @@ export const QuestionBoard: React.FC<RealtimeJeopardyState.QuestionBoardFrame> =
     const handleQuestionPick: React.MouseEventHandler<HTMLButtonElement> = event => {
         const questionId = event.currentTarget.id as `${number}-${number}-${number}`
 
-        if (activePickedQuestionId) {
+        if (activePickedQuestionId || isPaused) {
             return
         }
 
@@ -165,7 +166,7 @@ export const QuestionBoard: React.FC<RealtimeJeopardyState.QuestionBoardFrame> =
     }
 
     const handleThemeSkip = (themeId: RealtimeJeopardyThemeId) => () => {
-        if (isBoardLocked) {
+        if (isBoardLocked || isPaused) {
             return
         }
 
@@ -236,7 +237,7 @@ export const QuestionBoard: React.FC<RealtimeJeopardyState.QuestionBoardFrame> =
                                             variant="outlined"
                                             aria-label={`Skip ${theme.name}`}
                                             className="h-7 rounded-full px-2.5 text-xs font-medium uppercase tracking-[0.16em] text-violet-200/70 hover:bg-white/6 hover:text-violet-100"
-                                            disabled={isBoardLocked || !hasUnansweredQuestions(theme) || isThemeHiding}
+                                            disabled={isPaused || isBoardLocked || !hasUnansweredQuestions(theme) || isThemeHiding}
                                             onClick={handleThemeSkip(theme.themeId)}
                                         >
                                             {I18n.t('common.skip')}

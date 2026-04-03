@@ -161,4 +161,68 @@ describe('JeopardyControls', () => {
         expect(screen.getAllByRole('button', { name: 'Skip' }).every(button => !button.hasAttribute('disabled'))).toBe(true)
         expect(screen.getAllByRole('button', { name: 'Pause' }).every(button => !button.hasAttribute('disabled'))).toBe(true)
     })
+
+    it('shows a pause label and freezes gameplay controls while the session is paused', () => {
+        const players = [
+            createPlayerData({
+                id: 'master',
+                memberIsCreator: true,
+                memberPosition: 0,
+                playerIsMaster: true,
+                userNickname: 'Master'
+            }),
+            createPlayerData({
+                id: 'contestant-1',
+                memberPosition: 1,
+                userNickname: 'Contestant 1'
+            })
+        ]
+
+        const pausedSession = {
+            ...createQuestionSession({
+                answeringStatus: 'allowed',
+                specialPhase: undefined
+            }),
+            isPaused: true
+        }
+
+        const playerRender = renderWithProviders(<JeopardyControls />, {
+            game: createGameValue({
+                players,
+                session: pausedSession
+            }),
+            lobby: createLobbyData({
+                members: players,
+                id: 'lobby-1'
+            }),
+            user: createUserData({
+                id: 'contestant-1',
+                userNickname: 'Contestant 1'
+            })
+        })
+
+        expect(screen.getAllByText('Pause').length).toBeGreaterThan(0)
+        expect(screen.getAllByRole('button', { name: 'THE BUTTON' }).every(button => button.hasAttribute('disabled'))).toBe(true)
+
+        playerRender.unmount()
+
+        renderWithProviders(<JeopardyControls />, {
+            game: createGameValue({
+                players,
+                session: pausedSession
+            }),
+            lobby: createLobbyData({
+                members: players,
+                id: 'lobby-1'
+            }),
+            user: createUserData({
+                id: 'master',
+                userNickname: 'Master'
+            })
+        })
+
+        expect(screen.getAllByText('Pause').length).toBeGreaterThan(0)
+        expect(screen.getAllByRole('button', { name: 'Resume' }).every(button => !button.hasAttribute('disabled'))).toBe(true)
+        expect(screen.getAllByRole('button', { name: 'Skip' }).every(button => button.hasAttribute('disabled'))).toBe(true)
+    })
 })

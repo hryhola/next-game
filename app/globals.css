@@ -236,6 +236,24 @@ body[data-hide-tips='true'] .lobby-tip {
     }
 }
 
+@keyframes jeopardy-pause-glow-fade-in {
+    0% {
+        opacity: 0;
+    }
+    100% {
+        opacity: 1;
+    }
+}
+
+@keyframes jeopardy-pause-glow-fade-out {
+    0% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 0;
+    }
+}
+
 .player-highlight {
     position: relative;
     isolation: isolate;
@@ -277,6 +295,18 @@ body[data-hide-tips='true'] .lobby-tip {
 
 .jeopardy-floating-widget {
     animation: jeopardy-widget-float-in 220ms ease-out;
+}
+
+.jeopardy-pause-glow-enter {
+    animation: jeopardy-pause-glow-fade-in 220ms ease-out forwards;
+}
+
+.jeopardy-pause-glow-visible {
+    opacity: 1;
+}
+
+.jeopardy-pause-glow-leave {
+    animation: jeopardy-pause-glow-fade-out 220ms ease-in forwards;
 }
 
 ::-webkit-scrollbar {

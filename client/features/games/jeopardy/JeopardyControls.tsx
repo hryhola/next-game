@@ -14,6 +14,7 @@ const JeopardyControls = (props: Props) => {
     const { t } = useI18n()
 
     const gameControls: React.ReactNode[] = []
+    const isPaused = Boolean(game.session?.isPaused)
 
     if (lobby.myRole !== 'spectator') {
         const isMasterView = game.players.some(p => p.id === user.id && p.playerIsMaster)
@@ -26,6 +27,7 @@ const JeopardyControls = (props: Props) => {
             const isRegularBuzzWindow = questionFrame?.answeringStatus === 'allowed'
             const theButtonEnabled =
                 (isEarlyBuzzWindow || isRegularBuzzWindow) &&
+                !isPaused &&
                 !questionFrame.playersOnCooldown.includes(user.id) &&
                 !questionFrame.playersWhoAnswered.includes(user.id) &&
                 questionFrame.answeringPlayerId !== user.id
@@ -39,7 +41,7 @@ const JeopardyControls = (props: Props) => {
             gameControls.push(
                 <Button
                     variant="secondary"
-                    disabled={!game.session || game.session?.frame.id === 'question-board'}
+                    disabled={!game.session || game.session?.frame.id === 'question-board' || isPaused}
                     onClick={() => actionSender('$SkipVote', null)}
                     key="1"
                 >
@@ -52,6 +54,14 @@ const JeopardyControls = (props: Props) => {
                 </Button>
             )
         }
+    }
+
+    if (isPaused) {
+        gameControls.push(
+            <div className="w-full pt-1 text-center text-sm font-semibold uppercase tracking-[0.28em] text-slate-100/74" key="paused-label">
+                {t('jeopardy.pause')}
+            </div>
+        )
     }
 
     return <LobbyControls buttons={gameControls} />

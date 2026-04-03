@@ -209,6 +209,88 @@ describe('QuestionBoard', () => {
         expect(screen.getByRole('button', { name: 'Skip Theme 2' })).toBeDisabled()
     })
 
+    it('disables question picking and category skipping while the Jeopardy session is paused', () => {
+        const players = [
+            createPlayerData({
+                id: 'master',
+                memberIsCreator: true,
+                memberPosition: 0,
+                playerIsMaster: true,
+                userNickname: 'Master'
+            }),
+            createPlayerData({
+                id: 'contestant-1',
+                memberPosition: 1,
+                userNickname: 'Contestant 1'
+            })
+        ]
+        const ws = createWSHarness()
+        const frame = createBoardFrame()
+
+        const playerView = renderWithProviders(<QuestionBoard {...frame} />, {
+            game: createGameValue({
+                players,
+                session: {
+                    frame,
+                    isPaused: true
+                }
+            }),
+            lobby: createLobbyData({
+                id: 'lobby-1',
+                members: players
+            }),
+            user: createUserData({
+                id: 'contestant-1',
+                userNickname: 'Contestant 1'
+            }),
+            ws
+        })
+
+        expect(screen.getByRole('button', { name: '100' })).toBeDisabled()
+
+        fireEvent.click(screen.getByRole('button', { name: '100' }))
+
+        expect(ws.send).not.toHaveBeenCalledWith(
+            'Game-SendAction',
+            expect.objectContaining({
+                actionName: '$PickQuestion'
+            })
+        )
+
+        playerView.unmount()
+
+        renderWithProviders(<QuestionBoard {...frame} />, {
+            game: createGameValue({
+                players,
+                session: {
+                    frame,
+                    isPaused: true
+                }
+            }),
+            lobby: createLobbyData({
+                id: 'lobby-1',
+                members: players
+            }),
+            user: createUserData({
+                id: 'master',
+                userNickname: 'Master'
+            }),
+            ws
+        })
+
+        expect(screen.getByRole('button', { name: 'Skip Theme 1' })).toBeDisabled()
+        expect(screen.getByRole('button', { name: 'Skip Theme 2' })).toBeDisabled()
+
+        fireEvent.click(screen.getByRole('button', { name: 'Skip Theme 1' }))
+
+        expect(ws.send).not.toHaveBeenCalledWith(
+            'Game-SendAction',
+            expect.objectContaining({
+                actionName: '$SkipCategory'
+            })
+        )
+    })
+
     it('animates cleared themes out before removing them from the board', () => {
         jest.useFakeTimers()
 
