@@ -1,6 +1,6 @@
 import type { GameActionEvent } from './game-actions'
 import type { LobbyBaseInfo } from './lobby'
-import type { LobbyMemberData, PlayerData, TChatMessage, Tip } from './app'
+import type { GameData, LobbyData, LobbyMemberData, PlayerData, TChatMessage, Tip } from './app'
 
 export interface StateEvents {
     'Chat-NewMessage': {
@@ -53,6 +53,11 @@ export interface StateEvents {
     }
     'Lobby-ListUpdated': {
         lobbies: LobbyBaseInfo[]
+    }
+    'Lobby-Snapshot': {
+        game: GameData
+        lobby: LobbyData
+        lobbyId: string
     }
     'Lobby-MemberUpdate': {
         lobbyId: string

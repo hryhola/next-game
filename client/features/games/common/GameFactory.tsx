@@ -39,6 +39,7 @@ export const createGame = <
         const [isLoading, setIsLoading] = React.useState(true)
         const [session, setSession] = React.useState<ThisSessionData | null>(null)
         const [initialData, setInitialData] = React.useState<ThisInitialData>({} as ThisInitialData)
+        const hasHydratedFromLiveSnapshotRef = React.useRef(false)
 
         useEventHandler('Game-Join', data => {
             setPlayers(ps => [...ps.filter(p => p.id !== data.player.id), data.player as ThisPlayerData])
@@ -59,6 +60,35 @@ export const createGame = <
                         : player
                 )
             )
+        })
+
+        useEventHandler('Lobby-MemberUpdate', data => {
+            if (data.lobbyId !== lobby.lobbyId || !data.data.id) {
+                return
+            }
+
+            setPlayers(ps =>
+                ps.map(player =>
+                    player.id === data.data.id
+                        ? {
+                              ...player,
+                              ...data.data
+                          }
+                        : player
+                )
+            )
+        })
+
+        useEventHandler('Lobby-Snapshot', data => {
+            if (data.lobbyId !== lobby.lobbyId) {
+                return
+            }
+
+            hasHydratedFromLiveSnapshotRef.current = true
+            setInitialData(data.game.initialData as ThisInitialData)
+            setPlayers(data.game.players as ThisPlayerData[])
+            setSession((data.game.session ?? null) as ThisSessionData | null)
+            setIsLoading(false)
         })
 
         useEventHandler('Game-SessionStart', ({ lobbyId, session }) => {
@@ -89,6 +119,10 @@ export const createGame = <
 
                 if (!response || !response.success) {
                     return console.error(response ? response.message : postError)
+                }
+
+                if (hasHydratedFromLiveSnapshotRef.current) {
+                    return
                 }
 
                 lobby.setMembers(response.lobby.members)

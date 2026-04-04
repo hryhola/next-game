@@ -19,6 +19,7 @@ const initialPlayer = createPlayerData({
     id: 'contestant-1',
     memberPosition: 1,
     playerScore: 100,
+    userIsOnline: false,
     userNickname: 'Contestant 1'
 })
 
@@ -28,6 +29,7 @@ const [TestGameView, useTestGame] = createGame<PlayerData, { phase: string }, { 
     return (
         <div>
             <div>{`players:${game.players.map(player => `${player.userNickname}:${player.playerScore}`).join('|')}`}</div>
+            <div>{`presence:${game.players.map(player => `${player.userNickname}:${player.userIsOnline ? 'online' : 'offline'}`).join('|')}`}</div>
             <div>{`session:${game.session ? game.session.phase : 'none'}`}</div>
             <div>{`initial:${game.initialData.seed}`}</div>
         </div>
@@ -77,10 +79,18 @@ describe('createGame', () => {
             expect(screen.getByText('players:Contestant 1:100')).toBeInTheDocument()
         })
 
+        expect(screen.getByText('presence:Contestant 1:offline')).toBeInTheDocument()
         expect(screen.getByText('session:board')).toBeInTheDocument()
         expect(screen.getByText('initial:initial')).toBeInTheDocument()
 
         act(() => {
+            ws.emit('Lobby-MemberUpdate', {
+                data: {
+                    id: 'contestant-1',
+                    userIsOnline: true
+                },
+                lobbyId: 'lobby-1'
+            })
             ws.emit('Game-Join', {
                 player: createPlayerData({
                     id: 'contestant-2',
@@ -110,6 +120,7 @@ describe('createGame', () => {
         })
 
         expect(screen.getByText('players:Contestant 1:300|Contestant 2:50')).toBeInTheDocument()
+        expect(screen.getByText('presence:Contestant 1:online|Contestant 2:online')).toBeInTheDocument()
         expect(screen.getByText('session:question')).toBeInTheDocument()
 
         act(() => {
@@ -124,6 +135,97 @@ describe('createGame', () => {
         })
 
         expect(screen.getByText('players:Contestant 1:300')).toBeInTheDocument()
+        expect(screen.getByText('presence:Contestant 1:online')).toBeInTheDocument()
         expect(screen.getByText('session:none')).toBeInTheDocument()
+    })
+
+    it('prefers the latest live lobby snapshot over an older in-flight lobby-data response', async () => {
+        const ws = createWSHarness()
+        let resolvePost: ((value: unknown) => void) | null = null
+
+        postMock.mockReset()
+        postMock.mockImplementation(
+            () =>
+                new Promise(resolve => {
+                    resolvePost = resolve
+                })
+        )
+
+        renderWithProviders(<TestGameView />, {
+            lobby: createLobbyData({
+                id: 'lobby-1',
+                members: [createPlayerData({ id: 'contestant-1', userNickname: 'Contestant 1', userIsOnline: false })]
+            }),
+            ws
+        })
+
+        act(() => {
+            ws.emit('Lobby-Snapshot', {
+                game: {
+                    initialData: {
+                        seed: 'live'
+                    },
+                    name: 'Jeopardy',
+                    players: [
+                        createPlayerData({
+                            id: 'contestant-1',
+                            memberPosition: 1,
+                            playerScore: 125,
+                            userIsOnline: true,
+                            userNickname: 'Contestant 1'
+                        })
+                    ],
+                    session: {
+                        phase: 'live-board'
+                    }
+                },
+                lobby: createLobbyData({
+                    id: 'lobby-1',
+                    members: [createPlayerData({ id: 'contestant-1', userNickname: 'Contestant 1', userIsOnline: true })]
+                }),
+                lobbyId: 'lobby-1'
+            })
+        })
+
+        expect(screen.getByText('players:Contestant 1:125')).toBeInTheDocument()
+        expect(screen.getByText('presence:Contestant 1:online')).toBeInTheDocument()
+        expect(screen.getByText('session:live-board')).toBeInTheDocument()
+        expect(screen.getByText('initial:live')).toBeInTheDocument()
+
+        await act(async () => {
+            resolvePost?.([
+                {
+                    success: true,
+                    game: {
+                        initialData: {
+                            seed: 'stale'
+                        },
+                        name: 'Jeopardy',
+                        players: [
+                            createPlayerData({
+                                id: 'contestant-1',
+                                memberPosition: 1,
+                                playerScore: 100,
+                                userIsOnline: false,
+                                userNickname: 'Contestant 1'
+                            })
+                        ],
+                        session: {
+                            phase: 'stale-board'
+                        }
+                    },
+                    lobby: createLobbyData({
+                        id: 'lobby-1',
+                        members: [createPlayerData({ id: 'contestant-1', userNickname: 'Contestant 1', userIsOnline: false })]
+                    })
+                },
+                undefined
+            ])
+        })
+
+        expect(screen.getByText('players:Contestant 1:125')).toBeInTheDocument()
+        expect(screen.getByText('presence:Contestant 1:online')).toBeInTheDocument()
+        expect(screen.getByText('session:live-board')).toBeInTheDocument()
+        expect(screen.getByText('initial:live')).toBeInTheDocument()
     })
 })

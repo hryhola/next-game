@@ -79,6 +79,17 @@ export const LobbyFrame: React.FC = () => {
         appendLobbyMessage(createLobbySystemMessage([{ color: data.member.userColor, text: data.member.userNickname }, { text: t('lobby.system.left') }]))
     })
 
+    useEventHandler('Lobby-Snapshot', data => {
+        if (data.lobbyId !== lobbyRef.current.lobbyId) {
+            return
+        }
+
+        lobby.setMembers(data.lobby.members)
+        lobby.setGameName(data.lobby.gameName)
+        lobby.setReadyCheck(Boolean(data.lobby.readyCheck))
+        lobby.setReadyCheckMembers(data.lobby.readyCheck?.members || [])
+    })
+
     useEventHandler('Lobby-MemberUpdate', data => {
         if (data.lobbyId === lobbyRef.current.lobbyId) {
             lobby.setMembers(ms =>

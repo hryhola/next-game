@@ -20,6 +20,7 @@ import {
     toAppChatMessages,
     getWorkerErrorMessage,
     toAppGameActionEvent,
+    toAppGameData,
     toAppLobbyBaseInfo,
     toAppLobbyChatMessages,
     toAppLobbyData,
@@ -380,6 +381,12 @@ export const WSProvider: React.FC<Props> = props => {
 
         workerLobbySnapshotRef.current = snapshot
         workerLobbyIdRef.current = snapshot.lobbyId
+
+        emit('Lobby-Snapshot', {
+            game: toAppGameData(snapshot),
+            lobby: toAppLobbyData(snapshot),
+            lobbyId: snapshot.lobbyId
+        })
 
         if (!previousSnapshot) {
             return

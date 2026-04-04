@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/refs */
 import React, { useEffect, useRef, useState } from 'react'
 import { FinalRoundBoard } from './frames/JeopardyFinalRoundBoard'
 import { FinalScore } from './frames/JeopardyFinalScore'
@@ -19,8 +18,12 @@ export const JeopardyCanvas: React.FC<JeopardyCanvasProps> = props => {
     const firstShownFrameId = useRef('')
     const firstShownQuestionType = useRef('')
     const firstShownQuestionId = useRef('')
+    const loadedPackUrlRef = useRef<string | null>(null)
+    const loadingPackUrlRef = useRef<string | null>(null)
+    const packLoadRequestRef = useRef(0)
 
     const game = useJeopardy()
+    const packUrl = game.initialData?.pack?.value ?? null
 
     const Resources = useRef<JeopardyMedia>({
         Audio: {},
@@ -29,23 +32,41 @@ export const JeopardyCanvas: React.FC<JeopardyCanvasProps> = props => {
     })
 
     useEffect(() => {
-        if (!game.initialData?.pack) return
+        if (!packUrl || loadedPackUrlRef.current === packUrl || loadingPackUrlRef.current === packUrl) return
+
+        const requestId = ++packLoadRequestRef.current
+        loadingPackUrlRef.current = packUrl
         ;(async () => {
             const startTime = Date.now()
 
             props.setIsPackLoading(true)
+            try {
+                const packArchive = await fetchPack(packUrl)
 
-            const packArchive = await fetchPack(game.initialData.pack.value)
+                const mediaFiles = await getMediaFilesFromPack(packArchive)
 
-            Resources.current = await getMediaFilesFromPack(packArchive)
+                if (packLoadRequestRef.current !== requestId) {
+                    return
+                }
 
-            props.setIsPackLoading(false)
+                Resources.current = mediaFiles
+                loadedPackUrlRef.current = packUrl
 
-            const endTime = Date.now()
+                const endTime = Date.now()
 
-            setPackFetchingTimeMs(endTime - startTime)
+                setPackFetchingTimeMs(endTime - startTime)
+            } catch (error) {
+                console.error(error)
+            } finally {
+                if (packLoadRequestRef.current !== requestId) {
+                    return
+                }
+
+                loadingPackUrlRef.current = null
+                props.setIsPackLoading(false)
+            }
         })()
-    }, [game.initialData])
+    }, [packUrl, props.setIsPackLoading])
 
     if (props.isPackLoading || !game.session) {
         return <></>
