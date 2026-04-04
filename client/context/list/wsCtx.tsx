@@ -32,6 +32,7 @@ import { useI18n } from './settingsCtx'
 const CLIENT_REQUEST_ERROR_EVENT = 'Client-RequestError'
 
 const userFacingRequestContexts = [
+    'Auth-Register',
     'Chat-Send',
     'Game-SendAction',
     'Game-Start',
@@ -80,6 +81,10 @@ const clientRequestErrorMeta: Record<ClientRequestErrorContext, ClientRequestErr
     },
     Unknown: {
         fallbackMessageKey: 'ws.error.fallback.unknown',
+        titleKey: 'ws.error.requestFailed'
+    },
+    'Auth-Register': {
+        fallbackMessageKey: 'errors.registrationFailed',
         titleKey: 'ws.error.requestFailed'
     }
 }
