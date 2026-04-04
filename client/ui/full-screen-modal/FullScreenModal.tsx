@@ -11,11 +11,19 @@ export const FullScreenModal: React.FC<{
     label: string
     transition?: 'left' | 'right' | 'up' | 'down'
     padding?: boolean
+    disableClose?: boolean
 }> = props => {
     const { t } = useI18n()
+    const handleOpenChange = (value: boolean) => {
+        if (!value && props.disableClose) {
+            return
+        }
+
+        props.setIsOpen(value)
+    }
 
     return (
-        <Dialog open={props.isOpen} onOpenChange={props.setIsOpen}>
+        <Dialog open={props.isOpen} onOpenChange={handleOpenChange}>
             <DialogContent
                 hideClose
                 title={props.label}
@@ -30,7 +38,13 @@ export const FullScreenModal: React.FC<{
             >
                 <div className={cn('flex items-center justify-between px-6', props.padding ? 'py-6' : 'pt-6 pb-4')}>
                     <h2 className="text-xl font-semibold text-white">{props.label}</h2>
-                    <Button variant="ghost" className="size-12 rounded-full p-0" onClick={() => props.setIsOpen(false)} aria-label={t('common.close')}>
+                    <Button
+                        variant="ghost"
+                        className={cn('size-12 rounded-full p-0', props.disableClose && 'pointer-events-none opacity-40')}
+                        disabled={props.disableClose}
+                        onClick={() => props.setIsOpen(false)}
+                        aria-label={t('common.close')}
+                    >
                         <X className="size-6 text-slate-200" strokeWidth={2.5} />
                     </Button>
                 </div>

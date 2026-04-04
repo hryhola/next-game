@@ -1,8 +1,9 @@
 import React, { useEffect } from 'react'
-import { useLobby, useEventHandler, useWS } from 'client/context/list'
+import { useLobby, useEventHandler, useI18n, useWS } from 'client/context/list'
 import { api } from 'client/network-utils/api'
 import type { GameActionMap, GameActionName, GameActionPayload, TypedGameActionEvent } from 'shared/contracts/game-actions'
 import type { GameName, PlayerData } from 'shared/contracts/app'
+import { LoadingOverlay } from 'client/ui'
 
 export type GameCtxValue = {
     players: PlayerData[]
@@ -32,6 +33,7 @@ export const createGame = <
 
     const GameComponent = () => {
         const lobby = useLobby()
+        const { t } = useI18n()
 
         const [players, setPlayers] = React.useState<ThisPlayerData[]>([])
         const [isLoading, setIsLoading] = React.useState(true)
@@ -109,7 +111,14 @@ export const createGame = <
 
         return (
             <GameCtx.Provider value={game as GameCtxValue}>
-                <GameCtx.Consumer>{() => <Component />}</GameCtx.Consumer>
+                <GameCtx.Consumer>
+                    {() => (
+                        <>
+                            <Component />
+                            <LoadingOverlay isLoading={isLoading} text={t('common.loading')} />
+                        </>
+                    )}
+                </GameCtx.Consumer>
             </GameCtx.Provider>
         )
     }

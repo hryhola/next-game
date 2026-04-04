@@ -19,6 +19,7 @@ type Props = {
 const JoinLobbyShell: React.FC<{ lobby: LobbyData }> = ({ lobby }) => {
     const router = useClientRouter()
     const [isOpen, setIsOpen] = useState(true)
+    const [isJoiningLobby, setIsJoiningLobby] = useState(false)
     const { t } = useI18n()
 
     return (
@@ -34,6 +35,7 @@ const JoinLobbyShell: React.FC<{ lobby: LobbyData }> = ({ lobby }) => {
             </div>
             <FullScreenModal
                 isOpen={isOpen}
+                disableClose={isJoiningLobby}
                 setIsOpen={value => {
                     setIsOpen(value)
 
@@ -44,7 +46,7 @@ const JoinLobbyShell: React.FC<{ lobby: LobbyData }> = ({ lobby }) => {
                 label={t('lobby.joinTitle', { id: lobby.id })}
                 padding
             >
-                <LobbyPreview lobby={lobby} />
+                <LobbyPreview lobby={lobby} onLoadingChange={setIsJoiningLobby} />
             </FullScreenModal>
         </div>
     )

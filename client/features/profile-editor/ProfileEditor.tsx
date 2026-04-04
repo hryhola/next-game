@@ -12,11 +12,13 @@ import { SettingsControls } from '../settings/SettingsControls'
 
 interface Props {
     onUpdated?: () => void
+    onLoadingChange?: (isLoading: boolean) => void
 }
 
 export const ProfileEditor: React.FC<Props> = props => {
     const globalModel = useGlobalModal()
     const { t, translateErrorMessage } = useI18n()
+    const onLoadingChange = props.onLoadingChange
 
     const formRef = useRef<HTMLFormElement | null>(null)
 
@@ -29,6 +31,14 @@ export const ProfileEditor: React.FC<Props> = props => {
 
     const [error, setError] = useState('')
     const [isLoading, setIsLoading] = useState(false)
+
+    React.useEffect(() => {
+        onLoadingChange?.(isLoading)
+
+        return () => {
+            onLoadingChange?.(false)
+        }
+    }, [isLoading, onLoadingChange])
 
     const displayedImage = imageFile
         ? {
@@ -53,13 +63,15 @@ export const ProfileEditor: React.FC<Props> = props => {
 
         setIsLoading(true)
 
-        const [response, postError] = await api.post('profile', data).finally(() => setIsLoading(false))
+        const [response, postError] = await api.post('profile', data)
 
         if (!response) {
+            setIsLoading(false)
             return setError(translateErrorMessage(String(postError)))
         }
 
         if (!response.success) {
+            setIsLoading(false)
             setError(translateErrorMessage(response.message))
 
             return
@@ -71,7 +83,10 @@ export const ProfileEditor: React.FC<Props> = props => {
 
         if (props.onUpdated) {
             props.onUpdated()
+            return
         }
+
+        setIsLoading(false)
     }
 
     const handleLogout = () => {
@@ -99,24 +114,32 @@ export const ProfileEditor: React.FC<Props> = props => {
                         variant="secondary"
                         size="icon"
                         className="relative overflow-hidden"
+                        disabled={isLoading}
                         onClick={() => setNicknameColor(randomColor())}
                         aria-label={t('profile.changeNicknameColor')}
                     >
                         <span className="absolute inset-[6px] rounded-full border border-white/10" style={{ backgroundColor: userColor }} />
                         <Sparkles className="relative z-10 size-4 text-white" />
                     </Button>
-                    <Input placeholder={t('profile.nickname')} name="userNickname" value={nickname} onChange={e => setNickname(e.target.value)} />
+                    <Input
+                        disabled={isLoading}
+                        placeholder={t('profile.nickname')}
+                        name="userNickname"
+                        value={nickname}
+                        onChange={e => setNickname(e.target.value)}
+                    />
                 </div>
                 <div className="lg:hidden">
                     <SettingsControls />
                 </div>
                 <div className="mt-auto flex flex-col gap-3">
-                    <Button className="w-full" size="lg" type="submit">
+                    <Button className="w-full" size="lg" type="submit" disabled={isLoading}>
                         {t('common.update')}
                     </Button>
                     <Button
                         className="w-full"
                         variant="outlineDanger"
+                        disabled={isLoading}
                         onClick={() =>
                             globalModel.confirm({
                                 title: t('profile.logoutTitle'),
@@ -130,7 +153,7 @@ export const ProfileEditor: React.FC<Props> = props => {
                     </Button>
                 </div>
             </form>
-            <LoadingOverlay isLoading={isLoading} />
+            <LoadingOverlay isLoading={isLoading} text={t('profile.saving')} zIndex={60} />
         </>
     )
 }

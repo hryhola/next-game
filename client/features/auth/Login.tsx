@@ -1,8 +1,8 @@
 import { useState, FormEventHandler } from 'react'
 import { setCookie } from 'cookies-next'
-import { useWS, useUser, useRequestHandler, useI18n } from 'client/context/list'
+import { useWS, useUser, useRequestHandler, useI18n, useClientRequestErrorHandler } from 'client/context/list'
 import { useClientRouter } from 'client/route/ClientRouter'
-import { Button, Card, CardContent, CardHeader, Input } from 'client/ui/primitives'
+import { Button, Card, CardContent, CardHeader, Input, Spinner } from 'client/ui/primitives'
 
 const inSeconds90Days = 7776000
 
@@ -14,6 +14,7 @@ export const Login: React.FC = () => {
 
     const [nickname, setNickname] = useState('')
     const [error, setError] = useState('')
+    const [isSubmitting, setIsSubmitting] = useState(false)
 
     useRequestHandler('Auth-Register', data => {
         if (data.success) {
@@ -25,17 +26,29 @@ export const Login: React.FC = () => {
 
             router.setFrame('Home')
         } else {
+            setIsSubmitting(false)
             setError(translateErrorMessage(data.message))
+        }
+    })
+
+    useClientRequestErrorHandler(data => {
+        if (data.context === 'Auth-Register') {
+            setIsSubmitting(false)
         }
     })
 
     const handleSubmit: FormEventHandler<HTMLFormElement> = e => {
         e.preventDefault()
 
+        if (isSubmitting) {
+            return
+        }
+
         const nicknameTrimmed = nickname.trim()
 
         if (nicknameTrimmed.length) {
             setError('')
+            setIsSubmitting(true)
 
             ws.send('Auth-Register', { userNickname: nicknameTrimmed })
         } else {
@@ -56,6 +69,7 @@ export const Login: React.FC = () => {
                         <form className="space-y-4" onSubmit={handleSubmit}>
                             <div className="space-y-2">
                                 <Input
+                                    disabled={isSubmitting}
                                     name="nickname"
                                     placeholder={t('login.nicknamePlaceholder')}
                                     value={nickname}
@@ -63,8 +77,15 @@ export const Login: React.FC = () => {
                                 />
                                 {error ? <p className="text-sm text-rose-300">{translateErrorMessage(error)}</p> : null}
                             </div>
-                            <Button className="w-full" size="lg" variant="primary" type="submit">
-                                {t('login.enter')}
+                            <Button className="w-full" size="lg" variant="primary" type="submit" disabled={isSubmitting}>
+                                {isSubmitting ? (
+                                    <>
+                                        <Spinner className="size-4 text-slate-950" />
+                                        <span>{t('login.entering')}</span>
+                                    </>
+                                ) : (
+                                    t('login.enter')
+                                )}
                             </Button>
                         </form>
                     </CardContent>

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import { useAudio, useEventHandler, useI18n, useLobby, useRequestHandler, useUser, useWS } from 'client/context/list/'
 import { useClientRouter } from 'client/route/ClientRouter'
@@ -7,6 +7,24 @@ import { useToast } from 'client/ui/toast/ToastProvider'
 import { useLobbyMessages } from 'client/features/lobby/useLobbyMessages'
 import { ReadyCheckDialog } from 'client/features/ready-check/ReadyCheckDialog'
 
+const ClickerView = dynamic(() => import('client/features/games/clicker/ClickerView').then(mod => mod.ClickerView), {
+    loading: () => <LoadingOverlay isLoading={true} />
+})
+
+const TicTacToeView = dynamic(() => import('client/features/games/tic-tac-toe/TicTacToeView').then(mod => mod.TicTacToeView), {
+    loading: () => <LoadingOverlay isLoading={true} />
+})
+
+const JeopardyView = dynamic(() => import('client/features/games/jeopardy/JeopardyView').then(mod => mod.JeopardyView), {
+    loading: () => <LoadingOverlay isLoading={true} />
+})
+
+const gameViews = {
+    Clicker: ClickerView,
+    Jeopardy: JeopardyView,
+    TicTacToe: TicTacToeView
+} as const
+
 export const LobbyFrame: React.FC = () => {
     const lobby = useLobby()
     const user = useUser()
@@ -14,9 +32,6 @@ export const LobbyFrame: React.FC = () => {
     const ws = useWS()
     const audio = useAudio()
     const router = useClientRouter()
-
-    const game = useRef<ReturnType<typeof dynamic<any>> | null>(null)
-    const [isLoaded, setIsLoaded] = useState(false)
 
     const { push } = useToast()
     const { t, tMemberRole } = useI18n()
@@ -175,34 +190,6 @@ export const LobbyFrame: React.FC = () => {
     })
 
     useEffect(() => {
-        switch (lobby.gameName) {
-            case 'Clicker': {
-                game.current = dynamic(() => import('client/features/games/clicker/ClickerView').then(mod => mod.ClickerView), {
-                    loading: () => <LoadingOverlay isLoading={true} />
-                })
-                break
-            }
-            case 'TicTacToe': {
-                game.current = dynamic(() => import('client/features/games/tic-tac-toe/TicTacToeView').then(mod => mod.TicTacToeView), {
-                    loading: () => <LoadingOverlay isLoading={true} />
-                })
-                break
-            }
-            case 'Jeopardy': {
-                game.current = dynamic(() => import('client/features/games/jeopardy/JeopardyView').then(mod => mod.JeopardyView), {
-                    loading: () => <LoadingOverlay isLoading={true} />
-                })
-                break
-            }
-            default: {
-                return
-            }
-        }
-
-        setIsLoaded(true)
-    }, [])
-
-    useEffect(() => {
         lobbyRef.current = lobby
     }, [lobby])
 
@@ -228,10 +215,11 @@ export const LobbyFrame: React.FC = () => {
     }, [ws.isConnected])
 
     const readyCheckVoted = typeof lobby.readyCheckMembers.find(m => m.id === user.id)?.ready === 'boolean'
+    const GameView = lobby.gameName ? gameViews[lobby.gameName] : null
 
     return (
         <>
-            {isLoaded && game.current ? <game.current /> : null}
+            {GameView ? <GameView /> : <LoadingOverlay isLoading={true} text={t('common.loading')} />}
             {lobby.readyCheck && (
                 <ReadyCheckDialog
                     members={lobby.readyCheckMembers}

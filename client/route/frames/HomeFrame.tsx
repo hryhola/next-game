@@ -41,6 +41,8 @@ const DesktopWidget: React.FC<{
 export const HomeFrame: React.FC = () => {
     const home = useContext(HomeContext)
     const [backgroundType, setBackgroundType] = useState<AnimationType>('stars')
+    const [isCreateLobbySubmitting, setIsCreateLobbySubmitting] = useState(false)
+    const [isProfileUpdating, setIsProfileUpdating] = useState(false)
     const { count: onlineCount, users: onlineUsers } = useGlobalOnlineUsers()
     const { t } = useI18n()
 
@@ -114,11 +116,25 @@ export const HomeFrame: React.FC = () => {
                     </DesktopWidget>
                 </div>
             </div>
-            <FullScreenModal label={t('home.editProfile')} transition="left" padding isOpen={home.isProfileEditOpen} setIsOpen={home.setIsProfileEditOpen}>
-                <ProfileEditor onUpdated={() => home.setIsProfileEditOpen(false)} />
+            <FullScreenModal
+                label={t('home.editProfile')}
+                transition="left"
+                padding
+                isOpen={home.isProfileEditOpen}
+                setIsOpen={home.setIsProfileEditOpen}
+                disableClose={isProfileUpdating}
+            >
+                <ProfileEditor onLoadingChange={setIsProfileUpdating} onUpdated={() => home.setIsProfileEditOpen(false)} />
             </FullScreenModal>
-            <FullScreenModal label={t('home.createLobbyModal')} transition="up" padding isOpen={home.isCreateLobbyOpen} setIsOpen={home.setIsCreateLobbyOpen}>
-                <LobbyCreator />
+            <FullScreenModal
+                label={t('home.createLobbyModal')}
+                transition="up"
+                padding
+                isOpen={home.isCreateLobbyOpen}
+                setIsOpen={home.setIsCreateLobbyOpen}
+                disableClose={isCreateLobbySubmitting}
+            >
+                <LobbyCreator onLoadingChange={setIsCreateLobbySubmitting} />
             </FullScreenModal>
         </>
     )

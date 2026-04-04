@@ -1,11 +1,10 @@
-import { FormEventHandler, useContext, useState, useRef, useEffect } from 'react'
+import { FormEventHandler, useState, useRef, useEffect } from 'react'
 import { useI18n, useLobby } from 'client/context/list'
 import { useClientRouter } from 'client/route/ClientRouter'
 import { LoadingOverlay } from 'client/ui'
 import { api } from 'client/network-utils/api'
-import { HomeContext } from 'client/context/list/homeCtx'
 import type { GameName, InitialGameDataSchema } from 'shared/contracts/app'
-import { Button, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, VisuallyHidden } from 'client/ui/primitives'
+import { Button, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Spinner, VisuallyHidden } from 'client/ui/primitives'
 import { cn } from 'client/ui/lib/cn'
 import { AlertTriangle, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react'
 
@@ -14,11 +13,11 @@ type JeopardyPackValidationState = {
     reason?: string
 }
 
-export const LobbyCreator: React.FC = () => {
-    const home = useContext(HomeContext)
+export const LobbyCreator: React.FC<{ onLoadingChange?: (isLoading: boolean) => void }> = props => {
     const router = useClientRouter()
     const lobby = useLobby()
     const { t, tFieldLabel, tGameName, translateErrorMessage } = useI18n()
+    const onLoadingChange = props.onLoadingChange
 
     const formRef = useRef<HTMLFormElement | null>(null)
 
@@ -27,6 +26,7 @@ export const LobbyCreator: React.FC = () => {
     const [error, setError] = useState('')
     const [gameName, setGameName] = useState<GameName>('Clicker')
     const [isLoading, setIsLoading] = useState(false)
+    const [isSchemaLoading, setIsSchemaLoading] = useState(true)
     const [isValidatingPack, setIsValidatingPack] = useState(false)
     const [initialDataScheme, setInitialDataScheme] = useState<InitialGameDataSchema>([])
     const [selectedJeopardyPack, setSelectedJeopardyPack] = useState<File | null>(null)
@@ -47,17 +47,24 @@ export const LobbyCreator: React.FC = () => {
     const handleSubmit: FormEventHandler<HTMLFormElement> = async event => {
         event.preventDefault()
 
+        if (isLoading || isValidatingPack || isSchemaLoading) {
+            return
+        }
+
         const data = new FormData(formRef.current!)
 
+        setError('')
         setIsLoading(true)
 
-        const [response, postError] = await api.post('lobby-create', data).finally(() => setIsLoading(false))
+        const [response, postError] = await api.post('lobby-create', data)
 
         if (!response) {
+            setIsLoading(false)
             return setError(translateErrorMessage(String(postError)))
         }
 
         if (!response.success) {
+            setIsLoading(false)
             setError(translateErrorMessage(response.message))
 
             return
@@ -65,9 +72,6 @@ export const LobbyCreator: React.FC = () => {
 
         lobby.setLobbyId(lobbyId)
         lobby.setGameName(gameName)
-
-        home.setIsCreateLobbyOpen(false)
-
         router.setFrame('Lobby')
     }
 
@@ -105,6 +109,10 @@ export const LobbyCreator: React.FC = () => {
         let isCancelled = false
 
         const loadGameSchema = async () => {
+            setError('')
+            setIsSchemaLoading(true)
+            setInitialDataScheme([])
+
             const [response, postError] = await api.post('game-get-schema', { gameName })
 
             if (isCancelled) {
@@ -112,17 +120,20 @@ export const LobbyCreator: React.FC = () => {
             }
 
             if (!response) {
+                setIsSchemaLoading(false)
                 setError(translateErrorMessage(String(postError)))
                 return
             }
 
             if (!response.success) {
+                setIsSchemaLoading(false)
                 setError(translateErrorMessage(response.message))
                 return
             }
 
             setError('')
             setInitialDataScheme(response.initialDataScheme || [])
+            setIsSchemaLoading(false)
         }
 
         void loadGameSchema()
@@ -130,20 +141,35 @@ export const LobbyCreator: React.FC = () => {
         return () => {
             isCancelled = true
         }
-    }, [gameName])
+    }, [gameName, translateErrorMessage])
+
+    useEffect(() => {
+        onLoadingChange?.(isLoading)
+
+        return () => {
+            onLoadingChange?.(false)
+        }
+    }, [isLoading, onLoadingChange])
 
     return (
         <>
-            <form className="flex h-full flex-col gap-4" onSubmit={handleSubmit} ref={formRef}>
+            <form className="flex h-full flex-col gap-4" onSubmit={handleSubmit} ref={formRef} aria-busy={isLoading || isSchemaLoading}>
                 {error ? (
                     <div className="rounded-2xl border border-rose-300/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">{translateErrorMessage(error)}</div>
                 ) : null}
-                <Input required placeholder={t('lobbyCreator.lobbyName')} name="lobbyId" value={lobbyId} onChange={e => setLobbyId(e.target.value)} />
+                <Input
+                    required
+                    disabled={isLoading}
+                    placeholder={t('lobbyCreator.lobbyName')}
+                    name="lobbyId"
+                    value={lobbyId}
+                    onChange={e => setLobbyId(e.target.value)}
+                />
                 <div>
                     <VisuallyHidden asChild>
                         <Label htmlFor="game-type-selector">{t('common.game')}</Label>
                     </VisuallyHidden>
-                    <Select value={gameName} onValueChange={value => handleGameNameChange(value as GameName)}>
+                    <Select value={gameName} onValueChange={value => handleGameNameChange(value as GameName)} disabled={isLoading}>
                         <SelectTrigger id="game-type-selector">
                             <SelectValue placeholder={t('lobbyCreator.selectGame')} />
                         </SelectTrigger>
@@ -156,16 +182,29 @@ export const LobbyCreator: React.FC = () => {
                     <input type="hidden" name="gameName" value={gameName} />
                 </div>
 
+                {isSchemaLoading ? (
+                    <div className="glass-card flex items-center gap-3 px-4 py-3 text-sm text-slate-200">
+                        <Spinner className="size-4 text-violet-200" />
+                        <span>{t('lobbyCreator.loadingSchema')}</span>
+                    </div>
+                ) : null}
+
                 {initialDataScheme.map(field => (
                     <div key={field.name} className="space-y-2">
                         {field.type === 'field' && (
-                            <Input placeholder={tFieldLabel(field.name, field.label)} name={'initialData-' + field.name} required={field.required} />
+                            <Input
+                                disabled={isLoading}
+                                placeholder={tFieldLabel(field.name, field.label)}
+                                name={'initialData-' + field.name}
+                                required={field.required}
+                            />
                         )}
                         {field.type === 'file' && (
                             <div className="space-y-2">
                                 <Label>{tFieldLabel(field.name, field.label)}</Label>
                                 <input
                                     className="glass-input block w-full rounded-2xl px-4 py-3 text-sm"
+                                    disabled={isLoading}
                                     required={field.required}
                                     multiple={false}
                                     accept={field.accept.join(',')}
@@ -270,14 +309,27 @@ export const LobbyCreator: React.FC = () => {
                     </div>
                 ))}
 
-                <Input placeholder={t('common.password')} name="password" value={password} onChange={e => setPassword(e.target.value.split('\\').pop()!)} />
+                <Input
+                    disabled={isLoading}
+                    placeholder={t('common.password')}
+                    name="password"
+                    value={password}
+                    onChange={e => setPassword(e.target.value.split('\\').pop()!)}
+                />
                 <div className="mt-auto pb-2">
-                    <Button className="w-full" type="submit" size="lg" disabled={isLoading || isValidatingPack}>
-                        {t('common.create')}
+                    <Button className="w-full" type="submit" size="lg" disabled={isLoading || isValidatingPack || isSchemaLoading}>
+                        {isLoading ? (
+                            <>
+                                <Spinner className="size-4 text-slate-950" />
+                                <span>{t('lobbyCreator.creating')}</span>
+                            </>
+                        ) : (
+                            t('common.create')
+                        )}
                     </Button>
                 </div>
             </form>
-            <LoadingOverlay isLoading={isLoading} />
+            <LoadingOverlay isLoading={isLoading} text={t('lobbyCreator.creating')} zIndex={60} />
         </>
     )
 }
