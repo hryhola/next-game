@@ -1,7 +1,14 @@
 /** @jest-environment jsdom */
 
 import { fireEvent, screen } from '@testing-library/react'
-import { createGameValue, createLobbyData, createPlayerData, createUserData, renderWithProviders } from 'client/test-utils/renderWithProviders'
+import {
+    createAudioHarness,
+    createGameValue,
+    createLobbyData,
+    createPlayerData,
+    createUserData,
+    renderWithProviders
+} from 'client/test-utils/renderWithProviders'
 import { QuestionContent } from './JeopardyQuestionContent'
 
 const resources = {
@@ -255,6 +262,65 @@ describe('QuestionContent', () => {
         expect(audioCard).toContainElement(screen.getByAltText('Audio question'))
         expect(audioElement).not.toBeNull()
         expect(audioElement).not.toHaveAttribute('controls')
+    })
+
+    it('applies the current lobby volume to media that appears after the clue rerenders', () => {
+        const players = createPlayers()
+        const audio = createAudioHarness({
+            volume: 35
+        })
+        const { rerender } = renderWithProviders(
+            <QuestionContent
+                {...(createQuestionFrame({
+                    content: 'Question text',
+                    questionType: 'simple',
+                    type: 'text'
+                }) as any)}
+                Resources={resources as never}
+                packFetchingTimeMs={0}
+                useMediaTimestamp={false}
+            />,
+            {
+                audio,
+                game: createGameValue({
+                    players,
+                    session: {
+                        frame: createQuestionFrame({
+                            content: 'Question text',
+                            questionType: 'simple',
+                            type: 'text'
+                        }),
+                        internal: {},
+                        isPaused: false
+                    }
+                }),
+                lobby: createLobbyData({
+                    id: 'lobby-1',
+                    members: players
+                }),
+                user: createUserData({
+                    id: 'contestant-1',
+                    userNickname: 'Contestant 1'
+                })
+            }
+        )
+
+        rerender(
+            <QuestionContent
+                {...(createQuestionFrame({
+                    content: '/assets/test-question.mp3',
+                    questionType: 'simple',
+                    type: 'voice'
+                }) as any)}
+                Resources={resources as never}
+                packFetchingTimeMs={0}
+                useMediaTimestamp={false}
+            />
+        )
+
+        const audioElement = screen.getByTestId('jeopardy-audio-card').querySelector('audio') as HTMLAudioElement
+
+        expect(audioElement.volume).toBeCloseTo(0.35)
     })
 
     it('shows no progress bar during clue presentation before buzzing is allowed', () => {

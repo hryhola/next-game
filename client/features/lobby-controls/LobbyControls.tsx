@@ -31,6 +31,14 @@ type ChatPreviewMessage = {
 const controlIconClassName = 'size-6 shrink-0'
 const iconButtonClassName = 'size-12 rounded-full border-0 bg-transparent p-0 shadow-none hover:bg-white/6'
 
+function isEditableTarget(target: EventTarget | null): boolean {
+    if (!(target instanceof HTMLElement)) {
+        return false
+    }
+
+    return target.isContentEditable || Boolean(target.closest('input, textarea, select, [contenteditable="true"], [contenteditable="plaintext-only"]'))
+}
+
 export const LobbyControls: React.FC<LobbyControlsProps> = props => {
     const globalModal = useGlobalModal()
     const lobby = useLobby()
@@ -124,17 +132,21 @@ export const LobbyControls: React.FC<LobbyControlsProps> = props => {
         setIsDesktopVolumeOpen(current => !current)
     }
 
-    const toggleLobbyChat = () => {
+    const toggleLobbyChat = React.useCallback(() => {
         setIsLobbyChatOpen(current => {
-            const next = !current
-
-            if (next) {
-                setIsMobileVolumeOpen(false)
+            if (current) {
+                return false
             }
 
-            return next
+            if (isBottomDockOccupied) {
+                return false
+            }
+
+            setIsMobileVolumeOpen(false)
+
+            return true
         })
-    }
+    }, [isBottomDockOccupied])
 
     const toggleMobileVolume = () => {
         setIsMobileVolumeOpen(current => {
@@ -151,20 +163,32 @@ export const LobbyControls: React.FC<LobbyControlsProps> = props => {
     const chatDockHeight = 'min(24rem, 44vh)'
 
     React.useEffect(() => {
-        if (!isLobbyChatOpen) {
-            return
-        }
-
         const handleKeyDown = (event: KeyboardEvent) => {
             if (event.key === 'Escape') {
                 setIsLobbyChatOpen(false)
+                return
             }
+
+            if (
+                event.repeat ||
+                !event.shiftKey ||
+                event.altKey ||
+                event.ctrlKey ||
+                event.metaKey ||
+                event.key.toLowerCase() !== 'c' ||
+                isEditableTarget(event.target)
+            ) {
+                return
+            }
+
+            event.preventDefault()
+            toggleLobbyChat()
         }
 
         addEventListener('keydown', handleKeyDown)
 
         return () => removeEventListener('keydown', handleKeyDown)
-    }, [isLobbyChatOpen])
+    }, [toggleLobbyChat])
 
     React.useEffect(() => {
         if (!isLobbyChatOpen) {
@@ -299,7 +323,7 @@ export const LobbyControls: React.FC<LobbyControlsProps> = props => {
                     </Button>
 
                     {isDesktopVolumeOpen ? (
-                        <div className="glass-card pointer-events-none w-[18rem] rounded-[1.75rem] p-3">
+                        <div className="glass-card pointer-events-none w-[18rem] rounded-[1rem]! px-4 pt-2 pb-5">
                             <div className="flex items-center justify-between gap-3">
                                 <div>
                                     <div className="text-xs text-slate-300">{audio.volume}%</div>
@@ -486,7 +510,7 @@ export const LobbyControls: React.FC<LobbyControlsProps> = props => {
                 {!isBottomDockOccupied && isLobbyChatOpen ? (
                     <div className="glass-card pointer-events-auto w-full max-w-xl rounded-[2rem] p-3">
                         <div className="flex items-center justify-between gap-3">
-                            <div className="min-w-0">
+                            <div className="min-w-0 ml-4 mt-4">
                                 <div className="text-xs font-semibold uppercase tracking-[0.28em] text-violet-200/60">{t('lobbyControls.lobbyChat')}</div>
                                 <div className="truncate text-sm text-slate-300">{lobby.lobbyId}</div>
                             </div>

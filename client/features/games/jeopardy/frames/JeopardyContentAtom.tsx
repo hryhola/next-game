@@ -1,5 +1,5 @@
-import React, { MutableRefObject, useState } from 'react'
-import { useI18n } from 'client/context/list'
+import React, { MutableRefObject, useCallback, useEffect, useState } from 'react'
+import { useAudio, useI18n } from 'client/context/list'
 import { Button } from 'client/ui/mui-shim'
 import { Card, CardContent, CardFooter } from 'client/ui/primitives/card'
 import { cn } from 'client/ui/lib/cn'
@@ -123,17 +123,33 @@ function MediaCard(props: {
 
 export const JeopardyContentAtom: React.FC<JeopardyContentAtomProps> = props => {
     const { Resources, content, contentPlacement, isRef, mediaAutoPlay, mediaControls, mediaElementRef, onMediaEnded, type } = props
+    const audio = useAudio()
     const { t } = useI18n()
     const [expanded, setExpanded] = useState(false)
     const [mediaAspectRatio, setMediaAspectRatio] = useState(16 / 9)
     const resolvedContent = resolveJeopardyPackContent(Resources, type, content, isRef)
     const textPresentation = getTextCardPresentation(content)
 
-    const assignMediaElementRef = (element: HTMLAudioElement | HTMLVideoElement | null) => {
-        if (mediaElementRef) {
-            mediaElementRef.current = element
+    const assignMediaElementRef = useCallback(
+        (element: HTMLAudioElement | HTMLVideoElement | null) => {
+            if (element) {
+                element.volume = audio.volume / 100
+            }
+
+            if (mediaElementRef) {
+                mediaElementRef.current = element
+            }
+        },
+        [audio.volume, mediaElementRef]
+    )
+
+    useEffect(() => {
+        if (!mediaElementRef?.current) {
+            return
         }
-    }
+
+        mediaElementRef.current.volume = audio.volume / 100
+    }, [audio.volume, mediaElementRef])
 
     const updateAspectRatio = (width: number, height: number) => {
         if (!width || !height) {
@@ -211,15 +227,13 @@ export const JeopardyContentAtom: React.FC<JeopardyContentAtomProps> = props => 
                     data-testid="jeopardy-audio-card"
                 >
                     <CardContent className="px-4 pb-4 pt-4 sm:px-6 sm:pt-6">
-                        <div className="overflow-hidden rounded-[1.6rem] border border-white/10 bg-slate-950/88 p-4 sm:p-6">
-                            <img
-                                src="/assets/jeopardy/audio.gif"
-                                alt={t('image.alt.audioQuestion')}
-                                className="mx-auto aspect-square w-full max-w-[18rem] object-contain"
-                            />
-                        </div>
+                        <img
+                            src="/assets/jeopardy/audio.gif"
+                            alt={t('image.alt.audioQuestion')}
+                            className="mx-auto mb-2 aspect-square w-full max-w-[18rem] object-contain"
+                        />
                     </CardContent>
-                    <CardFooter className="justify-center border-t border-white/10 px-4 pb-4 pt-3 sm:px-6">
+                    <CardFooter className="justify-center border-t border-white/10 px-4 pb-4 pt-3 sm:px-6 hidden">
                         <audio
                             ref={assignMediaElementRef as React.Ref<HTMLAudioElement>}
                             autoPlay={mediaAutoPlay}

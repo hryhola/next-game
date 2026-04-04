@@ -15,7 +15,7 @@ import {
     TextField,
     Typography
 } from 'client/ui/mui-shim'
-import { useAudio, useI18n, useLobby, useUser, useWS } from 'client/context/list'
+import { useI18n, useLobby, useUser, useWS } from 'client/context/list'
 import { isCloudflareRealtimeEnabled } from 'client/network-utils/realtimeMode'
 import React, { MutableRefObject, useEffect, useRef, useState } from 'react'
 import { useActionSender, useJeopardy, useJeopardyAction } from '../JeopardyView'
@@ -99,7 +99,6 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
     const game = useJeopardy()
     const sendAction = useActionSender()
     const playerRef = useRef<HTMLAudioElement | HTMLVideoElement | null>(null)
-    const audio = useAudio()
     const { t } = useI18n()
     const isWorkerMode = isCloudflareRealtimeEnabled()
     const session = game.session as RealtimeJeopardySessionState | null
@@ -164,20 +163,6 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
             text: answerInputRef.current?.value
         })
     }
-
-    function updatePlayerVolume() {
-        if (!playerRef.current) return
-
-        playerRef.current.volume = audio.volume / 100
-    }
-
-    useEffect(() => {
-        updatePlayerVolume()
-    }, [audio.volume])
-
-    useEffect(() => {
-        updatePlayerVolume()
-    }, [])
 
     useEffect(() => {
         if (!props.useMediaTimestamp || typeof props.elapsedMediaTimeMs !== 'number' || !playerRef.current) {

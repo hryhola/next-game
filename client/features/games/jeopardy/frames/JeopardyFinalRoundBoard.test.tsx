@@ -1,7 +1,14 @@
 /** @jest-environment jsdom */
 
 import { fireEvent, screen } from '@testing-library/react'
-import { createGameValue, createLobbyData, createPlayerData, createUserData, renderWithProviders } from 'client/test-utils/renderWithProviders'
+import {
+    createAudioHarness,
+    createGameValue,
+    createLobbyData,
+    createPlayerData,
+    createUserData,
+    renderWithProviders
+} from 'client/test-utils/renderWithProviders'
 import { FinalRoundBoard } from './JeopardyFinalRoundBoard'
 
 const resources = {
@@ -116,6 +123,95 @@ describe('FinalRoundBoard', () => {
 
         expect(mediaShell).toHaveAttribute('data-expanded', 'true')
         expect(screen.getByRole('button', { name: 'Back to Card' })).toBeInTheDocument()
+    })
+
+    it('autoplays final-round voice atoms at the current lobby volume and reacts to pause and resume actions', () => {
+        const players = createPlayers()
+        const audio = createAudioHarness({
+            volume: 30
+        })
+        const pauseSpy = jest.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => {})
+        const playSpy = jest.spyOn(HTMLMediaElement.prototype, 'play').mockImplementation(async () => undefined)
+        const { ws } = renderWithProviders(
+            <FinalRoundBoard
+                {...(createFinalFrame({
+                    questionAtoms: [
+                        {
+                            content: '/assets/final-question.mp3',
+                            type: 'voice'
+                        }
+                    ],
+                    status: 'answering'
+                }) as any)}
+                Resources={resources as never}
+            />,
+            {
+                audio,
+                game: createGameValue({
+                    players,
+                    session: {
+                        frame: createFinalFrame({
+                            questionAtoms: [
+                                {
+                                    content: '/assets/final-question.mp3',
+                                    type: 'voice'
+                                }
+                            ],
+                            playersThatAnswered: ['contestant-1'],
+                            status: 'answering'
+                        }),
+                        internal: {
+                            finalAnswers: {}
+                        },
+                        isPaused: false
+                    }
+                }),
+                lobby: createLobbyData({
+                    id: 'lobby-1',
+                    members: players
+                }),
+                user: createUserData({
+                    id: 'master',
+                    userNickname: 'Master'
+                })
+            }
+        )
+
+        const audioElement = screen.getByTestId('jeopardy-audio-card').querySelector('audio') as HTMLAudioElement
+
+        expect(audioElement.autoplay).toBe(true)
+        expect(audioElement.volume).toBeCloseTo(0.3)
+
+        ws.emit('Game-SessionAction', {
+            actor: {
+                id: 'game',
+                type: 'game'
+            },
+            lobbyId: 'lobby-1',
+            payload: null,
+            result: {
+                success: true
+            },
+            type: '$Pause'
+        })
+        ws.emit('Game-SessionAction', {
+            actor: {
+                id: 'game',
+                type: 'game'
+            },
+            lobbyId: 'lobby-1',
+            payload: null,
+            result: {
+                success: true
+            },
+            type: '$Resume'
+        })
+
+        expect(pauseSpy).toHaveBeenCalled()
+        expect(playSpy).toHaveBeenCalled()
+
+        pauseSpy.mockRestore()
+        playSpy.mockRestore()
     })
 
     it('shows the current bet value to the eligible contestant during final betting', () => {

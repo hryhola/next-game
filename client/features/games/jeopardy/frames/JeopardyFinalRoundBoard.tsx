@@ -16,7 +16,7 @@ import {
     TextField
 } from 'client/ui/mui-shim'
 import { useI18n, useUser } from 'client/context/list'
-import { useActionSender, useJeopardy } from '../JeopardyView'
+import { useActionSender, useJeopardy, useJeopardyAction } from '../JeopardyView'
 import { JeopardyMedia } from '../utils/jeopardyPackLoading'
 import { useTimedProgress } from '../utils/timedProgress'
 import { JeopardyContentAtom } from './JeopardyContentAtom'
@@ -25,11 +25,24 @@ import type { RealtimeJeopardySessionState, RealtimeJeopardyState } from 'shared
 const FinalQuestion: React.FC<{ type: string; content: string; isRef?: boolean; Resources: MutableRefObject<JeopardyMedia> }> = props => {
     const playerRef = useRef<HTMLAudioElement | HTMLVideoElement | null>(null)
 
+    useJeopardyAction('$Pause', data => {
+        if (!data.result.success) return
+
+        playerRef.current?.pause()
+    })
+
+    useJeopardyAction('$Resume', data => {
+        if (!data.result.success) return
+
+        playerRef.current?.play()
+    })
+
     return (
         <JeopardyContentAtom
             Resources={props.Resources}
             content={props.content}
             isRef={props.isRef}
+            mediaAutoPlay
             mediaControls
             mediaElementRef={playerRef}
             type={(props.type as RealtimeJeopardyState.QuestionContentFrame['type']) || 'text'}
