@@ -14,6 +14,29 @@ type AssetRow = {
     visibility: 'public'
 }
 
+export interface CreateMultipartAssetInput {
+    contentType: string
+    fileName: string
+    kind: string
+    ownerId: string
+    ownerType: AssetOwnerType
+    size: number
+    uploadedByUserId?: string
+    visibility?: 'public'
+}
+
+export interface PreparedMultipartAssetUpload extends CreateMultipartAssetInput {
+    assetId: string
+    bucketKey: string
+    fileName: string
+    uploadId: string
+    visibility: 'public'
+}
+
+export interface CompleteMultipartAssetUploadInput extends PreparedMultipartAssetUpload {
+    uploadedParts: R2UploadedPart[]
+}
+
 function nowIso(): string {
     return new Date().toISOString()
 }
@@ -81,7 +104,11 @@ function toStoredAsset(row: AssetRow, assetBaseUrl: string): StoredAsset {
 }
 
 export class R2AssetStore implements AssetStore {
-    constructor(private readonly db: D1Database, private readonly bucket: R2Bucket, private readonly assetBaseUrl: string) {}
+    constructor(
+        private readonly db: D1Database,
+        private readonly bucket: R2Bucket,
+        private readonly assetBaseUrl: string
+    ) {}
 
     async put(input: CreateAssetInput): Promise<StoredAsset> {
         const assetId = crypto.randomUUID()
@@ -145,6 +172,104 @@ export class R2AssetStore implements AssetStore {
             url: toAssetUrl(this.assetBaseUrl, assetId),
             visibility
         }
+    }
+
+    async createMultipartUpload(input: CreateMultipartAssetInput): Promise<PreparedMultipartAssetUpload> {
+        const assetId = crypto.randomUUID()
+        const fileName = sanitizeFileName(input.fileName)
+        const contentType = input.contentType || 'application/octet-stream'
+        const visibility = input.visibility || 'public'
+        const bucketKey = buildBucketKey(input.ownerType, input.ownerId, input.kind, assetId, fileName, contentType)
+        const upload = await this.bucket.createMultipartUpload(bucketKey, {
+            httpMetadata: {
+                cacheControl: 'public, max-age=31536000, immutable',
+                contentType
+            }
+        })
+
+        return {
+            assetId,
+            bucketKey,
+            contentType,
+            fileName,
+            kind: input.kind,
+            ownerId: input.ownerId,
+            ownerType: input.ownerType,
+            size: input.size,
+            uploadedByUserId: input.uploadedByUserId,
+            uploadId: upload.uploadId,
+            visibility
+        }
+    }
+
+    async uploadMultipartPart(input: {
+        body: ArrayBuffer | ArrayBufferView | Blob | ReadableStream
+        bucketKey: string
+        partNumber: number
+        uploadId: string
+    }): Promise<R2UploadedPart> {
+        return this.bucket.resumeMultipartUpload(input.bucketKey, input.uploadId).uploadPart(input.partNumber, input.body)
+    }
+
+    async completeMultipartUpload(input: CompleteMultipartAssetUploadInput): Promise<StoredAsset> {
+        await this.bucket.resumeMultipartUpload(input.bucketKey, input.uploadId).complete(input.uploadedParts)
+
+        const createdAt = nowIso()
+        const contentType = input.contentType || 'application/octet-stream'
+        const visibility = input.visibility || 'public'
+
+        await this.db
+            .prepare(
+                `
+                    INSERT INTO assets (
+                        id,
+                        owner_type,
+                        owner_id,
+                        kind,
+                        bucket_key,
+                        file_name,
+                        content_type,
+                        size,
+                        visibility,
+                        uploaded_by_user_id,
+                        created_at,
+                        updated_at,
+                        deleted_at
+                    )
+                    VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?11, NULL)
+                `
+            )
+            .bind(
+                input.assetId,
+                input.ownerType,
+                input.ownerId,
+                input.kind,
+                input.bucketKey,
+                input.fileName,
+                contentType,
+                input.size,
+                visibility,
+                input.uploadedByUserId || null,
+                createdAt
+            )
+            .run()
+
+        return {
+            contentType,
+            createdAt,
+            fileName: input.fileName,
+            id: input.assetId,
+            kind: input.kind,
+            ownerId: input.ownerId,
+            ownerType: input.ownerType,
+            size: input.size,
+            url: toAssetUrl(this.assetBaseUrl, input.assetId),
+            visibility
+        }
+    }
+
+    async abortMultipartUpload(bucketKey: string, uploadId: string): Promise<void> {
+        await this.bucket.resumeMultipartUpload(bucketKey, uploadId).abort()
     }
 
     async getPublic(assetId: string): Promise<StoredAsset | null> {

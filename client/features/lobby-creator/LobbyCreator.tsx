@@ -3,7 +3,9 @@ import { useI18n, useLobby } from 'client/context/list'
 import { useClientRouter } from 'client/route/ClientRouter'
 import { LoadingOverlay } from 'client/ui'
 import { api } from 'client/network-utils/api'
+import { validateJeopardyPackFile } from 'client/network-utils/jeopardyPack'
 import type { GameName, InitialGameDataSchema } from 'shared/contracts/app'
+import type { ParsedJeopardyPack } from 'shared/lib/jeopardyPack'
 import { Button, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Spinner, VisuallyHidden } from 'client/ui/primitives'
 import { cn } from 'client/ui/lib/cn'
 import { AlertTriangle, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react'
@@ -31,9 +33,11 @@ export const LobbyCreator: React.FC<{ onLoadingChange?: (isLoading: boolean) => 
     const [initialDataScheme, setInitialDataScheme] = useState<InitialGameDataSchema>([])
     const [selectedJeopardyPack, setSelectedJeopardyPack] = useState<File | null>(null)
     const [packValidation, setPackValidation] = useState<JeopardyPackValidationState | null>(null)
+    const [parsedJeopardyPack, setParsedJeopardyPack] = useState<ParsedJeopardyPack | null>(null)
     const [isPackValidationDetailsOpen, setIsPackValidationDetailsOpen] = useState(false)
 
     const resetPackValidation = () => {
+        setParsedJeopardyPack(null)
         setPackValidation(null)
         setIsPackValidationDetailsOpen(false)
     }
@@ -55,6 +59,45 @@ export const LobbyCreator: React.FC<{ onLoadingChange?: (isLoading: boolean) => 
 
         setError('')
         setIsLoading(true)
+
+        if (gameName === 'Jeopardy' && selectedJeopardyPack) {
+            try {
+                if (packValidation && !packValidation.compatible) {
+                    setIsLoading(false)
+                    setError(translateErrorMessage(packValidation.reason || t('lobbyCreator.notCompatibleDescription')))
+
+                    return
+                }
+
+                let resolvedParsedPack = parsedJeopardyPack
+
+                if (!resolvedParsedPack) {
+                    const { compatibility, parsedPack } = await validateJeopardyPackFile(selectedJeopardyPack)
+
+                    setParsedJeopardyPack(parsedPack)
+                    setPackValidation({
+                        compatible: compatibility.compatible,
+                        reason: compatibility.compatible ? undefined : compatibility.reason
+                    })
+
+                    if (!compatibility.compatible) {
+                        setIsLoading(false)
+                        setError(translateErrorMessage(compatibility.reason || t('lobbyCreator.notCompatibleDescription')))
+
+                        return
+                    }
+
+                    resolvedParsedPack = parsedPack
+                }
+
+                data.set('jeopardyParsedPack', JSON.stringify(resolvedParsedPack))
+            } catch (error) {
+                setIsLoading(false)
+                setError(translateErrorMessage(error instanceof Error ? error.message : String(error)))
+
+                return
+            }
+        }
 
         const [response, postError] = await api.post('lobby-create', data)
 
@@ -80,29 +123,23 @@ export const LobbyCreator: React.FC<{ onLoadingChange?: (isLoading: boolean) => 
             return
         }
 
-        const data = new FormData()
-        data.set('pack', selectedJeopardyPack)
-
         setError('')
         resetPackValidation()
         setIsValidatingPack(true)
 
-        const [response, postError] = await api.post('jeopardy-validate-pack', data).finally(() => setIsValidatingPack(false))
+        try {
+            const { compatibility, parsedPack } = await validateJeopardyPackFile(selectedJeopardyPack)
 
-        if (!response) {
-            setError(translateErrorMessage(String(postError)))
-            return
+            setParsedJeopardyPack(parsedPack)
+            setPackValidation({
+                compatible: compatibility.compatible,
+                reason: compatibility.compatible ? undefined : compatibility.reason
+            })
+        } catch (error) {
+            setError(translateErrorMessage(error instanceof Error ? error.message : String(error)))
+        } finally {
+            setIsValidatingPack(false)
         }
-
-        if (!response.success) {
-            setError(translateErrorMessage(response.message))
-            return
-        }
-
-        setPackValidation({
-            compatible: response.compatible,
-            reason: response.reason
-        })
     }
 
     useEffect(() => {

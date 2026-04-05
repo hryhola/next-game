@@ -2,7 +2,7 @@ import type { AdminLobbyListItem } from '../../shared/contracts/http-api'
 import type { RegisterIdentityRequest, UpdateIdentityProfileRequest } from '../../shared/contracts/identity'
 import type { CreateLobbyRequest } from '../../shared/contracts/realtime-lobby'
 import { matchesBasicAuthHeader } from '../../shared/lib/basicAuth'
-import { R2AssetStore } from './assets/store'
+import { R2AssetStore, type PreparedMultipartAssetUpload } from './assets/store'
 import { destroyIdentityUser, getIdentitySession, listIdentityUsers, registerIdentity, revokeIdentitySession, updateIdentityProfile } from './auth/store'
 import { GlobalPresenceDO } from './durable-objects/GlobalPresenceDO'
 import { LobbyDO } from './durable-objects/LobbyDO'
@@ -88,6 +88,62 @@ function parseAdminLobbyRoute(pathname: string): { lobbyId: string } | null {
     }
 }
 
+type JeopardyPackUploadRoute =
+    | {
+          kind: 'collection'
+      }
+    | {
+          kind: 'item'
+          uploadId: string
+      }
+    | {
+          kind: 'complete'
+          uploadId: string
+      }
+    | {
+          kind: 'part'
+          partNumber: number
+          uploadId: string
+      }
+
+function parseJeopardyPackUploadRoute(pathname: string): JeopardyPackUploadRoute | null {
+    if (pathname === '/jeopardy/packs/uploads' || pathname === '/jeopardy/packs/uploads/') {
+        return {
+            kind: 'collection'
+        }
+    }
+
+    const partMatch = pathname.match(/^\/jeopardy\/packs\/uploads\/([^/]+)\/parts\/(\d+)\/?$/)
+
+    if (partMatch) {
+        return {
+            kind: 'part',
+            partNumber: Number(partMatch[2]),
+            uploadId: decodeURIComponent(partMatch[1])
+        }
+    }
+
+    const completeMatch = pathname.match(/^\/jeopardy\/packs\/uploads\/([^/]+)\/complete\/?$/)
+
+    if (completeMatch) {
+        return {
+            kind: 'complete',
+            uploadId: decodeURIComponent(completeMatch[1])
+        }
+    }
+
+    const itemMatch = pathname.match(/^\/jeopardy\/packs\/uploads\/([^/]+)\/?$/)
+
+    if (itemMatch) {
+        return {
+            kind: 'item',
+            uploadId: decodeURIComponent(itemMatch[1])
+        }
+    }
+
+    return null
+}
+
 type LobbyActionPath = '/join' | '/leave' | '/destroy'
 
 function parseLobbyItemRoute(pathname: string): { lobbyId: string; action: LobbyActionPath } | null {
@@ -108,7 +164,7 @@ function createCorsHeaders(request: Request): Headers {
     const origin = request.headers.get('origin')
 
     headers.set('access-control-allow-origin', origin || '*')
-    headers.set('access-control-allow-methods', 'GET,POST,PATCH,DELETE,OPTIONS')
+    headers.set('access-control-allow-methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS')
     headers.set('access-control-allow-headers', 'authorization,content-type')
     headers.set('access-control-expose-headers', 'content-type,set-cookie')
     headers.set('vary', 'origin')
@@ -261,6 +317,28 @@ function errorResponse(status: number, message: string, code?: string): Response
             code
         },
         { status }
+    )
+}
+
+function isValidPreparedMultipartAssetUpload(value: unknown): value is PreparedMultipartAssetUpload {
+    if (!value || typeof value !== 'object') {
+        return false
+    }
+
+    const candidate = value as Partial<PreparedMultipartAssetUpload>
+
+    return (
+        typeof candidate.assetId === 'string' &&
+        typeof candidate.bucketKey === 'string' &&
+        typeof candidate.contentType === 'string' &&
+        typeof candidate.fileName === 'string' &&
+        typeof candidate.kind === 'string' &&
+        typeof candidate.ownerId === 'string' &&
+        typeof candidate.ownerType === 'string' &&
+        typeof candidate.size === 'number' &&
+        Number.isFinite(candidate.size) &&
+        typeof candidate.uploadId === 'string' &&
+        candidate.visibility === 'public'
     )
 }
 
@@ -722,6 +800,165 @@ const worker: ExportedHandler<RealtimeWorkerEnv> = {
                         reason: error instanceof Error ? error.message : 'Failed to parse Jeopardy pack'
                     })
                 }
+            }
+
+            const jeopardyPackUploadRoute = parseJeopardyPackUploadRoute(url.pathname)
+
+            if (jeopardyPackUploadRoute) {
+                const auth = await requireSession(request, env)
+
+                if (!auth.ok) {
+                    return auth.error
+                }
+
+                const session = (auth as unknown as { session: ResolvedSession }).session
+                const assetStore = createAssetStore(env, request)
+
+                if (jeopardyPackUploadRoute.kind === 'collection') {
+                    if (request.method !== 'POST') {
+                        return methodNotAllowed('POST')
+                    }
+
+                    const body = await parseJsonBody<{
+                        contentType?: string
+                        fileName?: string
+                        lobbyId?: string
+                        size?: number
+                    }>(request)
+                    const lobbyId = typeof body?.lobbyId === 'string' ? body.lobbyId.trim() : ''
+                    const fileName = typeof body?.fileName === 'string' ? body.fileName.trim() : ''
+                    const size = typeof body?.size === 'number' ? body.size : Number.NaN
+
+                    if (!lobbyId || !fileName || !Number.isFinite(size) || size <= 0) {
+                        return errorResponse(400, 'Invalid Jeopardy pack upload payload', 'invalid_payload')
+                    }
+
+                    const upload = await assetStore.createMultipartUpload({
+                        contentType: typeof body?.contentType === 'string' && body.contentType.trim() ? body.contentType.trim() : 'application/octet-stream',
+                        fileName,
+                        kind: 'jeopardy-pack',
+                        ownerId: lobbyId,
+                        ownerType: 'lobby',
+                        size,
+                        uploadedByUserId: session.user.id,
+                        visibility: 'public'
+                    })
+
+                    return json({
+                        ok: true,
+                        upload
+                    })
+                }
+
+                if (jeopardyPackUploadRoute.kind === 'part') {
+                    if (request.method !== 'PUT') {
+                        return methodNotAllowed('PUT')
+                    }
+
+                    const bucketKey = url.searchParams.get('key')?.trim()
+
+                    if (!bucketKey || !Number.isInteger(jeopardyPackUploadRoute.partNumber) || jeopardyPackUploadRoute.partNumber < 1) {
+                        return errorResponse(400, 'Invalid Jeopardy upload part request', 'invalid_payload')
+                    }
+
+                    if (!request.body) {
+                        return errorResponse(400, 'Jeopardy upload part body is required', 'invalid_payload')
+                    }
+
+                    try {
+                        const part = await assetStore.uploadMultipartPart({
+                            body: request.body,
+                            bucketKey,
+                            partNumber: jeopardyPackUploadRoute.partNumber,
+                            uploadId: jeopardyPackUploadRoute.uploadId
+                        })
+
+                        return json({
+                            ok: true,
+                            part: {
+                                etag: part.etag,
+                                partNumber: part.partNumber
+                            }
+                        })
+                    } catch (error) {
+                        return errorResponse(400, error instanceof Error ? error.message : 'Failed to upload Jeopardy pack part', 'multipart_upload_failed')
+                    }
+                }
+
+                if (jeopardyPackUploadRoute.kind === 'complete') {
+                    if (request.method !== 'POST') {
+                        return methodNotAllowed('POST')
+                    }
+
+                    const body = await parseJsonBody<{
+                        upload?: unknown
+                        uploadedParts?: Array<{
+                            etag?: string
+                            partNumber?: number
+                        }>
+                    }>(request)
+
+                    if (!isValidPreparedMultipartAssetUpload(body?.upload)) {
+                        return errorResponse(400, 'Invalid Jeopardy upload completion payload', 'invalid_payload')
+                    }
+
+                    const upload = body.upload
+
+                    if (
+                        upload.kind !== 'jeopardy-pack' ||
+                        upload.ownerType !== 'lobby' ||
+                        upload.uploadId !== jeopardyPackUploadRoute.uploadId ||
+                        (upload.uploadedByUserId && upload.uploadedByUserId !== session.user.id)
+                    ) {
+                        return errorResponse(400, 'Jeopardy upload metadata is not valid', 'invalid_payload')
+                    }
+
+                    const uploadedParts = (body?.uploadedParts || [])
+                        .map(part => ({
+                            etag: typeof part?.etag === 'string' ? part.etag.trim() : '',
+                            partNumber: typeof part?.partNumber === 'number' ? part.partNumber : Number.NaN
+                        }))
+                        .filter(part => part.etag && Number.isInteger(part.partNumber) && part.partNumber > 0)
+                        .sort((left, right) => left.partNumber - right.partNumber) as R2UploadedPart[]
+
+                    if (!uploadedParts.length) {
+                        return errorResponse(400, 'Jeopardy upload completion requires uploaded parts', 'invalid_payload')
+                    }
+
+                    try {
+                        const asset = await assetStore.completeMultipartUpload({
+                            ...upload,
+                            uploadedParts
+                        })
+
+                        return json({
+                            asset,
+                            ok: true
+                        })
+                    } catch (error) {
+                        return errorResponse(400, error instanceof Error ? error.message : 'Failed to finalize Jeopardy pack upload', 'multipart_upload_failed')
+                    }
+                }
+
+                if (request.method !== 'DELETE') {
+                    return methodNotAllowed('DELETE')
+                }
+
+                const bucketKey = url.searchParams.get('key')?.trim()
+
+                if (!bucketKey) {
+                    return errorResponse(400, 'Jeopardy upload key is required', 'invalid_payload')
+                }
+
+                try {
+                    await assetStore.abortMultipartUpload(bucketKey, jeopardyPackUploadRoute.uploadId)
+                } catch (_error) {
+                    // The upload may already be finalized or missing; abort remains best-effort cleanup.
+                }
+
+                return json({
+                    ok: true
+                })
             }
 
             if (url.pathname === '/admin/state') {

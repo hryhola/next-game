@@ -2,6 +2,8 @@ import { Resulted } from 'util/universalTypes'
 import { getCookie } from 'cookies-next'
 import { HTTPEndpointName as EndpointName, HTTPEndpoints as Endpoints } from 'shared/contracts'
 import { gameInitialDataSchemas, supportedGameNames } from 'shared/contracts/app'
+import { validateJeopardyPackCompatibility, type ParsedJeopardyPack } from 'shared/lib/jeopardyPack'
+import { uploadJeopardyPackFile, validateJeopardyPackFile } from './jeopardyPack'
 import { getCloudflareRealtimeApiUrl } from './realtimeMode'
 import { getWorkerErrorMessage, toAppGameData, toAppLobbyData } from './realtimeAdapter'
 
@@ -18,6 +20,32 @@ function createWorkerAuthHeaders(contentType: 'json' | null = 'json'): Headers {
     }
 
     return headers
+}
+
+function readParsedJeopardyPack(formData: FormData): ParsedJeopardyPack | null {
+    const value = formData.get('jeopardyParsedPack')
+
+    if (typeof value !== 'string' || !value.trim()) {
+        return null
+    }
+
+    try {
+        const parsed = JSON.parse(value) as Partial<ParsedJeopardyPack>
+
+        if (
+            !parsed ||
+            typeof parsed.author !== 'string' ||
+            typeof parsed.dateCreated !== 'string' ||
+            typeof parsed.packName !== 'string' ||
+            !parsed.declaration
+        ) {
+            return null
+        }
+
+        return parsed as ParsedJeopardyPack
+    } catch (_error) {
+        return null
+    }
 }
 
 async function handleWorkerApiRequest<E extends EndpointName>(endpoint: E, data: Endpoints[E]['request']): Promise<Resulted<Endpoints[E]['response']>> {
@@ -122,25 +150,77 @@ async function handleWorkerApiRequest<E extends EndpointName>(endpoint: E, data:
                 }
 
                 const response =
-                    gameName === 'Jeopardy' || gameName === 'Clicker'
-                        ? await fetch(getCloudflareRealtimeApiUrl('/lobbies'), {
-                              method: 'POST',
-                              headers: createWorkerAuthHeaders(null),
-                              body: request
-                          })
-                        : await fetch(getCloudflareRealtimeApiUrl('/lobbies'), {
-                              method: 'POST',
-                              headers: createWorkerAuthHeaders(),
-                              body: JSON.stringify({
-                                  game: {
-                                      kind: gameName,
-                                      config: {}
-                                  },
-                                  name: lobbyId,
-                                  password,
-                                  lobbyId: lobbyId
+                    gameName === 'Jeopardy'
+                        ? await (async () => {
+                              const packFile = request.get('initialData-pack')
+
+                              if (!(packFile instanceof File) || !packFile.size || !packFile.name.trim()) {
+                                  return new Response(JSON.stringify({ message: 'Jeopardy pack is required', ok: false }), {
+                                      headers: {
+                                          'content-type': 'application/json'
+                                      },
+                                      status: 400
+                                  })
+                              }
+
+                              const preParsedPack = readParsedJeopardyPack(request)
+                              const parsedPack = preParsedPack || (await validateJeopardyPackFile(packFile)).parsedPack
+                              const compatibility = validateJeopardyPackCompatibility(parsedPack.declaration)
+
+                              if (!compatibility.compatible) {
+                                  return new Response(JSON.stringify({ message: compatibility.reason, ok: false }), {
+                                      headers: {
+                                          'content-type': 'application/json'
+                                      },
+                                      status: 400
+                                  })
+                              }
+
+                              const storedPack = await uploadJeopardyPackFile(packFile, lobbyId)
+
+                              return fetch(getCloudflareRealtimeApiUrl('/lobbies'), {
+                                  method: 'POST',
+                                  headers: createWorkerAuthHeaders(),
+                                  body: JSON.stringify({
+                                      game: {
+                                          kind: 'Jeopardy',
+                                          config: {
+                                              pack: {
+                                                  public: true,
+                                                  value: storedPack.url
+                                              },
+                                              packAssetId: storedPack.id,
+                                              packAuthor: parsedPack.author,
+                                              packDateCreated: parsedPack.dateCreated,
+                                              packDeclaration: parsedPack.declaration,
+                                              packFileName: storedPack.fileName
+                                          }
+                                      },
+                                      lobbyId,
+                                      name: lobbyId,
+                                      password
+                                  })
                               })
-                          })
+                          })()
+                        : gameName === 'Clicker'
+                          ? await fetch(getCloudflareRealtimeApiUrl('/lobbies'), {
+                                method: 'POST',
+                                headers: createWorkerAuthHeaders(null),
+                                body: request
+                            })
+                          : await fetch(getCloudflareRealtimeApiUrl('/lobbies'), {
+                                method: 'POST',
+                                headers: createWorkerAuthHeaders(),
+                                body: JSON.stringify({
+                                    game: {
+                                        kind: gameName,
+                                        config: {}
+                                    },
+                                    name: lobbyId,
+                                    password,
+                                    lobbyId: lobbyId
+                                })
+                            })
 
                 if (!response.ok) {
                     return [
@@ -172,32 +252,38 @@ async function handleWorkerApiRequest<E extends EndpointName>(endpoint: E, data:
                     return [undefined, new Error('Jeopardy pack validation payload must be FormData')]
                 }
 
-                const response = await fetch(getCloudflareRealtimeApiUrl('/jeopardy/packs/validate'), {
-                    method: 'POST',
-                    headers: createWorkerAuthHeaders(null),
-                    body: request
-                })
+                const packFile = request.get('pack')
 
-                if (!response.ok) {
+                if (!(packFile instanceof File) || !packFile.size || !packFile.name.trim()) {
                     return [
                         {
                             success: false,
-                            message: await getWorkerErrorMessage(response, 'Failed to validate Jeopardy pack')
+                            message: 'Jeopardy pack is required'
                         } as Endpoints[E]['response'],
                         undefined
                     ]
                 }
 
-                const body = await response.json()
+                try {
+                    const { compatibility } = await validateJeopardyPackFile(packFile)
 
-                return [
-                    {
-                        success: true,
-                        compatible: Boolean(body.compatible),
-                        reason: typeof body.reason === 'string' && body.reason.trim() ? body.reason : undefined
-                    } as Endpoints[E]['response'],
-                    undefined
-                ]
+                    return [
+                        {
+                            success: true,
+                            compatible: compatibility.compatible,
+                            reason: compatibility.compatible ? undefined : compatibility.reason
+                        } as Endpoints[E]['response'],
+                        undefined
+                    ]
+                } catch (error) {
+                    return [
+                        {
+                            success: false,
+                            message: error instanceof Error ? error.message : 'Failed to validate Jeopardy pack'
+                        } as Endpoints[E]['response'],
+                        undefined
+                    ]
+                }
             }
             case 'lobby-data': {
                 const request = data as Endpoints['lobby-data']['request']
