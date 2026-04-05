@@ -12,6 +12,7 @@ type JeopardyContentAtomProps = {
     Resources: MutableRefObject<JeopardyMedia>
     content: string
     contentPlacement?: RealtimeJeopardyContentPlacement
+    fullscreenCollapseButtonPosition?: 'bottom' | 'top'
     isRef?: boolean
     mediaAutoPlay?: boolean
     mediaControls?: boolean
@@ -82,9 +83,25 @@ function MediaCard(props: {
     collapseLabel: string
     onToggleExpanded: () => void
     expanded: boolean
+    expandedControlsPosition: 'bottom' | 'top'
     fullscreenLabel: string
     mediaCardStyle: React.CSSProperties
 }) {
+    const controls = (
+        <div
+            className={cn(
+                'flex justify-center',
+                props.expanded && props.expandedControlsPosition === 'top' && 'pointer-events-none fixed inset-x-0 top-4 z-[26] px-4'
+            )}
+            data-placement={props.expanded && props.expandedControlsPosition === 'top' ? 'top' : 'bottom'}
+            data-testid="jeopardy-media-controls"
+        >
+            <Button className={cn(props.expanded && props.expandedControlsPosition === 'top' && 'pointer-events-auto')} onClick={props.onToggleExpanded}>
+                {props.expanded ? props.collapseLabel : props.fullscreenLabel}
+            </Button>
+        </div>
+    )
+
     return (
         <div
             className={cn(
@@ -97,6 +114,7 @@ function MediaCard(props: {
             role={props.expanded ? 'dialog' : undefined}
             aria-label={props.expanded ? props.alt : undefined}
         >
+            {props.expanded && props.expandedControlsPosition === 'top' ? controls : null}
             <div
                 className={cn(
                     'flex w-full flex-col items-center',
@@ -113,16 +131,25 @@ function MediaCard(props: {
                 >
                     {props.children}
                 </Card>
-                <div className="flex justify-center">
-                    <Button onClick={props.onToggleExpanded}>{props.expanded ? props.collapseLabel : props.fullscreenLabel}</Button>
-                </div>
+                {!props.expanded || props.expandedControlsPosition === 'bottom' ? controls : null}
             </div>
         </div>
     )
 }
 
 export const JeopardyContentAtom: React.FC<JeopardyContentAtomProps> = props => {
-    const { Resources, content, contentPlacement, isRef, mediaAutoPlay, mediaControls, mediaElementRef, onMediaEnded, type } = props
+    const {
+        Resources,
+        content,
+        contentPlacement,
+        fullscreenCollapseButtonPosition = 'bottom',
+        isRef,
+        mediaAutoPlay,
+        mediaControls,
+        mediaElementRef,
+        onMediaEnded,
+        type
+    } = props
     const audio = useAudio()
     const { t } = useI18n()
     const [expanded, setExpanded] = useState(false)
@@ -150,6 +177,24 @@ export const JeopardyContentAtom: React.FC<JeopardyContentAtomProps> = props => 
 
         mediaElementRef.current.volume = audio.volume / 100
     }, [audio.volume, mediaElementRef])
+
+    useEffect(() => {
+        if (!expanded) {
+            return
+        }
+
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') {
+                setExpanded(false)
+            }
+        }
+
+        window.addEventListener('keydown', handleKeyDown)
+
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown)
+        }
+    }, [expanded])
 
     const updateAspectRatio = (width: number, height: number) => {
         if (!width || !height) {
@@ -183,6 +228,7 @@ export const JeopardyContentAtom: React.FC<JeopardyContentAtomProps> = props => 
                     alt={t('image.alt.questionImage')}
                     collapseLabel={t('jeopardy.collapseMedia')}
                     expanded={expanded}
+                    expandedControlsPosition={fullscreenCollapseButtonPosition}
                     fullscreenLabel={t('jeopardy.fullscreenMedia')}
                     mediaCardStyle={expanded ? expandedMediaCardStyle : collapsedMediaCardStyle}
                     onToggleExpanded={() => setExpanded(current => !current)}
@@ -203,6 +249,7 @@ export const JeopardyContentAtom: React.FC<JeopardyContentAtomProps> = props => 
                     alt={t('image.alt.questionImage')}
                     collapseLabel={t('jeopardy.collapseMedia')}
                     expanded={expanded}
+                    expandedControlsPosition={fullscreenCollapseButtonPosition}
                     fullscreenLabel={t('jeopardy.fullscreenMedia')}
                     mediaCardStyle={expanded ? expandedMediaCardStyle : collapsedMediaCardStyle}
                     onToggleExpanded={() => setExpanded(current => !current)}

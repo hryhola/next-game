@@ -218,6 +218,59 @@ describe('QuestionContent', () => {
         })
     })
 
+    it('moves the fullscreen collapse control to the top when the answer dock is visible and closes on Escape', () => {
+        const players = createPlayers()
+
+        renderWithProviders(
+            <QuestionContent
+                {...(createQuestionFrame({
+                    answeringPlayerId: 'contestant-1',
+                    answeringStatus: 'answering',
+                    content: '/assets/test-question.jpg',
+                    questionType: 'simple',
+                    type: 'image'
+                }) as any)}
+                Resources={resources as never}
+                packFetchingTimeMs={0}
+                useMediaTimestamp={false}
+            />,
+            {
+                game: createGameValue({
+                    players,
+                    session: {
+                        frame: createQuestionFrame({
+                            answeringPlayerId: 'contestant-1',
+                            answeringStatus: 'answering',
+                            content: '/assets/test-question.jpg',
+                            questionType: 'simple',
+                            type: 'image'
+                        }),
+                        internal: {},
+                        isPaused: false
+                    }
+                }),
+                lobby: createLobbyData({
+                    id: 'lobby-1',
+                    members: players
+                }),
+                user: createUserData({
+                    id: 'contestant-1',
+                    userNickname: 'Contestant 1'
+                })
+            }
+        )
+
+        fireEvent.click(screen.getByRole('button', { name: 'Fullscreen' }))
+
+        expect(screen.getByTestId('jeopardy-media-controls')).toHaveAttribute('data-placement', 'top')
+        expect(screen.getByRole('button', { name: 'Back to Card' })).toBeInTheDocument()
+
+        fireEvent.keyDown(window, { key: 'Escape' })
+
+        expect(screen.getByTestId('jeopardy-media-shell')).toHaveAttribute('data-expanded', 'false')
+        expect(screen.queryByRole('dialog', { name: 'Question image' })).not.toBeInTheDocument()
+    })
+
     it('renders audio atoms inside an audio card with the animated indicator', () => {
         const players = createPlayers()
 

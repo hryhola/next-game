@@ -157,6 +157,7 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
     const showInlineVerifyProgressBar = verifyDockVisible && showAnswerVerifyingProgressBar
     const showBottomAnswerProgressBar = showAnswerProgressBar && !showInlineAnswerProgressBar
     const showBottomVerifyProgressBar = showAnswerVerifyingProgressBar && !showInlineVerifyProgressBar
+    const bottomDockVisible = verifyDockVisible || selectionDockVisible || valueDockVisible || hiddenStakeDockVisible || answerDockVisible
 
     const submitAnswer = () => {
         sendAction('$GiveAnswer', {
@@ -248,6 +249,7 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
                         Resources={props.Resources}
                         content={props.content}
                         contentPlacement={props.contentPlacement}
+                        fullscreenCollapseButtonPosition={bottomDockVisible ? 'top' : 'bottom'}
                         isRef={props.isRef}
                         mediaAutoPlay
                         mediaControls={props.type === 'voice'}

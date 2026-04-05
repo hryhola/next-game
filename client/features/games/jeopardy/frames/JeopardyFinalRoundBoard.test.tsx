@@ -125,6 +125,57 @@ describe('FinalRoundBoard', () => {
         expect(screen.getByRole('button', { name: 'Back to Card' })).toBeInTheDocument()
     })
 
+    it('moves the fullscreen collapse control to the top when the final answer dock is visible', () => {
+        const players = createPlayers()
+
+        renderWithProviders(
+            <FinalRoundBoard
+                {...(createFinalFrame({
+                    questionAtoms: [
+                        {
+                            content: '/assets/final-question.jpg',
+                            type: 'image'
+                        }
+                    ],
+                    status: 'answering'
+                }) as any)}
+                Resources={resources as never}
+            />,
+            {
+                game: createGameValue({
+                    players,
+                    session: {
+                        frame: createFinalFrame({
+                            questionAtoms: [
+                                {
+                                    content: '/assets/final-question.jpg',
+                                    type: 'image'
+                                }
+                            ],
+                            status: 'answering'
+                        }),
+                        internal: {
+                            finalAnswers: {}
+                        },
+                        isPaused: false
+                    }
+                }),
+                lobby: createLobbyData({
+                    id: 'lobby-1',
+                    members: players
+                }),
+                user: createUserData({
+                    id: 'contestant-1',
+                    userNickname: 'Contestant 1'
+                })
+            }
+        )
+
+        fireEvent.click(screen.getByRole('button', { name: 'Fullscreen' }))
+
+        expect(screen.getByTestId('jeopardy-media-controls')).toHaveAttribute('data-placement', 'top')
+    })
+
     it('autoplays final-round voice atoms at the current lobby volume and reacts to pause and resume actions', () => {
         const players = createPlayers()
         const audio = createAudioHarness({
@@ -279,6 +330,51 @@ describe('FinalRoundBoard', () => {
 
         expect(screen.getByRole('button', { name: 'Submit Answer' }).closest('.glass-card')?.contains(progressBar)).toBe(true)
         expect(screen.getByRole('button', { name: 'Submit Answer' })).toBeInTheDocument()
+    })
+
+    it('uses a dedicated scroll viewport for tall final question stacks', () => {
+        const players = createPlayers()
+
+        renderWithProviders(
+            <FinalRoundBoard
+                {...(createFinalFrame({
+                    questionAtoms: Array.from({ length: 7 }, (_, index) => ({
+                        content: `Final clue ${index + 1}`,
+                        type: 'text'
+                    })),
+                    status: 'answering'
+                }) as any)}
+                Resources={resources as never}
+            />,
+            {
+                game: createGameValue({
+                    players,
+                    session: {
+                        frame: createFinalFrame({
+                            questionAtoms: Array.from({ length: 7 }, (_, index) => ({
+                                content: `Final clue ${index + 1}`,
+                                type: 'text'
+                            })),
+                            status: 'answering'
+                        }),
+                        internal: {
+                            finalAnswers: {}
+                        },
+                        isPaused: false
+                    }
+                }),
+                lobby: createLobbyData({
+                    id: 'lobby-1',
+                    members: players
+                }),
+                user: createUserData({
+                    id: 'master',
+                    userNickname: 'Master'
+                })
+            }
+        )
+
+        expect(screen.getByTestId('jeopardy-final-round-scroll')).toHaveClass('overflow-y-auto', 'overflow-x-hidden')
     })
 
     it('shows final-answer verification controls to the master with submitted answers', () => {

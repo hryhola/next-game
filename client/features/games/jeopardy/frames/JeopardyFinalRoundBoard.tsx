@@ -20,9 +20,16 @@ import { useActionSender, useJeopardy, useJeopardyAction } from '../JeopardyView
 import { JeopardyMedia } from '../utils/jeopardyPackLoading'
 import { useTimedProgress } from '../utils/timedProgress'
 import { JeopardyContentAtom } from './JeopardyContentAtom'
+import { cn } from 'client/ui/lib/cn'
 import type { RealtimeJeopardySessionState, RealtimeJeopardyState } from 'shared/contracts/jeopardy'
 
-const FinalQuestion: React.FC<{ type: string; content: string; isRef?: boolean; Resources: MutableRefObject<JeopardyMedia> }> = props => {
+const FinalQuestion: React.FC<{
+    type: string
+    content: string
+    isRef?: boolean
+    Resources: MutableRefObject<JeopardyMedia>
+    fullscreenCollapseButtonPosition?: 'bottom' | 'top'
+}> = props => {
     const playerRef = useRef<HTMLAudioElement | HTMLVideoElement | null>(null)
 
     useJeopardyAction('$Pause', data => {
@@ -41,6 +48,7 @@ const FinalQuestion: React.FC<{ type: string; content: string; isRef?: boolean; 
         <JeopardyContentAtom
             Resources={props.Resources}
             content={props.content}
+            fullscreenCollapseButtonPosition={props.fullscreenCollapseButtonPosition}
             isRef={props.isRef}
             mediaAutoPlay
             mediaControls
@@ -140,6 +148,7 @@ export const FinalRoundBoard: React.FC<
             !props.playersThatAnswered.includes(currentPlayer.id)
         )
     const verifyDockVisible = isMasterView && props.status === 'answer-verifying' && Boolean(internal)
+    const bottomDockVisible = bettingDockVisible || answeringDockVisible || verifyDockVisible
     const showInlineAnswerProgressBar = answeringDockVisible && props.status === 'answering' && phaseProgress !== null
     const showInlineVerifyProgressBar = verifyDockVisible && props.status === 'answer-verifying' && phaseProgress !== null
     const showBottomProgressBar =
@@ -155,6 +164,14 @@ export const FinalRoundBoard: React.FC<
         'pointer-events-none fixed inset-x-0 z-40 flex justify-center px-4 bottom-[calc(env(safe-area-inset-bottom,0px)+88px)] md:bottom-6'
     const bottomDockPanelClassName = 'glass-card pointer-events-auto w-full max-w-xl rounded-[2rem] p-3'
     const verifyDockPanelClassName = 'glass-card pointer-events-auto w-full max-w-4xl rounded-[2rem] p-3'
+    const isScrollableQuestionStack = props.status === 'answering' || props.status === 'answer-verifying'
+    const scrollViewportBottomPadding = verifyDockVisible
+        ? 'calc(env(safe-area-inset-bottom, 0px) + 26rem)'
+        : bettingDockVisible || answeringDockVisible
+          ? 'calc(env(safe-area-inset-bottom, 0px) + 14rem)'
+          : showBottomProgressBar
+            ? 'calc(env(safe-area-inset-bottom, 0px) + 3rem)'
+            : 'calc(env(safe-area-inset-bottom, 0px) + 2rem)'
 
     const handleSkip = (id: number) => () => {
         sendAction('$SkipFinalTheme', {
@@ -192,7 +209,13 @@ export const FinalRoundBoard: React.FC<
                 <Grid display="flex" flexDirection="column" spacing={3} container>
                     {props.questionAtoms?.map((q, i) => (
                         <Grid item key={i}>
-                            <FinalQuestion Resources={props.Resources} content={q.content || ''} isRef={q.isRef} type={q.type || 'text'} />
+                            <FinalQuestion
+                                Resources={props.Resources}
+                                content={q.content || ''}
+                                fullscreenCollapseButtonPosition={bottomDockVisible ? 'top' : 'bottom'}
+                                isRef={q.isRef}
+                                type={q.type || 'text'}
+                            />
                         </Grid>
                     ))}
                 </Grid>
@@ -202,18 +225,24 @@ export const FinalRoundBoard: React.FC<
 
     return (
         <>
-            <Grid
-                display="grid"
-                justifyContent="center"
-                alignContent="center"
-                width="100vw"
-                minHeight="calc(var(--fullHeight) - var(--playersHeaderHeight, 0px))"
-                mt="var(--playersHeaderHeight, 0px)"
+            <div
+                className="overflow-y-auto overflow-x-hidden"
+                data-testid="jeopardy-final-round-scroll"
+                style={{
+                    height: 'var(--fullHeight)',
+                    paddingTop: 'var(--playersHeaderHeight, 0px)',
+                    paddingBottom: scrollViewportBottomPadding
+                }}
             >
-                <Grid sx={{ textAlign: 'center' }} item>
-                    {content}
-                </Grid>
-            </Grid>
+                <div
+                    className={cn(
+                        'mx-auto flex w-full max-w-5xl px-4 sm:px-6',
+                        isScrollableQuestionStack ? 'min-h-full items-start justify-center py-6' : 'min-h-full items-center justify-center py-8'
+                    )}
+                >
+                    <div className="w-full text-center">{content}</div>
+                </div>
+            </div>
             {bettingDockVisible && currentPlayer ? (
                 <div className={bottomDockPositionClassName}>
                     <div className={bottomDockPanelClassName}>
