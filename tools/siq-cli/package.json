@@ -1,0 +1,9 @@
+{
+    "name": "@next-game/siq-cli",
+    "private": true,
+    "type": "commonjs",
+    "scripts": {
+        "boilerplate": "ts-node --project tsconfig.json src/index.ts boilerplate",
+        "build": "ts-node --project tsconfig.json src/index.ts build"
+    }
+}

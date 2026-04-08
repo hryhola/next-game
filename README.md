@@ -42,4 +42,14 @@ For local development, `NEXT_PUBLIC_REALTIME_API_ORIGIN` should usually point at
 - `docs/cloudflare-migration-plan.md`
 - `docs/frontend-boundaries.md`
 - `docs/runtime-baseline.md`
+- `tools/siq-cli/README.md`
 - `workers/realtime/README.md`
+
+## SIQ CLI
+
+Use the repo-local SIQ pack tool to scaffold or build Jeopardy packs:
+
+```bash
+yarn siq boilerplate my_pack
+yarn siq build my_pack
+```
