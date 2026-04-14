@@ -123,6 +123,7 @@ export function createEmptyJeopardySession(): StoredJeopardySession {
             currentQuestionFlow: null,
             mediaElapsedTimeMs: 0,
             mediaStartedAt: null,
+            pendingSkipVoteHighlightPlayerIds: [],
             pausedTasks: []
         }
     }
@@ -982,14 +983,6 @@ export class JeopardyLobbyFeature {
                 }
             }
             case '$SkipVote': {
-                if (!isMaster) {
-                    return {
-                        code: 'forbidden',
-                        message: 'Only the Jeopardy master can skip phases',
-                        success: false
-                    }
-                }
-
                 const sessionId = this.getActiveLobbySessionId(state)
 
                 if (!sessionId) {
@@ -997,6 +990,79 @@ export class JeopardyLobbyFeature {
                         code: 'game_not_started',
                         message: 'There is no active Jeopardy session',
                         success: false
+                    }
+                }
+
+                if (!isMaster) {
+                    if (
+                        session.frame.id !== 'question-content' ||
+                        (session.frame.specialPhase !== 'showing-question' && session.frame.specialPhase !== 'showing-answer')
+                    ) {
+                        return {
+                            code: 'forbidden',
+                            message: 'Players can only vote to skip during question atoms',
+                            success: false
+                        }
+                    }
+
+                    if (session.frame.skipVoted.includes(userId)) {
+                        return {
+                            code: 'already_voted',
+                            message: 'You already voted to skip this atom',
+                            success: false
+                        }
+                    }
+
+                    const contestants = this.getContestants(state)
+                    const nextSkipVoted = Array.from(new Set([...session.frame.skipVoted, userId]))
+
+                    if (nextSkipVoted.length < contestants.length) {
+                        this.updateFrame(state, {
+                            ...session.frame,
+                            recentSkipVoters: nextSkipVoted,
+                            skipVoted: nextSkipVoted
+                        })
+
+                        return {
+                            action: this.createSuccessfulGameAction(
+                                {
+                                    id: actor.id,
+                                    type: 'player'
+                                },
+                                '$SkipVote',
+                                null,
+                                {
+                                    mode: 'vote'
+                                }
+                            ),
+                            stateChanged: true,
+                            success: true
+                        }
+                    }
+
+                    session.meta.pendingSkipVoteHighlightPlayerIds = nextSkipVoted
+                    this.updateFrame(state, {
+                        ...session.frame,
+                        recentSkipVoters: nextSkipVoted,
+                        skipVoted: nextSkipVoted
+                    })
+                    await this.cancelQuestionAtomTask(sessionId, state).catch(() => null)
+                    await this.showNextQuestionAtom(state)
+
+                    return {
+                        action: this.createSuccessfulGameAction(
+                            {
+                                id: actor.id,
+                                type: 'player'
+                            },
+                            '$SkipVote',
+                            null,
+                            {
+                                mode: 'vote'
+                            }
+                        ),
+                        stateChanged: true,
+                        success: true
                     }
                 }
 
@@ -1523,13 +1589,15 @@ export class JeopardyLobbyFeature {
                 const playersOnCooldown = this.filterMemberIds(session.frame.playersOnCooldown, contestantIds)
                 const playersThatMadeBet = this.filterMemberIds(session.frame.playersThatMadeBet || [], contestantIds)
                 const playersWhoAnswered = this.filterMemberIds(session.frame.playersWhoAnswered, contestantIds)
-                const skipVoted = this.filterMemberIds(session.frame.skipVoted, playerIds)
+                const recentSkipVoters = this.filterMemberIds(session.frame.recentSkipVoters || [], contestantIds)
+                const skipVoted = this.filterMemberIds(session.frame.skipVoted, contestantIds)
                 const sessionId = this.getActiveLobbySessionId(state)
                 const nextFrameBase = {
                     ...session.frame,
                     playersOnCooldown,
                     playersThatMadeBet,
                     playersWhoAnswered,
+                    recentSkipVoters,
                     selectedPlayerId:
                         session.internal.currentQuestionSelectedPlayerId && contestantIds.has(session.internal.currentQuestionSelectedPlayerId)
                             ? session.internal.currentQuestionSelectedPlayerId
@@ -1584,6 +1652,26 @@ export class JeopardyLobbyFeature {
                     } else {
                         await this.continueQuestionAfterAnswerResolution(state, false)
                     }
+                    return
+                }
+
+                if (
+                    (session.frame.specialPhase === 'showing-question' || session.frame.specialPhase === 'showing-answer') &&
+                    contestantIds.size > 0 &&
+                    skipVoted.length >= contestantIds.size
+                ) {
+                    session.meta.pendingSkipVoteHighlightPlayerIds = skipVoted
+                    this.updateFrame(state, {
+                        ...nextFrameBase,
+                        answeringPlayerId:
+                            session.frame.answeringPlayerId && contestantIds.has(session.frame.answeringPlayerId) ? session.frame.answeringPlayerId : null
+                    })
+
+                    if (sessionId) {
+                        await this.cancelQuestionAtomTask(sessionId, state).catch(() => null)
+                    }
+
+                    await this.showNextQuestionAtom(state)
                     return
                 }
 
@@ -2080,6 +2168,7 @@ export class JeopardyLobbyFeature {
         session.meta.currentQuestionFlow = null
         session.meta.mediaElapsedTimeMs = 0
         session.meta.mediaStartedAt = null
+        session.meta.pendingSkipVoteHighlightPlayerIds = []
         session.meta.pausedTasks = []
         session.frame = {
             id: 'pack-preview',
@@ -2220,6 +2309,7 @@ export class JeopardyLobbyFeature {
             stage: 'before'
         }
         session.meta.answerRequestRemainingMs = null
+        session.meta.pendingSkipVoteHighlightPlayerIds = []
         this.updateInternal(state, {
             answerIsApproved: null,
             correctAnswers: answers[0],
@@ -2303,6 +2393,10 @@ export class JeopardyLobbyFeature {
         const previousPlayersOnCooldown = session.frame.id === 'question-content' ? [...session.frame.playersOnCooldown] : ([] as string[])
         const previousPlayersWhoAnswered = session.frame.id === 'question-content' ? [...session.frame.playersWhoAnswered] : ([] as string[])
         const previousPlayersThatMadeBet = session.frame.id === 'question-content' ? [...(session.frame.playersThatMadeBet || [])] : ([] as string[])
+        const recentSkipVoters = this.filterMemberIds(
+            session.meta.pendingSkipVoteHighlightPlayerIds || [],
+            new Set(this.getContestants(state).map(player => player.id))
+        )
         const type = atom.type
 
         if (beforeMarker) {
@@ -2315,6 +2409,7 @@ export class JeopardyLobbyFeature {
 
         session.meta.mediaElapsedTimeMs = 0
         session.meta.mediaStartedAt = type === 'video' || type === 'voice' ? nowIso() : null
+        session.meta.pendingSkipVoteHighlightPlayerIds = []
 
         this.updateFrame(state, {
             answerRequestTimeLeft: null,
@@ -2337,6 +2432,7 @@ export class JeopardyLobbyFeature {
             questionPrice: this.getCurrentQuestionPrice(session),
             questionTheme: session.meta.currentQuestionFlow?.questionTheme,
             questionType: session.meta.currentQuestionFlow?.questionType,
+            recentSkipVoters,
             selectedPlayerId: session.internal.currentQuestionSelectedPlayerId,
             skipVoted: [],
             specialPhase: beforeMarker ? 'showing-question' : 'showing-answer',
@@ -2402,6 +2498,7 @@ export class JeopardyLobbyFeature {
             questionPrice: flow.currentPrice,
             questionTheme: flow.questionTheme,
             questionType: flow.questionType,
+            recentSkipVoters: [],
             selectedPlayerId: null,
             skipVoted: [],
             specialPhase: 'making-stake',
@@ -2492,6 +2589,7 @@ export class JeopardyLobbyFeature {
             questionPrice: flow.questionType === 'secretPublicPrice' && flow.priceOptions.length === 1 ? flow.priceOptions[0] : flow.currentPrice,
             questionTheme: flow.questionTheme,
             questionType: flow.questionType,
+            recentSkipVoters: [],
             selectedPlayerId: null,
             skipVoted: [],
             specialPhase: 'selecting-player',
@@ -2541,6 +2639,7 @@ export class JeopardyLobbyFeature {
             questionPrice: flow.currentPrice,
             questionTheme: flow.questionTheme,
             questionType: flow.questionType,
+            recentSkipVoters: [],
             selectedPlayerId: session.internal.currentQuestionSelectedPlayerId,
             skipVoted: [],
             specialPhase: 'choosing-price',
@@ -2616,6 +2715,7 @@ export class JeopardyLobbyFeature {
             questionPrice: flow.currentPrice,
             questionTheme: flow.questionTheme,
             questionType: flow.questionType,
+            recentSkipVoters: [],
             selectedPlayerId: null,
             skipVoted: [],
             specialPhase: 'making-hidden-stakes',
@@ -2670,6 +2770,7 @@ export class JeopardyLobbyFeature {
             questionPrice: flow.currentPrice,
             questionTheme: flow.questionTheme,
             questionType: flow.questionType,
+            recentSkipVoters: session.frame.skipVoted,
             selectedPlayerId: session.internal.currentQuestionSelectedPlayerId,
             specialPhase: undefined
         })
@@ -2727,6 +2828,7 @@ export class JeopardyLobbyFeature {
             questionPrice: flow.currentPrice,
             questionTheme: flow.questionTheme,
             questionType: flow.questionType,
+            recentSkipVoters: session.frame.skipVoted,
             specialPhase: undefined
         })
 
@@ -2769,6 +2871,7 @@ export class JeopardyLobbyFeature {
             answerVerifyingStartedAt: null,
             answerVerifyingEndsAt: null,
             answerVerifyingTimeLeft: null,
+            recentSkipVoters: session.frame.skipVoted,
             result: undefined,
             specialPhase: undefined
         })
@@ -2864,6 +2967,7 @@ export class JeopardyLobbyFeature {
             answerVerifyingStartedAt: phaseTiming.startedAt,
             answerVerifyingEndsAt: phaseTiming.endsAt,
             answerVerifyingTimeLeft: phaseTiming.timeLeft,
+            recentSkipVoters: session.frame.skipVoted,
             specialPhase: 'question-verifying'
         })
 

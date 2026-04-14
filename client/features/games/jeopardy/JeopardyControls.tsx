@@ -19,12 +19,16 @@ const JeopardyControls = (props: Props) => {
     if (lobby.myRole !== 'spectator') {
         const isMasterView = game.players.some(p => p.id === user.id && p.playerIsMaster)
         const questionFrame = game.session?.frame.id === 'question-content' ? game.session.frame : null
+        const isQuestionAtomPresentation =
+            questionFrame && (questionFrame.specialPhase === 'showing-question' || questionFrame.specialPhase === 'showing-answer')
 
         if (!isMasterView) {
             const isStandardBuzzerQuestion = questionFrame && (questionFrame.questionType === 'simple' || questionFrame.questionType === 'custom')
             const isEarlyBuzzWindow =
                 isStandardBuzzerQuestion && questionFrame.specialPhase === 'showing-question' && questionFrame.answeringStatus === 'too-early'
             const isRegularBuzzWindow = questionFrame?.answeringStatus === 'allowed'
+            const hasAlreadyVotedToSkip = Boolean(questionFrame?.skipVoted?.includes(user.id))
+            const skipVoteEnabled = Boolean(questionFrame && isQuestionAtomPresentation && !isPaused && !hasAlreadyVotedToSkip)
             const theButtonEnabled =
                 (isEarlyBuzzWindow || isRegularBuzzWindow) &&
                 !isPaused &&
@@ -35,6 +39,12 @@ const JeopardyControls = (props: Props) => {
             gameControls.push(
                 <Button className="w-full" onClick={() => actionSender('$AnswerRequest', null)} disabled={!theButtonEnabled} key="2">
                     {t('jeopardy.theButton')}
+                </Button>
+            )
+
+            gameControls.push(
+                <Button variant="secondary" disabled={!skipVoteEnabled} onClick={() => actionSender('$SkipVote', null)} key="1">
+                    {t('common.skip')}
                 </Button>
             )
         } else {

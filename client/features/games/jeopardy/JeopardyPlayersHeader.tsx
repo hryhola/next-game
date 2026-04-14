@@ -12,7 +12,8 @@ type TemporaryHighlight = {
 const highlightDurations: Record<Exclude<PlayerHighlightTone, 'green'>, number> = {
     blue: 900,
     cyan: 500,
-    red: 900
+    red: 900,
+    white: 1_100
 }
 
 const JeopardyPlayersHeader = () => {
@@ -50,6 +51,12 @@ const JeopardyPlayersHeader = () => {
         }
     })
 
+    useJeopardyAction('$SkipVote', data => {
+        if (data.result.mode === 'vote') {
+            pushTemporaryHighlight(data.actor.id, 'white')
+        }
+    })
+
     useJeopardyAction('$RateAnswer', data => {
         pushTemporaryHighlight(data.result.answeringPlayerId, data.result.rating === 'approved' ? 'blue' : 'red')
     })
@@ -74,6 +81,12 @@ const JeopardyPlayersHeader = () => {
                 toneByPlayerId[game.session.frame.answeringPlayerId] = 'green'
             } else if (game.session.frame.answeringPlayerId) {
                 toneByPlayerId[game.session.frame.answeringPlayerId] = 'cyan'
+            }
+
+            const skipHighlightPlayerIds = game.session.frame.skipVoted.length > 0 ? game.session.frame.skipVoted : (game.session.frame.recentSkipVoters ?? [])
+
+            for (const playerId of skipHighlightPlayerIds) {
+                toneByPlayerId[playerId] = 'white'
             }
         }
 

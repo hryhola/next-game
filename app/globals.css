@@ -347,6 +347,11 @@ body[data-hide-tips='true'] .lobby-tip {
     --player-highlight-shadow: inset 0 0 0 1px rgba(252, 165, 165, 0.28), 0 0 22px rgba(239, 68, 68, 0.22);
 }
 
+.player-highlight-white {
+    --player-highlight-from: rgba(255, 255, 255, 0.24);
+    --player-highlight-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3), 0 0 24px rgba(255, 255, 255, 0.2);
+}
+
 .jeopardy-floating-widget {
     animation: jeopardy-widget-float-in 220ms ease-out;
 }

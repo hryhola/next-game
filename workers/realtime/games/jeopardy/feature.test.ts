@@ -933,6 +933,101 @@ describe('jeopardy flow', () => {
         expect(frame.playersOnCooldown).not.toContain('contestant-1')
     })
 
+    it('requires every contestant to vote before skipping a clue atom and resets votes on the next atom', async () => {
+        const pack = createPackWithQuestions([
+            createScenarioQuestionWithAtoms({
+                atoms: [
+                    {
+                        _text: 'Question 1'
+                    },
+                    {
+                        _text: 'Question 2'
+                    },
+                    {
+                        _attributes: {
+                            type: 'marker'
+                        }
+                    },
+                    {
+                        _text: 'Answer 1'
+                    }
+                ],
+                price: '100'
+            })
+        ])
+        const state = createState(pack, 2)
+        const { feature, scheduler } = createFeatureHarness()
+
+        await advanceToQuestion(feature, state, scheduler, '0-0-0')
+
+        let frame = getQuestionFrame(state)
+
+        expect(frame.content).toBe('Question 1')
+        expect(frame.skipVoted).toEqual([])
+
+        const firstVoteResult = await feature.handleAction(state, 'contestant-1', '$SkipVote', null)
+
+        expect(firstVoteResult.success).toBe(true)
+        expect(firstVoteResult.action).toMatchObject({
+            payload: {
+                actionName: '$SkipVote',
+                actionResult: {
+                    mode: 'vote',
+                    success: true
+                },
+                actor: {
+                    id: 'contestant-1',
+                    type: 'player'
+                }
+            }
+        })
+
+        frame = getQuestionFrame(state)
+        expect(frame.content).toBe('Question 1')
+        expect(frame.skipVoted).toEqual(['contestant-1'])
+
+        const finalVoteResult = await feature.handleAction(state, 'contestant-2', '$SkipVote', null)
+
+        expect(finalVoteResult.success).toBe(true)
+        expect(finalVoteResult.action).toMatchObject({
+            payload: {
+                actionName: '$SkipVote',
+                actionResult: {
+                    mode: 'vote',
+                    success: true
+                },
+                actor: {
+                    id: 'contestant-2',
+                    type: 'player'
+                }
+            }
+        })
+
+        frame = getQuestionFrame(state)
+        expect(frame.content).toBe('Question 2')
+        expect(frame.specialPhase).toBe('showing-question')
+        expect(frame.recentSkipVoters).toEqual(['contestant-1', 'contestant-2'])
+        expect(frame.skipVoted).toEqual([])
+
+        await runScheduledTask(feature, state, scheduler, 'question.atom.complete')
+
+        frame = getQuestionFrame(state)
+        expect(frame.answeringStatus).toBe('allowed')
+        expect(frame.recentSkipVoters).toEqual([])
+    })
+
+    it('does not allow contestants to vote-skip outside clue atom presentation', async () => {
+        const state = createState(createPack(), 2)
+        const { feature, scheduler } = createFeatureHarness()
+
+        await advanceToAnswerRequest(feature, state, scheduler)
+
+        const result = await feature.handleAction(state, 'contestant-1', '$SkipVote', null)
+
+        expect(result.success).toBe(false)
+        expect(result.code).toBe('forbidden')
+    })
+
     it('skips through answer phases without reopening the same timer from the start', async () => {
         const state = createState()
         const { feature, scheduler } = createFeatureHarness()

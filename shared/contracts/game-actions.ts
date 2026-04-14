@@ -190,6 +190,8 @@ export type JeopardyGameActionMap = {
     }
     $SkipVote: {
         payload: null
-        result: SuccessResult
+        result: SuccessResult & {
+            mode?: 'skip' | 'vote'
+        }
     }
 }

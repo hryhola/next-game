@@ -204,6 +204,195 @@ describe('JeopardyPlayersHeader', () => {
         expect(getPlayerContainer('Contestant 2')).toHaveAttribute('data-highlight-tone', 'green')
     })
 
+    it('shows contestants who voted to skip the current atom in white', () => {
+        const players = [
+            createPlayerData({
+                id: 'master',
+                memberIsCreator: true,
+                memberPosition: 0,
+                playerIsMaster: true,
+                userNickname: 'Master'
+            }),
+            createPlayerData({
+                id: 'contestant-1',
+                memberPosition: 1,
+                userNickname: 'Contestant 1'
+            }),
+            createPlayerData({
+                id: 'contestant-2',
+                memberPosition: 2,
+                userNickname: 'Contestant 2'
+            })
+        ]
+
+        renderWithProviders(<JeopardyPlayersHeader />, {
+            game: createGameValue({
+                players,
+                session: {
+                    frame: {
+                        answerGivingEndsAt: null,
+                        answerGivingStartedAt: null,
+                        answerGivingTimeLeft: null,
+                        answerRequestEndsAt: null,
+                        answerRequestStartedAt: null,
+                        answerRequestTimeLeft: null,
+                        answerVerifyingEndsAt: null,
+                        answerVerifyingStartedAt: null,
+                        answerVerifyingTimeLeft: null,
+                        answeringPlayerId: null,
+                        answeringStatus: 'too-early',
+                        content: 'Question',
+                        id: 'question-content',
+                        playersOnCooldown: [],
+                        playersWhoAnswered: [],
+                        questionId: '0-0-0',
+                        skipVoted: ['contestant-2'],
+                        specialPhase: 'showing-question',
+                        type: 'text'
+                    },
+                    isPaused: false
+                }
+            }),
+            lobby: createLobbyData({
+                id: 'lobby-1',
+                members: players
+            }),
+            user: createUserData({
+                id: 'master',
+                userNickname: 'Master'
+            })
+        })
+
+        expect(getPlayerContainer('Contestant 2')).toHaveAttribute('data-highlight-tone', 'white')
+    })
+
+    it('keeps unanimously skipped players highlighted in white on the next atom even after skipVoted resets', () => {
+        const players = [
+            createPlayerData({
+                id: 'master',
+                memberIsCreator: true,
+                memberPosition: 0,
+                playerIsMaster: true,
+                userNickname: 'Master'
+            }),
+            createPlayerData({
+                id: 'contestant-1',
+                memberPosition: 1,
+                userNickname: 'Contestant 1'
+            }),
+            createPlayerData({
+                id: 'contestant-2',
+                memberPosition: 2,
+                userNickname: 'Contestant 2'
+            })
+        ]
+
+        renderWithProviders(<JeopardyPlayersHeader />, {
+            game: createGameValue({
+                players,
+                session: {
+                    frame: {
+                        answerGivingEndsAt: null,
+                        answerGivingStartedAt: null,
+                        answerGivingTimeLeft: null,
+                        answerRequestEndsAt: null,
+                        answerRequestStartedAt: null,
+                        answerRequestTimeLeft: null,
+                        answerVerifyingEndsAt: null,
+                        answerVerifyingStartedAt: null,
+                        answerVerifyingTimeLeft: null,
+                        answeringPlayerId: null,
+                        answeringStatus: 'too-early',
+                        content: 'Next atom',
+                        id: 'question-content',
+                        playersOnCooldown: [],
+                        playersWhoAnswered: [],
+                        questionId: '0-0-0',
+                        recentSkipVoters: ['contestant-1', 'contestant-2'],
+                        skipVoted: [],
+                        specialPhase: 'showing-question',
+                        type: 'text'
+                    },
+                    isPaused: false
+                }
+            }),
+            lobby: createLobbyData({
+                id: 'lobby-1',
+                members: players
+            }),
+            user: createUserData({
+                id: 'master',
+                userNickname: 'Master'
+            })
+        })
+
+        expect(getPlayerContainer('Contestant 1')).toHaveAttribute('data-highlight-tone', 'white')
+        expect(getPlayerContainer('Contestant 2')).toHaveAttribute('data-highlight-tone', 'white')
+    })
+
+    it('keeps the skip-vote white highlight visible during later answering phases until the frame changes', () => {
+        const players = [
+            createPlayerData({
+                id: 'master',
+                memberIsCreator: true,
+                memberPosition: 0,
+                playerIsMaster: true,
+                userNickname: 'Master'
+            }),
+            createPlayerData({
+                id: 'contestant-1',
+                memberPosition: 1,
+                userNickname: 'Contestant 1'
+            }),
+            createPlayerData({
+                id: 'contestant-2',
+                memberPosition: 2,
+                userNickname: 'Contestant 2'
+            })
+        ]
+
+        renderWithProviders(<JeopardyPlayersHeader />, {
+            game: createGameValue({
+                players,
+                session: {
+                    frame: {
+                        answerGivingEndsAt: null,
+                        answerGivingStartedAt: null,
+                        answerGivingTimeLeft: 40,
+                        answerRequestEndsAt: null,
+                        answerRequestStartedAt: null,
+                        answerRequestTimeLeft: null,
+                        answerVerifyingEndsAt: null,
+                        answerVerifyingStartedAt: null,
+                        answerVerifyingTimeLeft: null,
+                        answeringPlayerId: 'contestant-1',
+                        answeringStatus: 'answering',
+                        content: 'Question',
+                        id: 'question-content',
+                        playersOnCooldown: [],
+                        playersWhoAnswered: ['contestant-1'],
+                        questionId: '0-0-0',
+                        skipVoted: ['contestant-2'],
+                        specialPhase: undefined,
+                        type: 'text'
+                    },
+                    isPaused: false
+                }
+            }),
+            lobby: createLobbyData({
+                id: 'lobby-1',
+                members: players
+            }),
+            user: createUserData({
+                id: 'master',
+                userNickname: 'Master'
+            })
+        })
+
+        expect(getPlayerContainer('Contestant 2')).toHaveAttribute('data-highlight-tone', 'white')
+        expect(getPlayerContainer('Contestant 1')).toHaveAttribute('data-highlight-tone', 'green')
+    })
+
     it('briefly flashes the rated contestant blue on approval and red on decline', () => {
         const ws = createWSHarness()
         const players = [

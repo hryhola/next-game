@@ -47,6 +47,7 @@ export interface StoredJeopardySessionMeta {
     currentQuestionFlow: StoredJeopardyQuestionFlow | null
     mediaElapsedTimeMs: number
     mediaStartedAt: string | null
+    pendingSkipVoteHighlightPlayerIds: string[]
     pausedTasks: StoredJeopardyPausedTask[]
 }
 

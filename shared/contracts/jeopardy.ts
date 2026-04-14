@@ -247,6 +247,7 @@ export namespace RealtimeJeopardyState {
         questionPrice?: number | null
         questionTheme?: string | null
         questionType?: RealtimeJeopardyQuestionType
+        recentSkipVoters?: string[]
         result?: 'approved' | 'declined'
         selectedPlayerId?: string | null
         skipVoted: string[]

@@ -6,7 +6,7 @@ import { PlayerMenu } from './PlayerMenu'
 import { Skeleton } from 'client/ui/primitives'
 import { cn } from 'client/ui/lib/cn'
 
-export type PlayerHighlightTone = 'blue' | 'cyan' | 'green' | 'red'
+export type PlayerHighlightTone = 'blue' | 'cyan' | 'green' | 'red' | 'white'
 
 type Props = {
     highlightTone?: PlayerHighlightTone
@@ -45,7 +45,8 @@ export const Player: React.FC<Props> = props => {
                 props.highlightTone === 'blue' && 'player-highlight-blue',
                 props.highlightTone === 'cyan' && 'player-highlight-cyan',
                 props.highlightTone === 'green' && 'player-highlight-green',
-                props.highlightTone === 'red' && 'player-highlight-red'
+                props.highlightTone === 'red' && 'player-highlight-red',
+                props.highlightTone === 'white' && 'player-highlight-white'
             )}
             data-highlight-tone={props.highlightTone}
             style={{ width: sizes.width, maxWidth: sizes.maxWidth }}

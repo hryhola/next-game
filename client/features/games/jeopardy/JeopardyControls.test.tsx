@@ -19,6 +19,8 @@ function createQuestionSession(frameOverrides: Record<string, unknown>) {
         frame: {
             id: 'question-content',
             playersOnCooldown: [],
+            recentSkipVoters: [],
+            skipVoted: [],
             playersWhoAnswered: [],
             answeringPlayerId: null,
             answeringStatus: 'too-early',
@@ -160,6 +162,108 @@ describe('JeopardyControls', () => {
 
         expect(screen.getAllByRole('button', { name: 'Skip' }).every(button => !button.hasAttribute('disabled'))).toBe(true)
         expect(screen.getAllByRole('button', { name: 'Pause' }).every(button => !button.hasAttribute('disabled'))).toBe(true)
+    })
+
+    it('keeps the player skip-vote button mounted and toggles its disabled state by phase', () => {
+        const players = [
+            createPlayerData({
+                id: 'master',
+                memberIsCreator: true,
+                memberPosition: 0,
+                playerIsMaster: true,
+                userNickname: 'Master'
+            }),
+            createPlayerData({
+                id: 'contestant-1',
+                memberPosition: 1,
+                userNickname: 'Contestant 1'
+            })
+        ]
+
+        const atomRender = renderWithProviders(<JeopardyControls />, {
+            game: createGameValue({
+                players,
+                session: createQuestionSession({
+                    specialPhase: 'showing-question'
+                })
+            }),
+            lobby: createLobbyData({
+                members: players,
+                id: 'lobby-1'
+            }),
+            user: createUserData({
+                id: 'contestant-1',
+                userNickname: 'Contestant 1'
+            })
+        })
+
+        expect(screen.getAllByRole('button', { name: 'Skip' }).every(button => !button.hasAttribute('disabled'))).toBe(true)
+
+        atomRender.unmount()
+
+        const votedRender = renderWithProviders(<JeopardyControls />, {
+            game: createGameValue({
+                players,
+                session: createQuestionSession({
+                    skipVoted: ['contestant-1'],
+                    specialPhase: 'showing-answer'
+                })
+            }),
+            lobby: createLobbyData({
+                members: players,
+                id: 'lobby-1'
+            }),
+            user: createUserData({
+                id: 'contestant-1',
+                userNickname: 'Contestant 1'
+            })
+        })
+
+        expect(screen.getAllByRole('button', { name: 'Skip' }).every(button => button.hasAttribute('disabled'))).toBe(true)
+
+        votedRender.unmount()
+
+        const carriedHighlightRender = renderWithProviders(<JeopardyControls />, {
+            game: createGameValue({
+                players,
+                session: createQuestionSession({
+                    recentSkipVoters: ['contestant-1', 'contestant-2'],
+                    specialPhase: 'showing-answer'
+                })
+            }),
+            lobby: createLobbyData({
+                members: players,
+                id: 'lobby-1'
+            }),
+            user: createUserData({
+                id: 'contestant-1',
+                userNickname: 'Contestant 1'
+            })
+        })
+
+        expect(screen.getAllByRole('button', { name: 'Skip' }).every(button => !button.hasAttribute('disabled'))).toBe(true)
+
+        carriedHighlightRender.unmount()
+
+        renderWithProviders(<JeopardyControls />, {
+            game: createGameValue({
+                players,
+                session: createQuestionSession({
+                    answeringStatus: 'allowed',
+                    specialPhase: undefined
+                })
+            }),
+            lobby: createLobbyData({
+                members: players,
+                id: 'lobby-1'
+            }),
+            user: createUserData({
+                id: 'contestant-1',
+                userNickname: 'Contestant 1'
+            })
+        })
+
+        expect(screen.getAllByRole('button', { name: 'Skip' }).every(button => button.hasAttribute('disabled'))).toBe(true)
     })
 
     it('shows a pause label and freezes gameplay controls while the session is paused', () => {
