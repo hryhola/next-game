@@ -24,6 +24,10 @@ type AdminUserLookupRow = {
     name: string
 }
 
+type UserAvatarLookupRow = {
+    userAvatarUrl: string | null
+}
+
 type CreateSessionResult = {
     session: IdentitySession
     sessionToken: string
@@ -291,6 +295,22 @@ export async function listIdentityUsers(db: D1Database): Promise<AdminUserListIt
         lastSeenAt: row.lastSeenAt,
         name: row.name
     }))
+}
+
+export async function listIdentityAvatarUrls(db: D1Database): Promise<string[]> {
+    const result = await db
+        .prepare(
+            `
+                SELECT
+                    avatar_url as userAvatarUrl
+                FROM users
+                WHERE avatar_url IS NOT NULL
+                    AND trim(avatar_url) != ''
+            `
+        )
+        .all<UserAvatarLookupRow>()
+
+    return (result.results || []).map(row => row.userAvatarUrl?.trim() || '').filter(url => Boolean(url))
 }
 
 export async function destroyIdentityUser(db: D1Database, userId: string): Promise<boolean> {

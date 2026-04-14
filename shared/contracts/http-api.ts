@@ -61,6 +61,24 @@ export type AdminLobbyDestroyRequest = {
 
 export type AdminLobbyDestroyResponse = GeneralSuccess | GeneralFailure
 
+export type AdminAssetPurgeRequest = Record<string, never>
+
+export type AdminAssetPurgeSummary = {
+    deletedAssetCount: number
+    deletedBucketObjectCount: number
+    fallbackLobbyCount: number
+    referencedAssetCount: number
+    scannedBucketObjectCount: number
+    scannedLobbyCount: number
+    scannedUserAvatarCount: number
+}
+
+export type AdminAssetPurgeResponse =
+    | GeneralFailure
+    | (GeneralSuccess & {
+          summary: AdminAssetPurgeSummary
+      })
+
 export type LobbyCreateRequest = FormData
 
 export type LobbyCreateResponse =
@@ -113,6 +131,7 @@ export type ProfileResponse =
       })
 
 export type HTTPEndpoints = {
+    'admin-asset-purge': EndpointInfo<AdminAssetPurgeRequest, AdminAssetPurgeResponse>
     'admin-lobby-destroy': EndpointInfo<AdminLobbyDestroyRequest, AdminLobbyDestroyResponse>
     'admin-user-destroy': EndpointInfo<AdminUserDestroyRequest, AdminUserDestroyResponse>
     'game-get-schema': EndpointInfo<GameGetSchemaRequest, GameGetSchemaResponse>

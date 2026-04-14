@@ -51,6 +51,23 @@ function readParsedJeopardyPack(formData: FormData): ParsedJeopardyPack | null {
 async function handleWorkerApiRequest<E extends EndpointName>(endpoint: E, data: Endpoints[E]['request']): Promise<Resulted<Endpoints[E]['response']>> {
     try {
         switch (endpoint) {
+            case 'admin-asset-purge': {
+                const response = await fetch('/api/admin/assets/purge', {
+                    method: 'POST'
+                })
+
+                if (!response.ok) {
+                    return [
+                        {
+                            success: false,
+                            message: await getWorkerErrorMessage(response, 'Failed to purge old files')
+                        } as Endpoints[E]['response'],
+                        undefined
+                    ]
+                }
+
+                return [(await response.json()) as Endpoints[E]['response'], undefined]
+            }
             case 'admin-user-destroy': {
                 const request = data as Endpoints['admin-user-destroy']['request']
                 const response = await fetch(`/api/admin/users/${encodeURIComponent(request.userId)}`, {

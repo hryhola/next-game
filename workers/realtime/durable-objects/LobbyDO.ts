@@ -7,6 +7,7 @@ import type {
     RealtimeLobbyMemberRole
 } from '../../../shared/contracts/realtime-lobby'
 import type { IdentityProfile } from '../../../shared/contracts/identity'
+import { R2AssetStore } from '../assets/store'
 import { decodeHeaderValue } from '../lib/headerEncoding'
 import { json } from '../lib/json'
 import { markLobbyDeleted, upsertLobbyMetadata } from '../lobbies/store'
@@ -804,6 +805,16 @@ export class LobbyDO extends DurableObject<RealtimeWorkerEnv> {
                 return
             }
         })
+
+        // The base URL is unused for delete/list operations in this cleanup-only path.
+        const assetStore = new R2AssetStore(this.env.IDENTITY_DB, this.env.ASSETS_BUCKET, 'https://assets.internal')
+        const lobbyAssets = await assetStore.listActiveByOwner('lobby', lobbyId)
+        const assetDeleteResults = await Promise.allSettled(lobbyAssets.map(asset => assetStore.delete(asset.id)))
+        const failedAssetDeletes = assetDeleteResults.filter(result => result.status === 'rejected')
+
+        if (failedAssetDeletes.length) {
+            console.error(`Failed to delete ${failedAssetDeletes.length} lobby asset(s) for ${lobbyId}`)
+        }
 
         await markLobbyDeleted(this.env.IDENTITY_DB, lobbyId, new Date().toISOString())
         await this.notifyGlobalLobbyListUpdated()

@@ -5,7 +5,7 @@ import { api } from 'client/network-utils/api'
 import { useGlobalModal } from 'client/features/global-modal/GlobalModal'
 import { Button } from 'client/ui/primitives'
 import { useRouter } from 'next/navigation'
-import type { AdminLobbyListItem, AdminUserListItem } from 'shared/contracts/http-api'
+import type { AdminAssetPurgeSummary, AdminLobbyListItem, AdminUserListItem } from 'shared/contracts/http-api'
 
 type Props = {
     data: {
@@ -102,6 +102,23 @@ function renderDestroyList(title: string, items: React.ReactNode[]) {
                         {item}
                     </li>
                 ))}
+            </ul>
+        </div>
+    )
+}
+
+function renderPurgeSummary(summary: AdminAssetPurgeSummary) {
+    return (
+        <div className="space-y-3">
+            <p className="text-sm text-slate-200">Finished scanning realtime references and Cloudflare uploads.</p>
+            <ul className="space-y-2 rounded-2xl border border-white/10 bg-slate-950/40 p-3 text-sm text-slate-100">
+                <li>{`Referenced files kept: ${summary.referencedAssetCount}`}</li>
+                <li>{`User avatars scanned: ${summary.scannedUserAvatarCount}`}</li>
+                <li>{`Active lobbies scanned: ${summary.scannedLobbyCount}`}</li>
+                <li>{`Lobby fallbacks used: ${summary.fallbackLobbyCount}`}</li>
+                <li>{`Uploaded asset records deleted: ${summary.deletedAssetCount}`}</li>
+                <li>{`Raw bucket objects deleted: ${summary.deletedBucketObjectCount}`}</li>
+                <li>{`Bucket objects scanned: ${summary.scannedBucketObjectCount}`}</li>
             </ul>
         </div>
     )
@@ -386,6 +403,35 @@ export const AdminRoute: React.FC<Props> = ({ data }) => {
         })
     }, [destroyLobbiesBatch, globalModal, oldLobbies])
 
+    const purgeOldFiles = React.useCallback(async () => {
+        const actionId = 'assets:purge'
+
+        setPendingActionId(actionId)
+
+        const [response, error] = await api.post('admin-asset-purge', {})
+
+        setPendingActionId(current => (current === actionId ? null : current))
+
+        if (error || !response?.success) {
+            showError(getErrorMessage(error) || getFailureMessage(response) || 'Failed to purge old files')
+            return
+        }
+
+        router.refresh()
+        globalModal.open({
+            title: 'Old files purged',
+            content: renderPurgeSummary(response.summary)
+        })
+    }, [globalModal, router, showError])
+
+    const confirmPurgeOldFiles = React.useCallback(() => {
+        globalModal.confirm({
+            title: 'Purge old files',
+            content: 'Scan active realtime data, keep only files still referenced there, and delete every other uploaded Cloudflare file?',
+            onConfirm: purgeOldFiles
+        })
+    }, [globalModal, purgeOldFiles])
+
     if (!data.isAuthenticated) {
         return (
             <div className="mx-auto flex h-[var(--fullHeight)] max-w-6xl flex-col overflow-hidden px-6 py-10">
@@ -396,6 +442,16 @@ export const AdminRoute: React.FC<Props> = ({ data }) => {
 
     return (
         <div className="mx-auto flex h-[var(--fullHeight)] max-w-7xl flex-col gap-6 overflow-hidden px-6 py-10">
+            <section className="glass-card flex flex-wrap items-start justify-between gap-4 p-6">
+                <div className="space-y-1">
+                    <h1 className="text-2xl font-semibold text-white">Admin</h1>
+                    <p className="text-sm text-slate-300">Realtime maintenance tools and live records.</p>
+                </div>
+                <Button aria-label="Purge old files" disabled={pendingActionId !== null} onClick={confirmPurgeOldFiles} size="sm" variant="outlineDanger">
+                    {pendingActionId === 'assets:purge' ? 'Purging...' : 'Purge Old Files'}
+                </Button>
+            </section>
+
             <DataTableCard
                 actions={
                     <Button

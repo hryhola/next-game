@@ -297,4 +297,46 @@ describe('AdminRoute', () => {
         expect(pageQueries.getByText('Recent Empty')).toBeInTheDocument()
         expect(refreshMock).toHaveBeenCalledTimes(1)
     })
+
+    it('confirms and purges old uploaded files through the admin endpoint', async () => {
+        postMock.mockResolvedValueOnce([
+            {
+                success: true,
+                summary: {
+                    deletedAssetCount: 2,
+                    deletedBucketObjectCount: 3,
+                    fallbackLobbyCount: 1,
+                    referencedAssetCount: 4,
+                    scannedBucketObjectCount: 7,
+                    scannedLobbyCount: 2,
+                    scannedUserAvatarCount: 1
+                }
+            },
+            undefined
+        ])
+
+        render(
+            <AdminRoute
+                data={{
+                    isAuthenticated: true,
+                    lobbies: [],
+                    users: []
+                }}
+            />
+        )
+
+        fireEvent.click(screen.getByRole('button', { name: 'Purge old files' }))
+
+        expect(confirmMock).toHaveBeenCalledTimes(1)
+
+        const confirmOptions = confirmMock.mock.calls[0][0] as { onConfirm: () => void | Promise<void> }
+
+        await act(async () => {
+            await confirmOptions.onConfirm()
+        })
+
+        expect(postMock).toHaveBeenCalledWith('admin-asset-purge', {})
+        expect(openMock).toHaveBeenCalledTimes(1)
+        expect(refreshMock).toHaveBeenCalledTimes(1)
+    })
 })

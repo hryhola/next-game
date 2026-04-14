@@ -1,9 +1,18 @@
-import type { AdminLobbyListItem } from '../../shared/contracts/http-api'
+import type { AdminAssetPurgeSummary, AdminLobbyListItem } from '../../shared/contracts/http-api'
 import type { RegisterIdentityRequest, UpdateIdentityProfileRequest } from '../../shared/contracts/identity'
-import type { CreateLobbyRequest } from '../../shared/contracts/realtime-lobby'
+import type { CreateLobbyRequest, RealtimeLobbySnapshot } from '../../shared/contracts/realtime-lobby'
 import { matchesBasicAuthHeader } from '../../shared/lib/basicAuth'
+import { extractAssetIdFromUrl, getReferencedAssetIdsFromLobbySnapshot } from './assets/references'
 import { R2AssetStore, type PreparedMultipartAssetUpload } from './assets/store'
-import { destroyIdentityUser, getIdentitySession, listIdentityUsers, registerIdentity, revokeIdentitySession, updateIdentityProfile } from './auth/store'
+import {
+    destroyIdentityUser,
+    getIdentitySession,
+    listIdentityAvatarUrls,
+    listIdentityUsers,
+    registerIdentity,
+    revokeIdentitySession,
+    updateIdentityProfile
+} from './auth/store'
 import { GlobalPresenceDO } from './durable-objects/GlobalPresenceDO'
 import { LobbyDO } from './durable-objects/LobbyDO'
 import { parseJeopardyPackArchive, validateJeopardyPackCompatibility } from './jeopardy/pack'
@@ -285,6 +294,143 @@ function readOptionalFormFile(formData: FormData, key: string): File | undefined
 
 function createAssetStore(env: RealtimeWorkerEnv, request: Request): R2AssetStore {
     return new R2AssetStore(env.IDENTITY_DB, env.ASSETS_BUCKET, new URL(request.url).origin)
+}
+
+type AssetMetadataRow = {
+    assetId: string
+    bucketKey: string
+    deletedAt: string | null
+}
+
+async function listAllAssetMetadataRows(db: D1Database): Promise<AssetMetadataRow[]> {
+    const result = await db
+        .prepare(
+            `
+                SELECT
+                    id as assetId,
+                    bucket_key as bucketKey,
+                    deleted_at as deletedAt
+                FROM assets
+            `
+        )
+        .all<AssetMetadataRow>()
+
+    return result.results || []
+}
+
+async function collectReferencedAssetIds(
+    env: RealtimeWorkerEnv,
+    assetStore: R2AssetStore
+): Promise<{
+    fallbackLobbyCount: number
+    referencedAssetIds: Set<string>
+    scannedLobbyCount: number
+    scannedUserAvatarCount: number
+}> {
+    const referencedAssetIds = new Set<string>()
+    const avatarUrls = await listIdentityAvatarUrls(env.IDENTITY_DB)
+
+    avatarUrls.forEach(url => {
+        const assetId = extractAssetIdFromUrl(url)
+
+        if (assetId) {
+            referencedAssetIds.add(assetId)
+        }
+    })
+
+    const lobbies = await listLobbies(env.IDENTITY_DB)
+    let fallbackLobbyCount = 0
+
+    for (const lobby of lobbies) {
+        try {
+            const stateResponse = await getLobbyStub(env, lobby.id).fetch(new Request('https://lobby.internal/state'))
+
+            if (!stateResponse.ok) {
+                throw new Error(`Failed to inspect lobby ${lobby.id}`)
+            }
+
+            const stateBody = (await stateResponse.json().catch(() => null)) as { lobby?: RealtimeLobbySnapshot | null } | null
+
+            if (!stateBody?.lobby) {
+                throw new Error(`Lobby ${lobby.id} returned an invalid state payload`)
+            }
+
+            getReferencedAssetIdsFromLobbySnapshot(stateBody.lobby).forEach(assetId => referencedAssetIds.add(assetId))
+        } catch (_error) {
+            fallbackLobbyCount += 1
+
+            const fallbackAssets = await assetStore.listActiveByOwner('lobby', lobby.id)
+
+            fallbackAssets.forEach(asset => referencedAssetIds.add(asset.id))
+        }
+    }
+
+    return {
+        fallbackLobbyCount,
+        referencedAssetIds,
+        scannedLobbyCount: lobbies.length,
+        scannedUserAvatarCount: avatarUrls.length
+    }
+}
+
+async function purgeUnusedAssets(env: RealtimeWorkerEnv, assetStore: R2AssetStore): Promise<AdminAssetPurgeSummary> {
+    const { fallbackLobbyCount, referencedAssetIds, scannedLobbyCount, scannedUserAvatarCount } = await collectReferencedAssetIds(env, assetStore)
+    const assetRows = await listAllAssetMetadataRows(env.IDENTITY_DB)
+    const activeAssetRows = assetRows.filter(row => !row.deletedAt)
+    const activeAssetRowsById = new Map(activeAssetRows.map(row => [row.assetId, row]))
+    const deletedBucketKeys = new Set<string>()
+    let deletedAssetCount = 0
+
+    for (const row of activeAssetRows) {
+        if (referencedAssetIds.has(row.assetId)) {
+            continue
+        }
+
+        await assetStore.delete(row.assetId)
+        deletedBucketKeys.add(row.bucketKey)
+        deletedAssetCount += 1
+    }
+
+    const keptBucketKeys = new Set<string>()
+
+    referencedAssetIds.forEach(assetId => {
+        const row = activeAssetRowsById.get(assetId)
+
+        if (row) {
+            keptBucketKeys.add(row.bucketKey)
+        }
+    })
+
+    let deletedBucketObjectCount = 0
+    let scannedBucketObjectCount = 0
+    let cursor: string | undefined
+
+    do {
+        const bucketPage = await env.ASSETS_BUCKET.list(cursor ? { cursor } : undefined)
+
+        for (const object of bucketPage.objects) {
+            scannedBucketObjectCount += 1
+
+            if (keptBucketKeys.has(object.key) || deletedBucketKeys.has(object.key)) {
+                continue
+            }
+
+            await env.ASSETS_BUCKET.delete(object.key)
+            deletedBucketObjectCount += 1
+        }
+
+        cursor = bucketPage.truncated ? bucketPage.cursor : undefined
+    } while (cursor)
+
+    return {
+        deletedAssetCount,
+        deletedBucketObjectCount,
+        fallbackLobbyCount,
+        referencedAssetCount: referencedAssetIds.size,
+        scannedBucketObjectCount,
+        scannedLobbyCount,
+        scannedUserAvatarCount
+    }
 }
 
 function toRangeHeader(range: R2Range, size: number): string {
@@ -1009,6 +1155,25 @@ const worker: ExportedHandler<RealtimeWorkerEnv> = {
                     ok: true,
                     lobbies: adminLobbies,
                     users
+                })
+            }
+
+            if (url.pathname === '/admin/assets/purge') {
+                if (request.method !== 'POST') {
+                    return methodNotAllowed('POST')
+                }
+
+                const auth = await requireAdminBasicAuth(request, env)
+
+                if (!auth.ok) {
+                    return auth.error
+                }
+
+                const summary = await purgeUnusedAssets(env, assetStore)
+
+                return json({
+                    ok: true,
+                    summary
                 })
             }
 
