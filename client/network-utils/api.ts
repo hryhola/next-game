@@ -66,7 +66,33 @@ async function handleWorkerApiRequest<E extends EndpointName>(endpoint: E, data:
                     ]
                 }
 
-                return [(await response.json()) as Endpoints[E]['response'], undefined]
+                const body = (await response.json()) as {
+                    ok?: boolean
+                    success?: boolean
+                    summary?: unknown
+                }
+
+                if (body.success === true || body.ok === true) {
+                    return [
+                        {
+                            success: true,
+                            ...(body.summary !== undefined
+                                ? {
+                                      summary: body.summary
+                                  }
+                                : {})
+                        } as Endpoints[E]['response'],
+                        undefined
+                    ]
+                }
+
+                return [
+                    {
+                        success: false,
+                        message: 'Failed to purge old files'
+                    } as Endpoints[E]['response'],
+                    undefined
+                ]
             }
             case 'admin-user-destroy': {
                 const request = data as Endpoints['admin-user-destroy']['request']
