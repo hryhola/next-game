@@ -603,7 +603,15 @@ export function getQuestionById(declaration: JeopardyDeclaration.Pack, id: Realt
 }
 
 export function getNormalizedQuestionById(declaration: JeopardyDeclaration.Pack, id: RealtimeJeopardyQuestionId): NormalizedJeopardyQuestion | null {
-    const question = getQuestionById(declaration, id)
+    const [roundId, themeId, questionId] = id.split('-').map(value => Number(value))
+
+    if (![roundId, themeId, questionId].every(Number.isInteger)) {
+        return null
+    }
+
+    const round = getRounds(declaration)[roundId]
+    const theme = getThemes(round)[themeId]
+    const question = getQuestions(theme)[questionId]
 
     if (!question) {
         return null
@@ -648,7 +656,7 @@ export function getNormalizedQuestionById(declaration: JeopardyDeclaration.Pack,
         priceMultiplier: normalizedType.priceMultiplier,
         priceOptions: extractPriceOptions(question, price),
         questionItems,
-        questionTheme: normalizedType.questionTheme,
+        questionTheme: normalizedType.questionTheme || theme?._attributes?.name || null,
         selectionMode: normalizedType.selectionMode,
         type: normalizedType.type
     }

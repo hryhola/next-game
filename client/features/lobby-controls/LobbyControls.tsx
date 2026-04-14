@@ -3,11 +3,12 @@ import { useAudio, useI18n, useLobby, useUser, useWS } from 'client/context/list
 import { useClientRouter } from 'client/route/ClientRouter'
 import { useGlobalModal } from 'client/features/global-modal/GlobalModal'
 import { useGame } from '../games/common/GameFactory'
+import { SettingsControls } from 'client/features/settings/SettingsControls'
 import { cn } from 'client/ui/lib/cn'
 import { ChatBox } from 'client/ui'
 import { ChatMessageComponent } from 'client/ui/chat/ChatMessage'
 import { Button, Slider } from 'client/ui/primitives'
-import { Check, LogOut, MessageCircle, MoreHorizontal, OctagonX, Volume2, VolumeX, X } from 'lucide-react'
+import { Check, Languages, LogOut, MessageCircle, MoreHorizontal, OctagonX, Volume2, VolumeX, X } from 'lucide-react'
 import type { TChatMessage } from 'shared/contracts/app'
 
 interface LobbyControlsProps {
@@ -50,8 +51,10 @@ export const LobbyControls: React.FC<LobbyControlsProps> = props => {
     const { t } = useI18n()
 
     const [isDesktopMenuOpen, setIsDesktopMenuOpen] = React.useState(false)
+    const [isDesktopSettingsOpen, setIsDesktopSettingsOpen] = React.useState(false)
     const [isDesktopVolumeOpen, setIsDesktopVolumeOpen] = React.useState(false)
     const [isLobbyChatOpen, setIsLobbyChatOpen] = React.useState(false)
+    const [isMobileSettingsOpen, setIsMobileSettingsOpen] = React.useState(false)
     const [isMobileVolumeOpen, setIsMobileVolumeOpen] = React.useState(false)
     const [chatPreviewMessages, setChatPreviewMessages] = React.useState<ChatPreviewMessage[]>([])
 
@@ -59,6 +62,9 @@ export const LobbyControls: React.FC<LobbyControlsProps> = props => {
     const hasInitializedChatMessages = React.useRef(false)
     const seenChatMessageIds = React.useRef<Set<string>>(new Set())
     const previewTimeoutIds = React.useRef<Map<string, { fade: number; remove: number }>>(new Map())
+    const lobbyChatDockRef = React.useRef<HTMLDivElement | null>(null)
+    const mobileSettingsDockRef = React.useRef<HTMLDivElement | null>(null)
+    const mobileVolumeDockRef = React.useRef<HTMLDivElement | null>(null)
     const rightControlsRef = React.useRef<HTMLDivElement | null>(null)
 
     const isReadyCheckButtonVisible = !game.isSessionStarted
@@ -70,6 +76,18 @@ export const LobbyControls: React.FC<LobbyControlsProps> = props => {
         const height = rightControls ? Math.ceil(rightControls.getBoundingClientRect().height) : 0
 
         document.documentElement.style.setProperty('--lobbyControlsRightHeight', `${height}px`)
+    }, [])
+
+    const syncFloatingDockOffset = React.useCallback(() => {
+        const visibleBottomDocks = [lobbyChatDockRef.current, mobileSettingsDockRef.current, mobileVolumeDockRef.current].filter(
+            (element): element is HTMLDivElement => Boolean(element)
+        )
+        const offset = visibleBottomDocks.reduce((maxOffset, element) => {
+            const { top } = element.getBoundingClientRect()
+            return Math.max(maxOffset, Math.max(0, Math.ceil(window.innerHeight - top + 12)))
+        }, 0)
+
+        document.documentElement.style.setProperty('--lobbyFloatingDockOffset', `${offset}px`)
     }, [])
 
     const confirmDestroyLobby = () => {
@@ -129,7 +147,14 @@ export const LobbyControls: React.FC<LobbyControlsProps> = props => {
     const extraButtons = props.buttons || []
 
     const toggleDesktopVolume = () => {
+        setIsDesktopSettingsOpen(false)
         setIsDesktopVolumeOpen(current => !current)
+    }
+
+    const toggleDesktopSettings = () => {
+        setIsDesktopMenuOpen(false)
+        setIsDesktopVolumeOpen(false)
+        setIsDesktopSettingsOpen(current => !current)
     }
 
     const toggleLobbyChat = React.useCallback(() => {
@@ -142,7 +167,9 @@ export const LobbyControls: React.FC<LobbyControlsProps> = props => {
                 return false
             }
 
+            setIsDesktopSettingsOpen(false)
             setIsMobileVolumeOpen(false)
+            setIsMobileSettingsOpen(false)
 
             return true
         })
@@ -154,6 +181,20 @@ export const LobbyControls: React.FC<LobbyControlsProps> = props => {
 
             if (next) {
                 setIsLobbyChatOpen(false)
+                setIsMobileSettingsOpen(false)
+            }
+
+            return next
+        })
+    }
+
+    const toggleMobileSettings = () => {
+        setIsMobileSettingsOpen(current => {
+            const next = !current
+
+            if (next) {
+                setIsLobbyChatOpen(false)
+                setIsMobileVolumeOpen(false)
             }
 
             return next
@@ -287,6 +328,27 @@ export const LobbyControls: React.FC<LobbyControlsProps> = props => {
         }
     }, [syncRightControlsHeight])
 
+    React.useEffect(() => {
+        syncFloatingDockOffset()
+
+        const visibleBottomDocks = [lobbyChatDockRef.current, mobileSettingsDockRef.current, mobileVolumeDockRef.current].filter(
+            (element): element is HTMLDivElement => Boolean(element)
+        )
+        const resizeObserver = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => syncFloatingDockOffset()) : null
+
+        visibleBottomDocks.forEach(element => resizeObserver?.observe(element))
+
+        addEventListener('resize', syncFloatingDockOffset)
+        addEventListener('orientationchange', syncFloatingDockOffset)
+
+        return () => {
+            removeEventListener('resize', syncFloatingDockOffset)
+            removeEventListener('orientationchange', syncFloatingDockOffset)
+            resizeObserver?.disconnect()
+            document.documentElement.style.setProperty('--lobbyFloatingDockOffset', '0px')
+        }
+    }, [isLobbyChatOpen, isMobileSettingsOpen, isMobileVolumeOpen, syncFloatingDockOffset])
+
     const handleSendLobbyMessage = (text: string) => {
         ws.send('Chat-Send', {
             lobbyId: lobby.lobbyId,
@@ -304,10 +366,11 @@ export const LobbyControls: React.FC<LobbyControlsProps> = props => {
     return (
         <>
             <div
-                className="pointer-events-none fixed left-0 right-0 z-30 hidden justify-between px-4 md:flex lg:px-6"
+                className="pointer-events-none fixed left-0 right-0 z-30 hidden items-start justify-between px-4 md:flex lg:px-6"
+                data-testid="lobby-floating-controls"
                 style={{ top: 'calc(var(--playersHeaderHeight, 0px) + 16px)' }}
             >
-                <div className="pointer-events-none flex flex-col items-start gap-3">
+                <div className="pointer-events-none flex self-start flex-col items-start gap-3">
                     <Button
                         variant="secondary"
                         size="icon"
@@ -355,7 +418,37 @@ export const LobbyControls: React.FC<LobbyControlsProps> = props => {
                             variant="secondary"
                             size="icon"
                             className="pointer-events-auto size-12 rounded-full"
-                            onClick={() => setIsDesktopMenuOpen(current => !current)}
+                            onClick={toggleDesktopSettings}
+                            aria-label={isDesktopSettingsOpen ? t('lobbyControls.hidePreferences') : t('lobbyControls.showPreferences')}
+                            aria-expanded={isDesktopSettingsOpen}
+                            data-testid="lobby-desktop-settings-toggle"
+                        >
+                            <Languages className={controlIconClassName} strokeWidth={2.25} />
+                        </Button>
+                        <div
+                            className={cn(
+                                'overflow-hidden transition-all duration-200',
+                                isDesktopSettingsOpen ? 'pointer-events-auto max-h-[28rem] opacity-100' : 'pointer-events-none max-h-0 opacity-0'
+                            )}
+                        >
+                            <div className="glass-card w-[18rem] rounded-[1rem]! px-4 py-4" data-testid="lobby-settings-panel">
+                                <div className="mb-3 ml-2 text-xs font-semibold uppercase tracking-[0.28em] text-violet-200/60">
+                                    {t('lobbyControls.preferences')}
+                                </div>
+                                <SettingsControls className="pointer-events-auto" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col items-start gap-2">
+                        <Button
+                            variant="secondary"
+                            size="icon"
+                            className="pointer-events-auto size-12 rounded-full"
+                            onClick={() => {
+                                setIsDesktopSettingsOpen(false)
+                                setIsDesktopMenuOpen(current => !current)
+                            }}
                             aria-label={t('lobbyControls.menu')}
                         >
                             <MoreHorizontal className={controlIconClassName} strokeWidth={2.25} />
@@ -385,7 +478,7 @@ export const LobbyControls: React.FC<LobbyControlsProps> = props => {
                     </div>
                 </div>
 
-                <div ref={rightControlsRef} className="pointer-events-none flex flex-col items-end gap-3">
+                <div ref={rightControlsRef} className="pointer-events-none flex self-start flex-col items-end gap-3" data-testid="lobby-right-controls">
                     <Button
                         variant="secondary"
                         size="sm"
@@ -411,7 +504,7 @@ export const LobbyControls: React.FC<LobbyControlsProps> = props => {
 
             <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 flex flex-col items-center px-4 pb-[calc(env(safe-area-inset-bottom,0px)+12px)] md:hidden">
                 {isMobileVolumeOpen ? (
-                    <div className="glass-card pointer-events-none mb-3 w-full max-w-xs rounded-[1.75rem] p-3">
+                    <div className="glass-card pointer-events-none mb-3 w-full max-w-xs rounded-[1.75rem] p-3" ref={mobileVolumeDockRef}>
                         <div className="flex items-center justify-between gap-3">
                             <div>
                                 <div className="text-xs text-slate-300">{audio.volume}%</div>
@@ -435,6 +528,17 @@ export const LobbyControls: React.FC<LobbyControlsProps> = props => {
                             onValueChange={value => audio.setVolume(value[0] || 0)}
                             aria-label={t('lobbyControls.volume')}
                         />
+                    </div>
+                ) : null}
+
+                {isMobileSettingsOpen ? (
+                    <div
+                        className="glass-card pointer-events-auto mb-3 w-full max-w-xs rounded-[1.75rem] p-4"
+                        ref={mobileSettingsDockRef}
+                        data-testid="lobby-settings-panel"
+                    >
+                        <div className="mb-3 ml-2 text-xs font-semibold uppercase tracking-[0.28em] text-violet-200/60">{t('lobbyControls.preferences')}</div>
+                        <SettingsControls />
                     </div>
                 ) : null}
 
@@ -472,6 +576,17 @@ export const LobbyControls: React.FC<LobbyControlsProps> = props => {
                             <Volume2 className={controlIconClassName} strokeWidth={2.25} />
                         )}
                     </Button>
+                    <Button
+                        variant="secondary"
+                        size="icon"
+                        className="pointer-events-auto"
+                        onClick={toggleMobileSettings}
+                        aria-label={isMobileSettingsOpen ? t('lobbyControls.hidePreferences') : t('lobbyControls.showPreferences')}
+                        aria-expanded={isMobileSettingsOpen}
+                        data-testid="lobby-mobile-settings-toggle"
+                    >
+                        <Languages className={controlIconClassName} strokeWidth={2.25} />
+                    </Button>
                     {isReadyCheckButtonVisible ? (
                         <Button
                             variant="secondary"
@@ -508,7 +623,7 @@ export const LobbyControls: React.FC<LobbyControlsProps> = props => {
 
             <div className="pointer-events-none fixed inset-x-0 z-40 flex justify-center px-4 bottom-[calc(env(safe-area-inset-bottom,0px)+88px)] md:bottom-6">
                 {!isBottomDockOccupied && isLobbyChatOpen ? (
-                    <div className="glass-card pointer-events-auto w-full max-w-xl rounded-[2rem] p-3">
+                    <div className="glass-card pointer-events-auto w-full max-w-xl rounded-[2rem] p-3" ref={lobbyChatDockRef}>
                         <div className="flex items-center justify-between gap-3">
                             <div className="min-w-0 ml-4 mt-4">
                                 <div className="text-xs font-semibold uppercase tracking-[0.28em] text-violet-200/60">{t('lobbyControls.lobbyChat')}</div>

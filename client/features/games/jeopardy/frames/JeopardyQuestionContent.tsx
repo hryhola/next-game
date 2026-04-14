@@ -17,6 +17,7 @@ import {
 } from 'client/ui/mui-shim'
 import { useI18n, useLobby, useUser, useWS } from 'client/context/list'
 import { isCloudflareRealtimeEnabled } from 'client/network-utils/realtimeMode'
+import { cn } from 'client/ui/lib/cn'
 import React, { MutableRefObject, useEffect, useRef, useState } from 'react'
 import { useActionSender, useJeopardy, useJeopardyAction } from '../JeopardyView'
 import { JeopardyMedia } from '../utils/jeopardyPackLoading'
@@ -69,10 +70,7 @@ const QuestionReferenceAnswersWidget: React.FC<{
     title: string
 }> = ({ correctAnswers, correctLabel, incorrectAnswers, incorrectLabel, title }) => {
     return (
-        <div
-            className="jeopardy-floating-widget glass-card fixed right-4 z-30 w-[min(22rem,calc(100vw-2rem))] p-4"
-            style={{ top: 'calc(var(--playersHeaderHeight, 0px) + 16px + var(--lobbyControlsRightHeight, 0px) + 12px)' }}
-        >
+        <div className="jeopardy-floating-widget glass-card p-4">
             <div className="text-xs font-semibold uppercase tracking-[0.28em] text-violet-200/60">{title}</div>
             <div className="mt-3 space-y-3 text-sm">
                 {correctAnswers.length ? (
@@ -88,6 +86,43 @@ const QuestionReferenceAnswersWidget: React.FC<{
                     </div>
                 ) : null}
             </div>
+        </div>
+    )
+}
+
+const AnimatedSideWidget: React.FC<{
+    children: React.ReactNode
+    visible: boolean
+}> = ({ children, visible }) => {
+    const [shouldRender, setShouldRender] = useState(visible)
+
+    useEffect(() => {
+        if (visible) {
+            setShouldRender(true)
+            return
+        }
+
+        const timeoutId = window.setTimeout(() => {
+            setShouldRender(false)
+        }, 220)
+
+        return () => {
+            window.clearTimeout(timeoutId)
+        }
+    }, [visible])
+
+    if (!shouldRender) {
+        return null
+    }
+
+    return (
+        <div
+            className={cn(
+                'origin-top overflow-hidden transition-[max-height,opacity,transform] duration-200 ease-out',
+                visible ? 'max-h-[24rem] translate-y-0 opacity-100' : 'pointer-events-none max-h-0 -translate-y-2 opacity-0'
+            )}
+        >
+            {children}
         </div>
     )
 }
@@ -131,8 +166,10 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
         startedAt: props.answerVerifyingStartedAt,
         trackingKey: `${props.questionId}:answer-verifying:${props.answeringStatus}`
     })
+    const questionMetaDockVisible = Boolean(props.questionTheme || typeof props.questionPrice === 'number')
     const bottomDockPositionClassName =
         'pointer-events-none fixed inset-x-0 z-40 flex justify-center px-4 bottom-[calc(env(safe-area-inset-bottom,0px)+88px)] md:bottom-6'
+    const rightWidgetStackStyle = { top: 'calc(var(--playersHeaderHeight, 0px) + 16px + var(--lobbyControlsRightHeight, 0px) + 12px)' }
     const bottomDockPanelClassName = 'glass-card pointer-events-auto w-full max-w-xl rounded-[2rem] p-3'
     const isMultiAnswerQuestion = props.questionType === 'forAll' || props.questionType === 'stakeAll'
     const answerDockVisible =
@@ -157,7 +194,6 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
     const showInlineVerifyProgressBar = verifyDockVisible && showAnswerVerifyingProgressBar
     const showBottomAnswerProgressBar = showAnswerProgressBar && !showInlineAnswerProgressBar
     const showBottomVerifyProgressBar = showAnswerVerifyingProgressBar && !showInlineVerifyProgressBar
-    const bottomDockVisible = verifyDockVisible || selectionDockVisible || valueDockVisible || hiddenStakeDockVisible || answerDockVisible
 
     const submitAnswer = () => {
         sendAction('$GiveAnswer', {
@@ -227,11 +263,35 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
         !verifyDockVisible &&
         (props.specialPhase === 'showing-question' || props.answeringStatus === 'allowed' || props.answeringStatus === 'answering') &&
         (correctAnswers.length > 0 || incorrectAnswers.length > 0)
+    const rightWidgetStackVisible = questionMetaDockVisible || referenceAnswersVisible
     const mostAnswersList: string[] = correctAnswers.length > incorrectAnswers.length ? correctAnswers : incorrectAnswers
     const currentPlayer = game.players.find(player => player.id === user.id)
     const valueSelectionKey = `${props.questionId}:${props.specialPhase || 'none'}:${(props.priceOptions || []).join(',')}:${props.questionPrice || ''}:${
         currentPlayer?.playerScore || ''
     }`
+    const getRatedAnswerStatusLabel = (answer: { approvalMode?: 'full' | 'half' | 'third'; rate?: 'approved' | 'declined' }, playerId: string) => {
+        if (answer.rate === 'approved') {
+            if (answer.approvalMode === 'half') {
+                return t('jeopardy.answerStatus.approvedHalf')
+            }
+
+            if (answer.approvalMode === 'third') {
+                return t('jeopardy.answerStatus.approvedThird')
+            }
+
+            return t('jeopardy.answerStatus.approved')
+        }
+
+        if (answer.rate === 'declined') {
+            return t('jeopardy.answerStatus.declined')
+        }
+
+        if (session?.internal?.currentAnsweringPlayerId === playerId) {
+            return t('jeopardy.answerStatus.current')
+        }
+
+        return ''
+    }
 
     return (
         <>
@@ -249,7 +309,7 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
                         Resources={props.Resources}
                         content={props.content}
                         contentPlacement={props.contentPlacement}
-                        fullscreenCollapseButtonPosition={bottomDockVisible ? 'top' : 'bottom'}
+                        fullscreenCollapseButtonPosition="top"
                         isRef={props.isRef}
                         mediaAutoPlay
                         mediaControls={props.type === 'voice'}
@@ -259,14 +319,36 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
                     />
                 </Grid>
             </Grid>
-            {referenceAnswersVisible ? (
-                <QuestionReferenceAnswersWidget
-                    correctAnswers={correctAnswers}
-                    correctLabel={t('common.correct')}
-                    incorrectAnswers={incorrectAnswers}
-                    incorrectLabel={t('common.incorrect')}
-                    title={t('jeopardy.referenceAnswers')}
-                />
+            {rightWidgetStackVisible ? (
+                <div
+                    className="pointer-events-none fixed right-4 z-30 flex w-[min(22rem,calc(100vw-2rem))] flex-col gap-3"
+                    data-testid="jeopardy-side-widgets"
+                    style={rightWidgetStackStyle}
+                >
+                    <AnimatedSideWidget visible={questionMetaDockVisible}>
+                        <div className="glass-card pointer-events-auto p-4" data-testid="jeopardy-question-meta-dock">
+                            <div className="flex items-center justify-between gap-4">
+                                <div className="min-w-0">
+                                    {props.questionTheme ? <div className="truncate text-sm font-semibold text-slate-100">{props.questionTheme}</div> : null}
+                                </div>
+                                {typeof props.questionPrice === 'number' ? (
+                                    <div className="shrink-0 rounded-full border border-violet-300/30 bg-violet-500/14 px-4 py-1 text-lg font-semibold text-violet-50">
+                                        {props.questionPrice}
+                                    </div>
+                                ) : null}
+                            </div>
+                        </div>
+                    </AnimatedSideWidget>
+                    <AnimatedSideWidget visible={referenceAnswersVisible}>
+                        <QuestionReferenceAnswersWidget
+                            correctAnswers={correctAnswers}
+                            correctLabel={t('common.correct')}
+                            incorrectAnswers={incorrectAnswers}
+                            incorrectLabel={t('common.incorrect')}
+                            title={t('jeopardy.referenceAnswers')}
+                        />
+                    </AnimatedSideWidget>
+                </div>
             ) : null}
             {verifyDockVisible ? (
                 <div className={bottomDockPositionClassName}>
@@ -312,15 +394,7 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
                                                 <TableCell>{game.players.find(player => player.id === playerId)?.userNickname || playerId}</TableCell>
                                                 <TableCell>{answer.value}</TableCell>
                                                 <TableCell>{answer.wager ?? props.questionPrice ?? ''}</TableCell>
-                                                <TableCell>
-                                                    {answer.rate === 'approved'
-                                                        ? t('jeopardy.answerStatus.approved')
-                                                        : answer.rate === 'declined'
-                                                          ? t('jeopardy.answerStatus.declined')
-                                                          : session?.internal?.currentAnsweringPlayerId === playerId
-                                                            ? t('jeopardy.answerStatus.current')
-                                                            : ''}
-                                                </TableCell>
+                                                <TableCell>{getRatedAnswerStatusLabel(answer, playerId)}</TableCell>
                                             </TableRow>
                                         ))}
                                     </TableBody>
@@ -335,6 +409,12 @@ export const QuestionContent: React.FC<QuestionContentProps> = props => {
                         <div className="mt-3 flex flex-wrap justify-end gap-3">
                             <Button color="error" onClick={() => sendAction('$RateAnswer', { rating: 'declined' })}>
                                 {t('common.decline')}
+                            </Button>
+                            <Button color="success" variant="outlined" onClick={() => sendAction('$RateAnswer', { approvalMode: 'third', rating: 'approved' })}>
+                                {t('jeopardy.approveThird')}
+                            </Button>
+                            <Button color="success" variant="outlined" onClick={() => sendAction('$RateAnswer', { approvalMode: 'half', rating: 'approved' })}>
+                                {t('jeopardy.approveHalf')}
                             </Button>
                             <Button color="success" onClick={() => sendAction('$RateAnswer', { rating: 'approved' })}>
                                 {t('common.approve')}

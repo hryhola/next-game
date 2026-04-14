@@ -1,4 +1,4 @@
-import type { RealtimeJeopardyQuestionId, RealtimeJeopardyQuestionType, RealtimeJeopardyThemeId } from './jeopardy'
+import type { RealtimeJeopardyApprovalMode, RealtimeJeopardyQuestionId, RealtimeJeopardyQuestionType, RealtimeJeopardyThemeId } from './jeopardy'
 import type { TicTacToeCellCoords } from './realtime-lobby'
 
 export type GameActor = {
@@ -126,9 +126,11 @@ export type JeopardyGameActionMap = {
     }
     $RateAnswer: {
         payload: {
+            approvalMode?: RealtimeJeopardyApprovalMode
             rating: 'approved' | 'declined'
         }
         result: SuccessResult & {
+            approvalMode?: RealtimeJeopardyApprovalMode
             answeringPlayerId?: string
             rating?: 'approved' | 'declined'
         }

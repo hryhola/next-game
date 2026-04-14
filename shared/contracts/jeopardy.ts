@@ -150,6 +150,7 @@ export namespace JeopardyDeclaration {
 
 export type RealtimeJeopardyQuestionId = `${number}-${number}-${number}`
 export type RealtimeJeopardyThemeId = `${number}-${number}`
+export type RealtimeJeopardyApprovalMode = 'full' | 'half' | 'third'
 
 export type RealtimeJeopardyQuestionType =
     | 'custom'
@@ -297,6 +298,7 @@ export interface RealtimeJeopardySessionInternal {
     currentAnsweringPlayerId: string | null
     currentQuestionAnswers?: {
         [userId: string]: {
+            approvalMode?: RealtimeJeopardyApprovalMode
             rate?: 'approved' | 'declined'
             value: string
             wager?: number

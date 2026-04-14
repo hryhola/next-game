@@ -86,21 +86,23 @@ function MediaCard(props: {
     expandedControlsPosition: 'bottom' | 'top'
     fullscreenLabel: string
     mediaCardStyle: React.CSSProperties
+    showToggleControl?: boolean
 }) {
-    const controls = (
-        <div
-            className={cn(
-                'flex justify-center',
-                props.expanded && props.expandedControlsPosition === 'top' && 'pointer-events-none fixed inset-x-0 top-4 z-[26] px-4'
-            )}
-            data-placement={props.expanded && props.expandedControlsPosition === 'top' ? 'top' : 'bottom'}
-            data-testid="jeopardy-media-controls"
-        >
-            <Button className={cn(props.expanded && props.expandedControlsPosition === 'top' && 'pointer-events-auto')} onClick={props.onToggleExpanded}>
-                {props.expanded ? props.collapseLabel : props.fullscreenLabel}
-            </Button>
-        </div>
-    )
+    const controls =
+        props.showToggleControl === false ? null : (
+            <div
+                className={cn(
+                    'flex justify-center',
+                    props.expanded && props.expandedControlsPosition === 'top' && 'pointer-events-none fixed inset-x-0 top-4 z-[26] px-4'
+                )}
+                data-placement={props.expanded && props.expandedControlsPosition === 'top' ? 'top' : 'bottom'}
+                data-testid="jeopardy-media-controls"
+            >
+                <Button className={cn(props.expanded && props.expandedControlsPosition === 'top' && 'pointer-events-auto')} onClick={props.onToggleExpanded}>
+                    {props.expanded ? props.collapseLabel : props.fullscreenLabel}
+                </Button>
+            </div>
+        )
 
     return (
         <div
@@ -153,6 +155,7 @@ export const JeopardyContentAtom: React.FC<JeopardyContentAtomProps> = props => 
     const audio = useAudio()
     const { t } = useI18n()
     const [expanded, setExpanded] = useState(false)
+    const [isMobileViewport, setIsMobileViewport] = useState(false)
     const [mediaAspectRatio, setMediaAspectRatio] = useState(16 / 9)
     const resolvedContent = resolveJeopardyPackContent(Resources, type, content, isRef)
     const textPresentation = getTextCardPresentation(content)
@@ -177,6 +180,37 @@ export const JeopardyContentAtom: React.FC<JeopardyContentAtomProps> = props => 
 
         mediaElementRef.current.volume = audio.volume / 100
     }, [audio.volume, mediaElementRef])
+
+    useEffect(() => {
+        if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+            return
+        }
+
+        const mediaQuery = window.matchMedia('(max-width: 767px)')
+        const syncViewport = () => setIsMobileViewport(mediaQuery.matches)
+
+        syncViewport()
+
+        if (typeof mediaQuery.addEventListener === 'function') {
+            mediaQuery.addEventListener('change', syncViewport)
+
+            return () => {
+                mediaQuery.removeEventListener('change', syncViewport)
+            }
+        }
+
+        mediaQuery.addListener(syncViewport)
+
+        return () => {
+            mediaQuery.removeListener(syncViewport)
+        }
+    }, [])
+
+    useEffect(() => {
+        if (isMobileViewport && expanded) {
+            setExpanded(false)
+        }
+    }, [expanded, isMobileViewport])
 
     useEffect(() => {
         if (!expanded) {
@@ -232,6 +266,7 @@ export const JeopardyContentAtom: React.FC<JeopardyContentAtomProps> = props => 
                     fullscreenLabel={t('jeopardy.fullscreenMedia')}
                     mediaCardStyle={expanded ? expandedMediaCardStyle : collapsedMediaCardStyle}
                     onToggleExpanded={() => setExpanded(current => !current)}
+                    showToggleControl={!isMobileViewport}
                 >
                     <div className={mediaViewportClassName}>
                         <img
@@ -253,6 +288,7 @@ export const JeopardyContentAtom: React.FC<JeopardyContentAtomProps> = props => 
                     fullscreenLabel={t('jeopardy.fullscreenMedia')}
                     mediaCardStyle={expanded ? expandedMediaCardStyle : collapsedMediaCardStyle}
                     onToggleExpanded={() => setExpanded(current => !current)}
+                    showToggleControl={!isMobileViewport}
                 >
                     <div className={mediaViewportClassName}>
                         <video

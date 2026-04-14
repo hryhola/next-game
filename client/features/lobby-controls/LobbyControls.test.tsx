@@ -100,4 +100,49 @@ describe('LobbyControls', () => {
 
         expect(screen.getByText('Lobby Chat')).toBeInTheDocument()
     })
+
+    it('opens the preferences controls from the lobby controls panel', () => {
+        const players = createPlayers()
+
+        renderWithProviders(<LobbyControls />, {
+            game: createGameValue(),
+            lobby: createLobbyData({
+                id: 'lobby-1',
+                members: players
+            }),
+            user: createUserData({
+                id: 'player-1',
+                userNickname: 'Player 1'
+            })
+        })
+
+        const desktopSettingsButton = screen.getByTestId('lobby-desktop-settings-toggle')
+
+        expect(desktopSettingsButton).toHaveAttribute('aria-expanded', 'false')
+
+        fireEvent.click(desktopSettingsButton)
+
+        expect(desktopSettingsButton).toHaveAttribute('aria-expanded', 'true')
+        expect(screen.getAllByText('Font').length).toBeGreaterThan(0)
+        expect(screen.getAllByText('Language').length).toBeGreaterThan(0)
+    })
+
+    it('keeps the desktop right controls aligned independently from the left menu column', () => {
+        const players = createPlayers()
+
+        renderWithProviders(<LobbyControls />, {
+            game: createGameValue(),
+            lobby: createLobbyData({
+                id: 'lobby-1',
+                members: players
+            }),
+            user: createUserData({
+                id: 'player-1',
+                userNickname: 'Player 1'
+            })
+        })
+
+        expect(screen.getByTestId('lobby-floating-controls').className).toContain('items-start')
+        expect(screen.getByTestId('lobby-right-controls').className).toContain('self-start')
+    })
 })

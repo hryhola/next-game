@@ -1,5 +1,6 @@
 import type { LobbyGameActionMessage } from '../../../../shared/contracts/realtime-lobby'
 import type {
+    RealtimeJeopardyApprovalMode,
     RealtimeJeopardyPublicSession,
     RealtimeJeopardyQuestionId,
     RealtimeJeopardySessionInternal,
@@ -62,6 +63,25 @@ function getQuestionAnswerDurationMs(questionType: string | undefined, answerDur
     }
 
     return questionType === 'forAll' || questionType === 'stakeAll' ? JEOPARDY_SPECIAL_HIDDEN_ANSWER_DURATION_MS : JEOPARDY_SPECIAL_DIRECT_ANSWER_DURATION_MS
+}
+
+function isApprovalMode(value: unknown): value is RealtimeJeopardyApprovalMode {
+    return value === 'full' || value === 'half' || value === 'third'
+}
+
+function getApprovalMultiplier(mode: RealtimeJeopardyApprovalMode): number {
+    switch (mode) {
+        case 'half':
+            return 0.5
+        case 'third':
+            return 1 / 3
+        default:
+            return 1
+    }
+}
+
+function roundScoreDelta(value: number): number {
+    return Math.round(value * 100) / 100
 }
 
 type JeopardyDeps = {
@@ -495,7 +515,8 @@ export class JeopardyLobbyFeature {
                 }
 
                 this.updateInternal(state, {
-                    currentQuestionSelectedPlayerId: playerId
+                    currentQuestionSelectedPlayerId: playerId,
+                    pickerId: playerId
                 })
 
                 await this.continueSecretQuestionAfterSelection(state)
@@ -838,7 +859,7 @@ export class JeopardyLobbyFeature {
                     }
                 }
 
-                const payload = actionPayload as { rating?: 'approved' | 'declined' } | null
+                const payload = actionPayload as { approvalMode?: RealtimeJeopardyApprovalMode; rating?: 'approved' | 'declined' } | null
 
                 if (!payload?.rating) {
                     return {
@@ -848,7 +869,16 @@ export class JeopardyLobbyFeature {
                     }
                 }
 
+                if (payload.approvalMode && !isApprovalMode(payload.approvalMode)) {
+                    return {
+                        code: 'invalid_payload',
+                        message: 'Approval mode is invalid',
+                        success: false
+                    }
+                }
+
                 const currentPlayerId = session.internal.currentAnsweringPlayerId
+                const approvalMode = payload.rating === 'approved' ? payload.approvalMode || 'full' : undefined
 
                 this.updateFrame(state, {
                     ...session.frame,
@@ -861,7 +891,7 @@ export class JeopardyLobbyFeature {
                     await this.cancelTask(sessionId, 'answer-verifying.complete', state)
                 }
 
-                this.applyQuestionAnswerRating(state, currentPlayerId, payload.rating)
+                this.applyQuestionAnswerRating(state, currentPlayerId, payload.rating, approvalMode)
 
                 const remainingQueue = (session.internal.currentQuestionVerificationQueue || []).filter(playerId => playerId !== currentPlayerId)
 
@@ -890,9 +920,11 @@ export class JeopardyLobbyFeature {
                         },
                         '$RateAnswer',
                         {
+                            ...(approvalMode ? { approvalMode } : {}),
                             rating: payload.rating
                         },
                         {
+                            ...(approvalMode ? { approvalMode } : {}),
                             answeringPlayerId: currentPlayerId,
                             rating: payload.rating
                         }
@@ -2753,7 +2785,12 @@ export class JeopardyLobbyFeature {
         )
     }
 
-    private applyQuestionAnswerRating(state: StoredLobbyState, playerId: string, rating: 'approved' | 'declined'): void {
+    private applyQuestionAnswerRating(
+        state: StoredLobbyState,
+        playerId: string,
+        rating: 'approved' | 'declined',
+        approvalMode: RealtimeJeopardyApprovalMode = 'full'
+    ): void {
         const session = this.getSession(state)
         const flow = session?.meta.currentQuestionFlow
         const player = state.members.find(member => member.id === playerId && member.role === 'player')
@@ -2766,10 +2803,13 @@ export class JeopardyLobbyFeature {
         }
 
         if (session.internal.currentQuestionAnswers?.[playerId]) {
+            session.internal.currentQuestionAnswers[playerId].approvalMode = rating === 'approved' ? approvalMode : undefined
             session.internal.currentQuestionAnswers[playerId].rate = rating
         }
 
-        player.playerScore += rating === 'approved' ? delta : isNoRisk ? 0 : -delta
+        const approvedDelta = roundScoreDelta(delta * getApprovalMultiplier(approvalMode))
+
+        player.playerScore += rating === 'approved' ? approvedDelta : isNoRisk ? 0 : -delta
 
         if (rating === 'approved') {
             session.internal.pickerId = playerId
@@ -3648,8 +3688,28 @@ export class JeopardyLobbyFeature {
 
         const currentAnsweringPlayerId = session.internal.currentAnsweringPlayerId
         const remainingQueue = (session.internal.currentQuestionVerificationQueue || []).filter(playerId => playerId !== currentAnsweringPlayerId)
+        const timedOutAction =
+            currentAnsweringPlayerId &&
+            this.createSuccessfulGameAction(
+                {
+                    id: 'game',
+                    type: 'game'
+                },
+                '$RateAnswer',
+                {
+                    rating: 'declined'
+                },
+                {
+                    answeringPlayerId: currentAnsweringPlayerId,
+                    rating: 'declined'
+                }
+            )
 
         if (currentAnsweringPlayerId) {
+            this.updateFrame(state, {
+                ...session.frame,
+                result: 'declined'
+            })
             this.applyQuestionAnswerRating(state, currentAnsweringPlayerId, 'declined')
         }
 
@@ -3668,6 +3728,7 @@ export class JeopardyLobbyFeature {
         }
 
         return {
+            action: timedOutAction || undefined,
             stateChanged: true
         }
     }

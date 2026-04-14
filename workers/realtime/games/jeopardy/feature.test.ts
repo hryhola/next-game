@@ -683,6 +683,20 @@ describe('jeopardy flow', () => {
         expect(state.game.session?.internal.incorrectAnswers).toEqual(['Wrong answer'])
     })
 
+    it('uses the parent category name as the effective question theme when no question override is defined', async () => {
+        const pack = createPackWithQuestions([
+            createScenarioQuestion({
+                price: '300'
+            })
+        ])
+        const state = createState(pack)
+        const { feature, scheduler } = createFeatureHarness()
+
+        await advanceToQuestion(feature, state, scheduler, '0-0-0')
+
+        expect(getQuestionFrame(state).questionTheme).toBe('Theme 1')
+    })
+
     it('lets the master skip a category and clears only that category on the board', async () => {
         const state = createState()
         const { feature, scheduler } = createFeatureHarness()
@@ -984,6 +998,74 @@ describe('jeopardy flow', () => {
                 }
             }
         })
+    })
+
+    it('supports partial approvals and awards the configured fraction of the question value', async () => {
+        const state = createState()
+        const { feature, scheduler } = createFeatureHarness()
+
+        await advanceToAnswerRequest(feature, state, scheduler)
+
+        expect((await feature.handleAction(state, 'contestant-1', '$AnswerRequest', null)).success).toBe(true)
+        expect((await feature.handleAction(state, 'contestant-1', '$GiveAnswer', { text: 'Test answer' })).success).toBe(true)
+
+        const result = await feature.handleAction(state, 'master', '$RateAnswer', {
+            approvalMode: 'third',
+            rating: 'approved'
+        })
+
+        expect(result.success).toBe(true)
+        expect(result.action).toMatchObject({
+            payload: {
+                actionName: '$RateAnswer',
+                actionPayload: {
+                    approvalMode: 'third',
+                    rating: 'approved'
+                },
+                actionResult: {
+                    approvalMode: 'third',
+                    answeringPlayerId: 'contestant-1',
+                    rating: 'approved',
+                    success: true
+                }
+            }
+        })
+        expect(state.members.find(member => member.id === 'contestant-1')?.playerScore).toBeCloseTo(33.33, 2)
+        expect(state.game.session?.internal.pickerId).toBe('contestant-1')
+        expect(state.game.session?.internal.currentQuestionAnswers?.['contestant-1']).toMatchObject({
+            approvalMode: 'third',
+            rate: 'approved'
+        })
+    })
+
+    it('publishes a decline action when answer verification time runs out', async () => {
+        const state = createState()
+        const { feature, scheduler } = createFeatureHarness()
+
+        await advanceToAnswerRequest(feature, state, scheduler)
+
+        expect((await feature.handleAction(state, 'contestant-1', '$AnswerRequest', null)).success).toBe(true)
+        expect((await feature.handleAction(state, 'contestant-1', '$GiveAnswer', { text: 'Timed out answer' })).success).toBe(true)
+
+        const task = scheduler.takeBySuffix('answer-verifying.complete')
+        const result = await feature.handleTask(state, task.payload)
+
+        expect(result.stateChanged).toBe(true)
+        expect(result.action).toMatchObject({
+            payload: {
+                actionName: '$RateAnswer',
+                actionPayload: {
+                    rating: 'declined'
+                },
+                actionResult: {
+                    answeringPlayerId: 'contestant-1',
+                    rating: 'declined',
+                    success: true
+                }
+            }
+        })
+        expect(state.members.find(member => member.id === 'contestant-1')?.playerScore).toBe(-100)
+        expect(getQuestionFrame(state).answeringStatus).toBe('allowed')
     })
 
     it('reopens the answer request when the active answering player leaves', async () => {
@@ -1354,6 +1436,77 @@ describe('jeopardy flow', () => {
         expect(frame.questionPrice).toBe(700)
         expect(frame.questionTheme).toBe('Secret Theme')
         expect(frame.specialPhase).toBeUndefined()
+    })
+
+    it('keeps the transferred contestant as the next picker even after a wrong secret answer', async () => {
+        const pack = createPackWithQuestions([
+            createParamQuestion({
+                price: '400',
+                type: 'secret',
+                params: [
+                    {
+                        _attributes: {
+                            name: 'theme'
+                        },
+                        _text: 'Secret Theme'
+                    },
+                    {
+                        _attributes: {
+                            name: 'price',
+                            type: 'numberSet'
+                        },
+                        numberSet: {
+                            _attributes: {
+                                maximum: '700',
+                                minimum: '700',
+                                step: '0'
+                            }
+                        }
+                    },
+                    {
+                        _attributes: {
+                            name: 'selectionMode'
+                        },
+                        _text: 'exceptCurrent'
+                    },
+                    {
+                        _attributes: {
+                            name: 'question',
+                            type: 'content'
+                        },
+                        item: {
+                            _text: 'Secret question'
+                        }
+                    }
+                ]
+            }),
+            createScenarioQuestion({
+                price: '500'
+            })
+        ])
+        const state = createState(pack, 2)
+        const { feature, scheduler } = createFeatureHarness()
+
+        await advanceToQuestion(feature, state, scheduler, '0-0-0')
+
+        expect(
+            await feature.handleAction(state, 'contestant-1', '$SelectQuestionPlayer', {
+                playerId: 'contestant-2'
+            })
+        ).toMatchObject({ success: true })
+        await runScheduledTask(feature, state, scheduler, 'question.atom.complete')
+
+        expect((await feature.handleAction(state, 'contestant-2', '$GiveAnswer', { text: 'Wrong answer' })).success).toBe(true)
+        expect((await feature.handleAction(state, 'master', '$RateAnswer', { rating: 'declined' })).success).toBe(true)
+        expect(state.game.session?.internal.pickerId).toBe('contestant-2')
+
+        await runScheduledTask(feature, state, scheduler, 'question.atom.complete')
+
+        expect(state.game.session?.frame).toMatchObject({
+            id: 'question-board',
+            pickerId: 'contestant-2',
+            roundId: 0
+        })
     })
 
     it('falls back to the chooser when a secret question has no eligible transfer targets', async () => {

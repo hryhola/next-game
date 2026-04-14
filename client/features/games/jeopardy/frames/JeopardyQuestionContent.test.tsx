@@ -1,6 +1,6 @@
 /** @jest-environment jsdom */
 
-import { fireEvent, screen } from '@testing-library/react'
+import { fireEvent, screen, within } from '@testing-library/react'
 import {
     createAudioHarness,
     createGameValue,
@@ -17,6 +17,25 @@ const resources = {
         Images: {},
         Video: {}
     }
+}
+
+const originalMatchMedia = window.matchMedia
+
+function mockMatchMedia(matches: boolean) {
+    Object.defineProperty(window, 'matchMedia', {
+        configurable: true,
+        writable: true,
+        value: jest.fn().mockImplementation(() => ({
+            addEventListener: jest.fn(),
+            addListener: jest.fn(),
+            dispatchEvent: jest.fn(),
+            matches,
+            media: '(max-width: 767px)',
+            onchange: null,
+            removeEventListener: jest.fn(),
+            removeListener: jest.fn()
+        }))
+    })
 }
 
 function createQuestionFrame(overrides: Record<string, unknown> = {}) {
@@ -83,6 +102,22 @@ function createPlayers() {
 }
 
 describe('QuestionContent', () => {
+    afterEach(() => {
+        if (originalMatchMedia) {
+            Object.defineProperty(window, 'matchMedia', {
+                configurable: true,
+                writable: true,
+                value: originalMatchMedia
+            })
+        } else {
+            Object.defineProperty(window, 'matchMedia', {
+                configurable: true,
+                writable: true,
+                value: undefined
+            })
+        }
+    })
+
     it('renders text atoms inside a dedicated card and scales typography by content length', () => {
         const players = createPlayers()
         const shortView = renderWithProviders(
@@ -216,6 +251,50 @@ describe('QuestionContent', () => {
             height: 'calc(var(--fullHeight, 100vh) - 7rem)',
             width: 'calc(100vw - 2rem)'
         })
+    })
+
+    it('hides the media fullscreen toggle on mobile viewports', () => {
+        const players = createPlayers()
+
+        mockMatchMedia(true)
+
+        renderWithProviders(
+            <QuestionContent
+                {...(createQuestionFrame({
+                    content: '/assets/test-question.jpg',
+                    questionType: 'simple',
+                    type: 'image'
+                }) as any)}
+                Resources={resources as never}
+                packFetchingTimeMs={0}
+                useMediaTimestamp={false}
+            />,
+            {
+                game: createGameValue({
+                    players,
+                    session: {
+                        frame: createQuestionFrame({
+                            content: '/assets/test-question.jpg',
+                            questionType: 'simple',
+                            type: 'image'
+                        }),
+                        internal: {},
+                        isPaused: false
+                    }
+                }),
+                lobby: createLobbyData({
+                    id: 'lobby-1',
+                    members: players
+                }),
+                user: createUserData({
+                    id: 'contestant-1',
+                    userNickname: 'Contestant 1'
+                })
+            }
+        )
+
+        expect(screen.queryByRole('button', { name: 'Fullscreen' })).not.toBeInTheDocument()
+        expect(screen.queryByTestId('jeopardy-media-controls')).not.toBeInTheDocument()
     })
 
     it('moves the fullscreen collapse control to the top when the answer dock is visible and closes on Escape', () => {
@@ -635,7 +714,7 @@ describe('QuestionContent', () => {
         )
 
         expect(screen.getByText('Question Value')).toBeInTheDocument()
-        expect(screen.getByText('700')).toBeInTheDocument()
+        expect(within(screen.getByText('Question Value').closest('.glass-card') as HTMLElement).getByText('700')).toBeInTheDocument()
         expect(screen.getByRole('button', { name: 'Confirm' })).toBeInTheDocument()
     })
 
@@ -730,12 +809,60 @@ describe('QuestionContent', () => {
 
         expect(screen.getByText('Verify Answer')).toBeInTheDocument()
         expect(screen.getByText('Answer: Submitted answer')).toBeInTheDocument()
+        expect(screen.getByTestId('jeopardy-question-meta-dock')).toHaveTextContent('Theme')
+        expect(screen.getByTestId('jeopardy-question-meta-dock')).toHaveTextContent('700')
         const progressBar = screen.getByRole('progressbar')
 
         expect(progressBar).toBeInTheDocument()
         expect(screen.getByRole('button', { name: 'Approve' }).closest('.glass-card')?.contains(progressBar)).toBe(true)
         expect(screen.getByRole('button', { name: 'Approve' })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: 'Approve 1/2' })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: 'Approve 1/3' })).toBeInTheDocument()
         expect(screen.getByRole('button', { name: 'Decline' })).toBeInTheDocument()
+    })
+
+    it('keeps the question metadata dock visible while a player is answering', () => {
+        const players = createPlayers()
+
+        renderWithProviders(
+            <QuestionContent
+                {...(createQuestionFrame({
+                    answerGivingTimeLeft: 40,
+                    answeringPlayerId: 'contestant-1',
+                    answeringStatus: 'answering',
+                    questionType: 'simple'
+                }) as any)}
+                Resources={resources as never}
+                packFetchingTimeMs={0}
+                useMediaTimestamp={false}
+            />,
+            {
+                game: createGameValue({
+                    players,
+                    session: {
+                        frame: createQuestionFrame({
+                            answerGivingTimeLeft: 40,
+                            answeringPlayerId: 'contestant-1',
+                            answeringStatus: 'answering',
+                            questionType: 'simple'
+                        }),
+                        internal: {},
+                        isPaused: false
+                    }
+                }),
+                lobby: createLobbyData({
+                    id: 'lobby-1',
+                    members: players
+                }),
+                user: createUserData({
+                    id: 'contestant-2',
+                    userNickname: 'Contestant 2'
+                })
+            }
+        )
+
+        expect(screen.getByTestId('jeopardy-question-meta-dock')).toHaveTextContent('Theme')
+        expect(screen.getByTestId('jeopardy-question-meta-dock')).toHaveTextContent('700')
     })
 
     it('shows a compact answer guide to the Jeopardy master during question presentation', () => {
@@ -781,11 +908,14 @@ describe('QuestionContent', () => {
             }
         )
 
+        const sideWidgets = screen.getByTestId('jeopardy-side-widgets')
         const widget = screen.getByText('Answer Guide').closest('.jeopardy-floating-widget')
 
-        expect(widget).toHaveStyle({
+        expect(sideWidgets).toHaveStyle({
             top: 'calc(var(--playersHeaderHeight, 0px) + 16px + var(--lobbyControlsRightHeight, 0px) + 12px)'
         })
+        expect(sideWidgets.firstElementChild?.contains(screen.getByTestId('jeopardy-question-meta-dock'))).toBe(true)
+        expect(sideWidgets.lastElementChild?.contains(widget as HTMLElement)).toBe(true)
         expect(screen.getByText('Answer Guide')).toBeInTheDocument()
         expect(screen.getByText('Right answer')).toBeInTheDocument()
         expect(screen.getByText('Wrong answer')).toBeInTheDocument()
